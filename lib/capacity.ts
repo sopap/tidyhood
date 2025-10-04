@@ -191,8 +191,14 @@ export function calculateCleaningMinutes(
  * Validate ZIP code is in allowed areas
  */
 export function validateZipCode(zip: string): boolean {
-  const allowedZips = (process.env.NEXT_PUBLIC_ALLOWED_ZIPS || '').split(',').map(z => z.trim())
-  return allowedZips.includes(zip)
+  const allowedZipsEnv = process.env.NEXT_PUBLIC_ALLOWED_ZIPS || ''
+  console.log('[validateZipCode] NEXT_PUBLIC_ALLOWED_ZIPS:', allowedZipsEnv)
+  const allowedZips = allowedZipsEnv.split(',').map(z => z.trim()).filter(z => z.length > 0)
+  console.log('[validateZipCode] Parsed allowed ZIPs:', allowedZips)
+  console.log('[validateZipCode] Checking ZIP:', zip)
+  const isValid = allowedZips.includes(zip)
+  console.log('[validateZipCode] Is valid:', isValid)
+  return isValid
 }
 
 /**
