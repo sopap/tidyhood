@@ -34,8 +34,11 @@ const createOrderSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[POST /api/orders] Starting order creation')
     const user = await requireAuth()
+    console.log('[POST /api/orders] User authenticated:', user.id)
     const body = await request.json()
+    console.log('[POST /api/orders] Request body:', JSON.stringify(body, null, 2))
     
     // Check for idempotency key
     const idempotencyKey = request.headers.get('idempotency-key')
@@ -63,6 +66,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Calculate pricing
+    console.log('[POST /api/orders] Calculating pricing...')
     let pricing
     let units = 1 // For laundry, 1 order = 1 unit
     
@@ -110,21 +114,27 @@ export async function POST(request: NextRequest) {
     }
     
     // Reserve capacity
+    console.log('[POST /api/orders] Reserving capacity...', {
+      partner_id: params.slot.partner_id,
+      service_type: params.service_type,
+      slot_start: params.slot.slot_start,
+      units
+    })
     const reserved = await reserveCapacity(
       params.slot.partner_id,
       params.service_type,
       params.slot.slot_start,
       units
     )
+    console.log('[POST /api/orders] Capacity reserved:', reserved)
     
     if (!reserved) {
       throw new ConflictError('Selected time slot is no longer available', 'SLOT_FULL')
     }
     
     // Create order
-    const { data: order, error: orderError } = await db
-      .from('orders')
-      .insert({
+    console.log('[POST /api/orders] Creating order in database...')
+    const orderData = {
         user_id: user.id,
         service_type: params.service_type,
         partner_id: params.slot.partner_id,
@@ -138,11 +148,20 @@ export async function POST(request: NextRequest) {
         idempotency_key: idempotencyKey,
         order_details: params.details,
         address_snapshot: params.address,
-      })
+      }
+    console.log('[POST /api/orders] Order data:', JSON.stringify(orderData, null, 2))
+    
+    const { data: order, error: orderError } = await db
+      .from('orders')
+      .insert(orderData)
       .select()
       .single()
     
-    if (orderError) throw orderError
+    if (orderError) {
+      console.error('[POST /api/orders] Database error creating order:', orderError)
+      throw orderError
+    }
+    console.log('[POST /api/orders] Order created successfully:', order.id)
     
     // Create order event
     await db.from('order_events').insert({
@@ -197,8 +216,10 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    console.log('[POST /api/orders] Order creation complete')
     return NextResponse.json(order, { status: 201 })
   } catch (error) {
+    console.error('[POST /api/orders] Error:', error)
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request parameters', details: error.errors },
