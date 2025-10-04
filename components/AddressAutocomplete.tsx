@@ -52,6 +52,12 @@ export function AddressAutocomplete({
 }: AddressAutocompleteProps) {
   const [inputValue, setInputValue] = useState(defaultValue || '')
   const [showSavedAddresses, setShowSavedAddresses] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualAddress, setManualAddress] = useState({
+    line1: '',
+    city: 'New York',
+    zip: ''
+  })
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
@@ -155,6 +161,39 @@ export function AddressAutocomplete({
     })
   }
 
+  const handleManualSubmit = () => {
+    // Validate manual entry
+    if (!manualAddress.line1.trim()) {
+      setError('Please enter a street address')
+      return
+    }
+    
+    if (!manualAddress.zip.trim()) {
+      setError('Please enter a ZIP code')
+      return
+    }
+
+    // Validate ZIP code
+    if (!ALLOWED_ZIPS.includes(manualAddress.zip)) {
+      setError(`We're not yet serving ${manualAddress.zip}. Currently available in: ${ALLOWED_ZIPS.join(', ')}`)
+      return
+    }
+
+    setError(null)
+    
+    const address: Address = {
+      line1: manualAddress.line1,
+      city: manualAddress.city || 'New York',
+      state: 'NY',
+      zip: manualAddress.zip,
+      formatted: `${manualAddress.line1}, ${manualAddress.city}, NY ${manualAddress.zip}`
+    }
+
+    onAddressSelect(address)
+    setInputValue(address.formatted)
+    setManualMode(false)
+  }
+
   return (
     <div className="space-y-3">
       <div>
@@ -162,11 +201,11 @@ export function AddressAutocomplete({
           Service Address
         </label>
         
-        {savedAddresses.length > 0 && !showSavedAddresses && (
+        {savedAddresses.length > 0 && !showSavedAddresses && !manualMode && (
           <button
             type="button"
             onClick={() => setShowSavedAddresses(true)}
-            className="text-sm text-primary-600 hover:text-primary-700 mb-2"
+            className="text-sm text-primary-600 hover:text-primary-700 mb-2 block"
           >
             Use saved address
           </button>
@@ -196,17 +235,85 @@ export function AddressAutocomplete({
               ← Use different address
             </button>
           </div>
+        ) : manualMode ? (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Street Address</label>
+              <input
+                type="text"
+                value={manualAddress.line1}
+                onChange={(e) => setManualAddress({...manualAddress, line1: e.target.value})}
+                placeholder="171 W 131st St"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">City</label>
+              <input
+                type="text"
+                value={manualAddress.city}
+                onChange={(e) => setManualAddress({...manualAddress, city: e.target.value})}
+                placeholder="New York"
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">ZIP Code</label>
+              <input
+                type="text"
+                value={manualAddress.zip}
+                onChange={(e) => setManualAddress({...manualAddress, zip: e.target.value})}
+                placeholder="10027"
+                maxLength={5}
+                className="input-field"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleManualSubmit}
+                className="btn-primary flex-1"
+              >
+                Use This Address
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setManualMode(false)
+                  setError(null)
+                }}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         ) : (
-          <input
-            ref={inputRef}
-            type="text"
-            id="address"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter your address"
-            className="input-field"
-            required
-          />
+          <>
+            <input
+              ref={inputRef}
+              type="text"
+              id="address"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Start typing your address..."
+              className="input-field"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Start typing and <strong>select from the dropdown</strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setManualMode(true)
+                setError(null)
+              }}
+              className="text-sm text-primary-600 hover:text-primary-700 mt-2"
+            >
+              Can't find your address? Enter manually →
+            </button>
+          </>
         )}
       </div>
 
