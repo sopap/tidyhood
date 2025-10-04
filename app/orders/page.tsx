@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { useAuth } from '@/lib/auth-context'
 
 // Mock data for demonstration
 const mockOrders = [
@@ -23,8 +25,13 @@ const mockOrders = [
   }
 ]
 
-export default function OrdersPage() {
+function OrdersContent() {
+  const { user, signOut } = useAuth()
   const [orders] = useState(mockOrders)
+  
+  const handleLogout = async () => {
+    await signOut()
+  }
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -64,9 +71,17 @@ export default function OrdersPage() {
               <Link href="/orders" className="text-primary-600 font-medium">
                 My Orders
               </Link>
-              <button className="text-gray-600 hover:text-primary-600">
-                Logout
-              </button>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  {user?.email}
+                </span>
+                <button 
+                  onClick={handleLogout}
+                  className="text-gray-600 hover:text-primary-600"
+                >
+                  Logout
+                </button>
+              </div>
             </nav>
           </div>
         </div>
@@ -187,5 +202,13 @@ export default function OrdersPage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function OrdersPage() {
+  return (
+    <ProtectedRoute>
+      <OrdersContent />
+    </ProtectedRoute>
   )
 }

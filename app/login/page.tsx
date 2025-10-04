@@ -2,10 +2,13 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { refreshUser } = useAuth()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -36,8 +39,12 @@ export default function LoginPage() {
         throw new Error(data.error || 'Invalid email or password')
       }
 
-      // Success - redirect to orders page
-      router.push('/orders')
+      // Refresh the user session
+      await refreshUser()
+
+      // Success - redirect to intended page or orders page
+      const redirectTo = searchParams.get('redirect') || '/orders'
+      router.push(redirectTo)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password')
     } finally {

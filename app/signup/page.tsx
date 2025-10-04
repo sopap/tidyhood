@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 
 export default function SignupPage() {
   const router = useRouter()
+  const { refreshUser } = useAuth()
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -58,6 +60,9 @@ export default function SignupPage() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create account')
       }
+
+      // Refresh the user session
+      await refreshUser()
 
       // Success - redirect to services page
       router.push('/services')
