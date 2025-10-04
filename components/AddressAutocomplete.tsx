@@ -1,0 +1,224 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+
+const ALLOWED_ZIPS = ['10026', '10027', '10030']
+
+// Load Google Maps script
+function loadGoogleMapsScript(apiKey: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && window.google?.maps?.places) {
+      resolve()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Google Maps'))
+    document.head.appendChild(script)
+  })
+}
+
+interface Address {
+  line1: string
+  line2?: string
+  city: string
+  state: string
+  zip: string
+  formatted: string
+}
+
+interface AddressAutocompleteProps {
+  onAddressSelect: (address: Address) => void
+  defaultValue?: string
+  savedAddresses?: Array<{
+    id: string
+    line1: string
+    line2?: string
+    city: string
+    zip: string
+  }>
+  onSelectSavedAddress?: (addressId: string) => void
+}
+
+export function AddressAutocomplete({ 
+  onAddressSelect, 
+  defaultValue,
+  savedAddresses = [],
+  onSelectSavedAddress
+}: AddressAutocompleteProps) {
+  const [inputValue, setInputValue] = useState(defaultValue || '')
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+
+  useEffect(() => {
+    const initAutocomplete = async () => {
+      if (!inputRef.current) return
+      
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      if (!apiKey) {
+        console.error('Google Maps API key not found')
+        return
+      }
+
+      try {
+        await loadGoogleMapsScript(apiKey)
+
+        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+          componentRestrictions: { country: 'us' },
+          fields: ['address_components', 'formatted_address', 'geometry'],
+          types: ['address']
+        })
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace()
+          
+          if (!place.address_components) {
+            setError('Please select a valid address from the dropdown')
+            return
+          }
+
+          // Parse address components
+          let streetNumber = ''
+          let route = ''
+          let city = ''
+          let state = ''
+          let zip = ''
+
+          place.address_components.forEach((component) => {
+            const types = component.types
+            if (types.includes('street_number')) {
+              streetNumber = component.long_name
+            } else if (types.includes('route')) {
+              route = component.long_name
+            } else if (types.includes('locality')) {
+              city = component.long_name
+            } else if (types.includes('administrative_area_level_1')) {
+              state = component.short_name
+            } else if (types.includes('postal_code')) {
+              zip = component.long_name
+            }
+          })
+
+          // Validate ZIP code
+          if (!ALLOWED_ZIPS.includes(zip)) {
+            setError(`We're not yet serving ${zip}. Currently available in: ${ALLOWED_ZIPS.join(', ')}`)
+            setInputValue('')
+            return
+          }
+
+          setError(null)
+          
+          const address: Address = {
+            line1: `${streetNumber} ${route}`.trim(),
+            city: city || 'New York',
+            state: state || 'NY',
+            zip,
+            formatted: place.formatted_address || ''
+          }
+
+          onAddressSelect(address)
+          setInputValue(address.formatted)
+        })
+
+        autocompleteRef.current = autocomplete
+      } catch (err) {
+        console.error('Failed to load Google Maps:', err)
+      }
+    }
+
+    initAutocomplete()
+  }, [onAddressSelect])
+
+  const handleSavedAddressClick = (address: typeof savedAddresses[0]) => {
+    if (onSelectSavedAddress) {
+      onSelectSavedAddress(address.id)
+    }
+    
+    const formattedAddress = `${address.line1}${address.line2 ? ', ' + address.line2 : ''}, ${address.city}, NY ${address.zip}`
+    setInputValue(formattedAddress)
+    setShowSavedAddresses(false)
+    setError(null)
+    
+    onAddressSelect({
+      line1: address.line1,
+      line2: address.line2,
+      city: address.city,
+      state: 'NY',
+      zip: address.zip,
+      formatted: formattedAddress
+    })
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+          Service Address
+        </label>
+        
+        {savedAddresses.length > 0 && !showSavedAddresses && (
+          <button
+            type="button"
+            onClick={() => setShowSavedAddresses(true)}
+            className="text-sm text-primary-600 hover:text-primary-700 mb-2"
+          >
+            Use saved address
+          </button>
+        )}
+
+        {showSavedAddresses ? (
+          <div className="space-y-2">
+            {savedAddresses.map((address) => (
+              <button
+                key={address.id}
+                type="button"
+                onClick={() => handleSavedAddressClick(address)}
+                className="w-full text-left p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="font-medium">{address.line1}</div>
+                {address.line2 && <div className="text-sm text-gray-600">{address.line2}</div>}
+                <div className="text-sm text-gray-600">
+                  {address.city}, NY {address.zip}
+                </div>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setShowSavedAddresses(false)}
+              className="text-sm text-gray-600 hover:text-gray-800"
+            >
+              ← Use different address
+            </button>
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            type="text"
+            id="address"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Enter your address"
+            className="input-field"
+            required
+          />
+        )}
+      </div>
+
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+          {error}
+        </div>
+      )}
+
+      <p className="text-sm text-gray-500">
+        Currently serving ZIP codes: {ALLOWED_ZIPS.join(', ')}
+      </p>
+    </div>
+  )
+}

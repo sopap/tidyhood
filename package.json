@@ -13,9 +13,10 @@
     "supabase:seed": "psql $DATABASE_URL -f supabase/seed/seed.sql"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.0.1",
+    "@stripe/stripe-js": "^2.4.0",
     "@supabase/ssr": "^0.0.10",
     "@supabase/supabase-js": "^2.39.1",
-    "@stripe/stripe-js": "^2.4.0",
     "next": "14.1.0",
     "pdfkit": "^0.14.0",
     "qrcode": "^1.5.3",
