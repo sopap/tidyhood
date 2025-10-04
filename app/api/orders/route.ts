@@ -135,21 +135,6 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check first order cap
-    const { data: orderCount } = await db
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-    
-    const isFirstOrder = (orderCount || 0) === 0
-    const firstOrderCap = parseInt(process.env.FIRST_ORDER_CAP_CENTS || '12000')
-    
-    if (isFirstOrder && pricing.total_cents > firstOrderCap) {
-      throw new ValidationError(
-        `First order limited to $${firstOrderCap / 100}. Please contact support for higher amounts.`
-      )
-    }
-    
     // Reserve capacity
     console.log('[POST /api/orders] Reserving capacity...', {
       partner_id: params.slot.partner_id,
