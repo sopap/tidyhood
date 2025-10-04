@@ -87,10 +87,32 @@ export default function BookCleaningPage() {
   }
 
   const nextStep = async () => {
+    // Validate required fields before proceeding
     if (step === 1) {
+      if (!formData.zip || formData.zip.length !== 5) {
+        alert('Please enter a valid 5-digit ZIP code')
+        return
+      }
       await calculatePrice()
-    } else if (step === 2 && formData.date) {
+    } else if (step === 2) {
+      if (!formData.date) {
+        alert('Please select a service date')
+        return
+      }
+      if (!formData.timeSlot) {
+        alert('Please select a time slot')
+        return
+      }
       await fetchAvailableSlots()
+    } else if (step === 3) {
+      if (!formData.address) {
+        alert('Please enter your address')
+        return
+      }
+      if (!formData.phone) {
+        alert('Please enter your phone number')
+        return
+      }
     }
     setStep(prev => Math.min(prev + 1, 4))
   }
