@@ -21,6 +21,8 @@ interface SavedBookingData {
   formData: {
     zip: string
     pounds: number
+    // bathrooms removed
+    // deep removed
     addons: string[]
     date: string
     addressLine1: string
@@ -38,7 +40,7 @@ interface SavedBookingData {
   step: number
 }
 
-// Multi-step booking form for laundry service
+// Multi-step booking form for cleaning service
 function BookingForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -48,6 +50,8 @@ function BookingForm() {
   const [formData, setFormData] = useState({
     zip: '',
     pounds: 15,
+    // bathrooms removed
+    // deep removed
     addons: [] as string[],
     date: '',
     addressLine1: '',
@@ -71,15 +75,17 @@ function BookingForm() {
     const shouldRestore = searchParams.get('restore') === 'true'
     if (shouldRestore) {
       try {
-        const savedData = sessionStorage.getItem('pending-laundry-order')
+        const savedData = sessionStorage.getItem('pending-cleaning-order')
         if (savedData) {
           const parsed: SavedBookingData = JSON.parse(savedData)
           setFormData(parsed.formData)
           setSelectedSlot(parsed.selectedSlot)
           setPricing(parsed.pricing)
           setStep(parsed.step)
-          sessionStorage.removeItem('pending-laundry-order')
-          router.replace('/book/laundry')
+          // Clear the saved data
+          sessionStorage.removeItem('pending-cleaning-order')
+          // Remove restore param from URL
+          router.replace('/book/cleaning')
         }
       } catch (err) {
         console.error('Failed to restore booking data:', err)
@@ -89,9 +95,18 @@ function BookingForm() {
 
   const addons = [
     { id: 'LND_RUSH_24HR', name: 'Rush Service (24hr)', price: 10 },
-    { id: 'LND_DELICATE', name: 'Delicate Care', price: 5 },
+    { id: 'LND_DELICATE', name: 'Delicate Care', price: 10 },
     { id: 'LND_EXTRA_SOFTENER', name: 'Extra Softener', price: 3 },
+    { id: 'LND_FOLDING', name: 'Professional Folding', price: 5 },
   ]
+
+  const basePrices: Record<number, number> = {
+    0: 89,  // Studio
+    1: 119, // 1BR
+    2: 149, // 2BR
+    3: 179, // 3BR
+    4: 219, // 4BR+
+  }
 
   const handleAddonToggle = (addonId: string) => {
     setFormData(prev => ({
@@ -109,9 +124,11 @@ function BookingForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          service: 'LAUNDRY',
+          service: 'CLEANING',
           zip: formData.zip,
           lbs: formData.pounds,
+          // bathrooms removed
+          // deep removed
           addons: formData.addons
         })
       })
@@ -136,22 +153,20 @@ function BookingForm() {
   }
 
   const nextStep = async () => {
+    // Validate required fields before proceeding
     if (step === 1) {
       if (!formData.zip || formData.zip.length !== 5) {
         alert('Please enter a valid 5-digit ZIP code')
-        return
-      }
-      if (formData.pounds < 15) {
-        alert('Minimum weight is 15 lbs')
         return
       }
       await calculatePrice()
       setStep(2)
     } else if (step === 2) {
       if (!formData.date) {
-        alert('Please select a pickup date')
+        alert('Please select a service date')
         return
       }
+      // Fetch slots when date is selected, if not already fetched
       if (availableSlots.length === 0) {
         await fetchAvailableSlots()
       }
@@ -181,7 +196,7 @@ function BookingForm() {
     try {
       setLoading(true)
       const response = await fetch(
-        `/api/slots?service=LAUNDRY&zip=${formData.zip}&date=${formData.date}`
+        `/api/slots?service=CLEANING&zip=${formData.zip}&date=${formData.date}`
       )
 
       if (!response.ok) {
@@ -199,26 +214,69 @@ function BookingForm() {
 
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1))
 
+  const saveBookingData = () => {
+    const bookingData: SavedBookingData = {
+      formData,
+      selectedSlot,
+      pricing,
+      step
+    }
+    sessionStorage.setItem('pending-cleaning-order', JSON.stringify(bookingData))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!selectedSlot) {
+      alert('Please select a time slot')
+      return
+    }
+
+    // Check if user is authenticated
+    if (!user) {
+      // Save booking data before redirecting to login
+      saveBookingData()
+      // Redirect to login with return URL
+      router.push('/login?returnTo=/book/cleaning&restore=true')
+      return
+    }
+    
     try {
       setLoading(true)
+      
+      // Generate idempotency key
+      const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
+      
+      // Format request body to match API schema
+      const requestBody = {
+        service_type: 'CLEANING',
+        slot: {
+          partner_id: selectedSlot.partner_id,
+          slot_start: selectedSlot.slot_start,
+          slot_end: selectedSlot.slot_end
+        },
+        address: {
+          line1: formData.addressLine1,
+          line2: formData.addressLine2 || undefined,
+          city: formData.city,
+          zip: formData.zip,
+          notes: formData.specialInstructions || undefined
+        },
+        details: {
+          lbs: formData.pounds,
+          // bathrooms removed
+          // deep removed
+          addons: formData.addons
+        }
+      }
+      
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service: 'LAUNDRY',
-          zip: formData.zip,
-          lbs: formData.pounds,
-          addons: formData.addons,
-          pickup_date: formData.date,
-          pickup_slot: formData.timeSlot,
-          address: formData.address,
-          phone: formData.phone,
-          special_instructions: formData.specialInstructions,
-          idempotency_key: `laundry-${Date.now()}-${Math.random()}`
-        })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey
+        },
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
@@ -228,6 +286,8 @@ function BookingForm() {
 
       const order = await response.json()
       alert(`Order created successfully! Order ID: ${order.id}`)
+      // Clear any saved booking data
+      sessionStorage.removeItem('pending-cleaning-order')
       // TODO: Redirect to payment or order confirmation page
       window.location.href = `/orders/${order.id}`
     } catch (err: any) {
@@ -289,7 +349,7 @@ function BookingForm() {
             {/* Step 1: Service Details */}
             {step === 1 && (
               <div className="bg-white rounded-lg shadow-md p-8">
-                <h2 className="text-3xl font-bold mb-6">Laundry Service Details</h2>
+                <h2 className="text-3xl font-bold mb-6">Cleaning Service Details</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -363,44 +423,96 @@ function BookingForm() {
             {/* Step 2: Schedule */}
             {step === 2 && (
               <div className="bg-white rounded-lg shadow-md p-8">
-                <h2 className="text-3xl font-bold mb-6">Select Pickup Time</h2>
+                <h2 className="text-3xl font-bold mb-6">Select Service Date & Time</h2>
                 
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pickup Date
+                      Cleaning Date
                     </label>
                     <input
                       type="date"
                       value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      onChange={async (e) => {
+                        setFormData({...formData, date: e.target.value})
+                        setSelectedSlot(null)
+                        // Fetch slots when date changes
+                        if (e.target.value) {
+                          setLoading(true)
+                          try {
+                            const response = await fetch(
+                              `/api/slots?service=CLEANING&zip=${formData.zip}&date=${e.target.value}`
+                            )
+                            if (response.ok) {
+                              const data = await response.json()
+                              setAvailableSlots(data.slots || [])
+                            }
+                          } catch (err) {
+                            console.error('Failed to fetch slots:', err)
+                          } finally {
+                            setLoading(false)
+                          }
+                        }
+                      }}
                       min={new Date().toISOString().split('T')[0]}
                       className="input-field"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Time Slot
-                    </label>
-                    <select
-                      value={formData.timeSlot}
-                      onChange={(e) => setFormData({...formData, timeSlot: e.target.value})}
-                      className="input-field"
-                      required
-                    >
-                      <option value="">Select a time slot</option>
-                      <option value="09:00-11:00">9:00 AM - 11:00 AM</option>
-                      <option value="11:00-13:00">11:00 AM - 1:00 PM</option>
-                      <option value="13:00-15:00">1:00 PM - 3:00 PM</option>
-                      <option value="15:00-17:00">3:00 PM - 5:00 PM</option>
-                      <option value="17:00-19:00">5:00 PM - 7:00 PM</option>
-                    </select>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Delivery will be scheduled 48 hours after pickup (or 24 hours for rush service)
-                    </p>
-                  </div>
+                  {formData.date && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Available Time Slots
+                      </label>
+                      {loading ? (
+                        <p className="text-gray-500">Loading available slots...</p>
+                      ) : availableSlots.length === 0 ? (
+                        <p className="text-red-600">No slots available for this date. Please select a different date.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {availableSlots.map((slot) => (
+                            <label
+                              key={`${slot.partner_id}-${slot.slot_start}`}
+                              className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                                selectedSlot?.slot_start === slot.slot_start ? 'border-primary-600 bg-primary-50' : ''
+                              }`}
+                            >
+                              <div className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="slot"
+                                  checked={selectedSlot?.slot_start === slot.slot_start}
+                                  onChange={() => setSelectedSlot(slot)}
+                                  className="mr-3"
+                                />
+                                <div>
+                                  <div className="font-medium">
+                                    {new Date(slot.slot_start).toLocaleTimeString('en-US', { 
+                                      hour: 'numeric', 
+                                      minute: '2-digit',
+                                      hour12: true 
+                                    })} - {new Date(slot.slot_end).toLocaleTimeString('en-US', { 
+                                      hour: 'numeric', 
+                                      minute: '2-digit',
+                                      hour12: true 
+                                    })}
+                                  </div>
+                                  <div className="text-sm text-gray-600">{slot.partner_name}</div>
+                                </div>
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                {slot.available_units} spots available
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      <p className="mt-2 text-sm text-gray-500">
+                        Pickup will be processed within 24-48 hours
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-8 flex justify-between">
@@ -410,7 +522,7 @@ function BookingForm() {
                   <button 
                     type="button" 
                     onClick={nextStep} 
-                    disabled={loading}
+                    disabled={loading || !selectedSlot}
                     className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Loading...' : 'Continue to Contact Info →'}
@@ -427,13 +539,40 @@ function BookingForm() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Pickup Address
+                      Street Address
                     </label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      placeholder="123 Main St, Apt 4B, Harlem, NY 10027"
-                      rows={3}
+                    <input
+                      type="text"
+                      value={formData.addressLine1}
+                      onChange={(e) => setFormData({...formData, addressLine1: e.target.value})}
+                      placeholder="123 Main St"
+                      className="input-field"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Apartment, Suite, etc. (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.addressLine2}
+                      onChange={(e) => setFormData({...formData, addressLine2: e.target.value})}
+                      placeholder="Apt 4B"
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      placeholder="New York"
                       className="input-field"
                       required
                     />
@@ -460,7 +599,7 @@ function BookingForm() {
                     <textarea
                       value={formData.specialInstructions}
                       onChange={(e) => setFormData({...formData, specialInstructions: e.target.value})}
-                      placeholder="e.g., Ring doorbell twice, Leave with doorman, etc."
+                      placeholder="e.g., Focus on kitchen and bathroom, Use specific cleaning products, Pet-friendly products only, etc."
                       rows={3}
                       className="input-field"
                     />
@@ -489,12 +628,8 @@ function BookingForm() {
                     <h3 className="font-bold text-lg mb-3">Service Details</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>Laundry ({formData.pounds} lbs × $1.75/lb)</span>
+                        <span>Laundry Service ({formData.pounds} lbs)</span>
                         <span>${(formData.pounds * 1.75).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Delivery Fee</span>
-                        <span>$5.99</span>
                       </div>
                       {formData.addons.map(addonId => {
                         const addon = addons.find(a => a.id === addonId)
@@ -510,12 +645,33 @@ function BookingForm() {
 
                   <div className="border-b pb-4">
                     <h3 className="font-bold text-lg mb-3">Schedule</h3>
-                    <p className="text-sm">Pickup: {formData.date} at {formData.timeSlot}</p>
+                    <p className="text-sm">
+                      Service Date: {formData.date} at {selectedSlot ? (
+                        <>
+                          {new Date(selectedSlot.slot_start).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })} - {new Date(selectedSlot.slot_end).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
+                        </>
+                      ) : 'No slot selected'}
+                    </p>
+                    {selectedSlot && (
+                      <p className="text-sm text-gray-600">Partner: {selectedSlot.partner_name}</p>
+                    )}
                   </div>
 
                   <div className="border-b pb-4">
                     <h3 className="font-bold text-lg mb-3">Contact</h3>
-                    <p className="text-sm">{formData.address}</p>
+                    <p className="text-sm">
+                      {formData.addressLine1}
+                      {formData.addressLine2 && `, ${formData.addressLine2}`}
+                    </p>
+                    <p className="text-sm">{formData.city}, NY {formData.zip}</p>
                     <p className="text-sm">{formData.phone}</p>
                   </div>
 
@@ -526,8 +682,8 @@ function BookingForm() {
                       <span>${pricing.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
-                      <span>Tax</span>
-                      <span>${pricing.tax.toFixed(2)} <span className="text-xs text-gray-500">(tax-exempt)</span></span>
+                      <span>Tax (8.875%)</span>
+                      <span>${pricing.tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xl font-bold border-t pt-2 mt-2">
                       <span>Total</span>
@@ -554,5 +710,20 @@ function BookingForm() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function BookCleaningPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading booking form...</p>
+        </div>
+      </div>
+    }>
+      <BookingForm />
+    </Suspense>
   )
 }
