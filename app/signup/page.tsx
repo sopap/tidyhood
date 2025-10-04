@@ -40,17 +40,29 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // TODO: Implement Supabase auth signup
-      console.log('Signup attempt:', formData.email)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // For now, just redirect to services page
-      alert('Account created successfully! (Supabase auth integration pending)')
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName,
+          phone: formData.phone,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create account')
+      }
+
+      // Success - redirect to services page
       router.push('/services')
     } catch (err) {
-      setError('Failed to create account. Please try again.')
+      setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.')
     } finally {
       setLoading(false)
     }

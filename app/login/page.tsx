@@ -19,17 +19,27 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // TODO: Implement Supabase auth
-      console.log('Login attempt:', formData.email)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // For now, just redirect to orders page
-      alert('Login successful! (Supabase auth integration pending)')
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Invalid email or password')
+      }
+
+      // Success - redirect to orders page
       router.push('/orders')
     } catch (err) {
-      setError('Invalid email or password')
+      setError(err instanceof Error ? err.message : 'Invalid email or password')
     } finally {
       setLoading(false)
     }
