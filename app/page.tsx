@@ -4,6 +4,66 @@ import { useState } from 'react'
 
 const ALLOWED_ZIPS = ['10026', '10027', '10030']
 
+// Structured data for SEO
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Tidyhood",
+  "description": "Professional laundry and home cleaning services in Harlem",
+  "url": process.env.NEXT_PUBLIC_SITE_URL || "https://tidyhood.vercel.app",
+  "telephone": "+1-XXX-XXX-XXXX",
+  "email": "support@tidyhood.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "New York",
+    "addressRegion": "NY",
+    "addressCountry": "US",
+    "postalCode": "10027"
+  },
+  "areaServed": [
+    {
+      "@type": "City",
+      "name": "Harlem",
+      "containedInPlace": {
+        "@type": "City",
+        "name": "New York"
+      }
+    }
+  ],
+  "priceRange": "$$$",
+  "serviceArea": {
+    "@type": "GeoCircle",
+    "geoMidpoint": {
+      "@type": "GeoCoordinates",
+      "latitude": 40.8116,
+      "longitude": -73.9465
+    },
+    "geoRadius": "3000"
+  },
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Laundry and Cleaning Services",
+    "itemListElement": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Wash & Fold Laundry Service",
+          "description": "Professional laundry service with pickup and delivery"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Home Cleaning Service",
+          "description": "Professional home cleaning for apartments and houses"
+        }
+      }
+    ]
+  }
+}
+
 export default function Home() {
   const [zip, setZip] = useState('')
   const [showWaitlist, setShowWaitlist] = useState(false)
@@ -30,8 +90,15 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-      {/* Header */}
+    <>
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      
+      <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
+        {/* Header */}
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-primary-900">Tidyhood</h1>
@@ -209,6 +276,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   )
 }
