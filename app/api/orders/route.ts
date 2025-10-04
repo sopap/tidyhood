@@ -8,6 +8,43 @@ import { generateLabelCode } from '@/lib/ids'
 import { sendOrderCreatedSMS } from '@/lib/sms'
 import { ValidationError, ConflictError, handleApiError } from '@/lib/errors'
 
+// GET /api/orders - Fetch user's orders
+export async function GET(request: NextRequest) {
+  try {
+    const user = await requireAuth()
+    const db = getServiceClient()
+    
+    // Get query parameters
+    const searchParams = request.nextUrl.searchParams
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10
+    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+    
+    // Fetch orders for the user
+    const { data: orders, error } = await db
+      .from('orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    
+    if (error) {
+      console.error('Error fetching orders:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch orders' },
+        { status: 500 }
+      )
+    }
+    
+    return NextResponse.json({ orders: orders || [] })
+  } catch (error) {
+    console.error('Orders GET error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 const createOrderSchema = z.object({
   service_type: z.enum(['LAUNDRY', 'CLEANING']),
   slot: z.object({

@@ -1,12 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Header } from '@/components/Header'
-import { AddressAutocomplete } from '@/components/AddressAutocomplete'
-import { ServiceChips } from '@/components/ServiceChips'
 import { useAuth } from '@/lib/auth-context'
-import { usePreferences } from '@/lib/use-preferences'
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -35,120 +32,36 @@ const structuredData = {
   ]
 }
 
-interface Address {
-  line1: string
-  line2?: string
-  city: string
-  state: string
-  zip: string
-  formatted: string
-}
-
 export default function Home() {
-  const router = useRouter()
   const { user } = useAuth()
-  const { preferences, loading: prefsLoading } = usePreferences()
-  
-  const [selectedService, setSelectedService] = useState<'LAUNDRY' | 'CLEANING' | 'BOTH' | null>(null)
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null)
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
-  const [showWaitlist, setShowWaitlist] = useState(false)
-  const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [lastOrder, setLastOrder] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Load user's saved addresses and preferences
+  // Fetch user's last order for "Book Again" prompt
   useEffect(() => {
-    const loadUserData = async () => {
-      if (!user) return
+    const fetchLastOrder = async () => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
       try {
-        // Fetch saved addresses
-        const response = await fetch('/api/addresses')
+        const response = await fetch('/api/orders?limit=1')
         if (response.ok) {
           const data = await response.json()
-          setSavedAddresses(data.addresses || [])
-          
-          // Auto-select last used address
-          const lastAddress = data.addresses?.find((a: any) => 
-            a.id === preferences.last_address_id
-          ) || data.addresses?.[0]
-          
-          if (lastAddress) {
-            setSelectedAddress({
-              line1: lastAddress.line1,
-              line2: lastAddress.line2,
-              city: lastAddress.city,
-              state: 'NY',
-              zip: lastAddress.zip,
-              formatted: `${lastAddress.line1}${lastAddress.line2 ? ', ' + lastAddress.line2 : ''}, ${lastAddress.city}, NY ${lastAddress.zip}`
-            })
+          if (data.orders && data.orders.length > 0) {
+            setLastOrder(data.orders[0])
           }
         }
       } catch (err) {
-        console.error('Failed to load user data:', err)
+        console.error('Failed to fetch last order:', err)
+      } finally {
+        setLoading(false)
       }
     }
 
-    if (user && !prefsLoading) {
-      loadUserData()
-      // Pre-select last service
-      if (preferences.last_service) {
-        setSelectedService(preferences.last_service)
-      }
-    }
-  }, [user, preferences, prefsLoading])
-
-  const handleServiceChange = (service: 'LAUNDRY' | 'CLEANING') => {
-    if (selectedService === service) {
-      // Deselect if clicking same service
-      setSelectedService(null)
-    } else {
-      setSelectedService(service)
-    }
-  }
-
-  const handleAddressSelect = (address: Address) => {
-    setSelectedAddress(address)
-  }
-
-  const handleGetStarted = () => {
-    if (!selectedAddress) {
-      alert('Please enter your address')
-      return
-    }
-
-    if (!selectedService) {
-      alert('Please select a service')
-      return
-    }
-
-    // Store selection in sessionStorage for booking page
-    sessionStorage.setItem('booking-data', JSON.stringify({
-      service: selectedService,
-      address: selectedAddress
-    }))
-
-    // Navigate to unified booking page
-    router.push('/book')
-  }
-
-  const handleWaitlistSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: Store waitlist email
-    alert('Thanks! We\'ll notify you when we expand to your area.')
-    setShowWaitlist(false)
-    setWaitlistEmail('')
-  }
-
-  // Dynamic CTA text
-  const getCtaText = () => {
-    if (!selectedService) return 'Get Started'
-    if (selectedService === 'LAUNDRY') return 'Schedule Pickup →'
-    if (selectedService === 'CLEANING') return 'Schedule Cleaning →'
-    if (selectedService === 'BOTH') return 'Schedule Services →'
-    return 'Get Started'
-  }
-
-  const isCtaEnabled = selectedAddress && selectedService
+    fetchLastOrder()
+  }, [user])
 
   return (
     <>
@@ -163,114 +76,149 @@ export default function Home() {
 
         {/* Hero Section */}
         <main className="container mx-auto px-4 py-12 md:py-16">
-          {!showWaitlist ? (
-            <div className="max-w-2xl mx-auto">
-              {/* Hero Text */}
-              <div className="text-center mb-10">
-                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                  Harlem&apos;s Premier Laundry & Cleaning
-                </h1>
-                <p className="text-lg text-gray-600 mb-2">
-                  Pickup as soon as today • Harlem-first • Insured partners
-                </p>
-                {user && (
-                  <p className="text-sm text-primary-600 font-medium">
-                    Welcome back! Your usual service is preselected
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Harlem&apos;s Premier Laundry & Cleaning
+            </h1>
+            <p className="text-xl text-gray-600 mb-4">
+              Professional service with same-day pickup available
+            </p>
+            <p className="text-sm text-gray-500">
+              Serving ZIP codes: 10026, 10027, 10030
+            </p>
+          </div>
+
+          {/* Returning User "Book Again" Prompt */}
+          {user && lastOrder && !loading && (
+            <div className="max-w-2xl mx-auto mb-12 bg-primary-50 border-2 border-primary-200 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">👋</div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg mb-1">Welcome back!</h3>
+                  <p className="text-sm text-gray-700 mb-3">
+                    Last order: {lastOrder.address_snapshot?.line1}, {lastOrder.address_snapshot?.city} {lastOrder.address_snapshot?.zip}
                   </p>
-                )}
-              </div>
-
-              {/* Booking Form */}
-              <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-6">
-                {/* Address Input */}
-                <AddressAutocomplete
-                  onAddressSelect={handleAddressSelect}
-                  savedAddresses={savedAddresses}
-                  defaultValue={selectedAddress?.formatted}
-                />
-
-                {/* Service Selection */}
-                <ServiceChips
-                  selected={selectedService}
-                  onChange={handleServiceChange}
-                  allowMultiple={false}
-                />
-
-                {/* Live Microcopy */}
-                {selectedService && (
-                  <div className="text-sm text-gray-600 text-center bg-gray-50 rounded-lg p-3">
-                    {selectedService === 'LAUNDRY' && (
-                      <>🧺 Same-day pickup available. You&apos;ll get text updates.</>
-                    )}
-                    {selectedService === 'CLEANING' && (
-                      <>✨ Professional cleaners. 100% satisfaction guarantee.</>
-                    )}
+                  <div className="flex gap-3">
+                    <Link
+                      href="/book/laundry"
+                      className="btn-primary text-sm py-2 px-4"
+                    >
+                      Book Laundry Again
+                    </Link>
+                    <Link
+                      href="/book/cleaning"
+                      className="btn-secondary text-sm py-2 px-4"
+                    >
+                      Book Cleaning
+                    </Link>
                   </div>
-                )}
-
-                {/* Dynamic CTA Button */}
-                <button
-                  onClick={handleGetStarted}
-                  disabled={!isCtaEnabled}
-                  className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
-                    isCtaEnabled
-                      ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-md hover:shadow-lg'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {getCtaText()}
-                </button>
-
-                {!selectedAddress && (
-                  <p className="text-xs text-gray-500 text-center">
-                    Enter your address and select a service to continue
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Waitlist Form */
-            <div className="max-w-md mx-auto card">
-              <h3 className="text-2xl font-bold mb-4">
-                We&apos;re not in your area yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Join our waitlist and we&apos;ll notify you when we expand to your area.
-              </p>
-              <form onSubmit={handleWaitlistSubmit} className="space-y-4">
-                <input
-                  type="email"
-                  value={waitlistEmail}
-                  onChange={(e) => setWaitlistEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="input-field"
-                  required
-                />
-                <div className="flex gap-2">
-                  <button type="submit" className="btn-primary flex-1">
-                    Join Waitlist
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowWaitlist(false)}
-                    className="btn-secondary"
-                  >
-                    Back
-                  </button>
                 </div>
-              </form>
+              </div>
             </div>
           )}
 
+          {/* Main Service CTAs */}
+          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 mb-20">
+            {/* Laundry Service */}
+            <Link href="/book/laundry" className="group">
+              <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent group-hover:border-primary-300">
+                <div className="text-6xl mb-6 text-center">🧺</div>
+                <h2 className="text-3xl font-bold mb-4 text-center">Laundry Service</h2>
+                <p className="text-gray-600 mb-6 text-center">
+                  Professional wash & fold with 48-hour turnaround
+                </p>
+                
+                <div className="bg-primary-50 rounded-lg p-4 mb-6 text-center">
+                  <div className="text-3xl font-bold text-primary-600">$1.75<span className="text-lg">/lb</span></div>
+                  <div className="text-sm text-gray-600">15 lb minimum ($26.25)</div>
+                </div>
+
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Free pickup & delivery</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Eco-friendly detergents</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>QR-coded bags for tracking</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Rush 24hr service available</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Tax-exempt service</span>
+                  </li>
+                </ul>
+
+                <div className="text-center">
+                  <span className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold group-hover:bg-primary-700 transition-colors">
+                    Book Laundry →
+                  </span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Cleaning Service */}
+            <Link href="/book/cleaning" className="group">
+              <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent group-hover:border-primary-300">
+                <div className="text-6xl mb-6 text-center">✨</div>
+                <h2 className="text-3xl font-bold mb-4 text-center">Home Cleaning</h2>
+                <p className="text-gray-600 mb-6 text-center">
+                  Deep or standard cleaning by background-checked pros
+                </p>
+                
+                <div className="bg-primary-50 rounded-lg p-4 mb-6 text-center">
+                  <div className="text-3xl font-bold text-primary-600">$89<span className="text-lg">+</span></div>
+                  <div className="text-sm text-gray-600">Studio from $89, 1BR $119, 2BR $149</div>
+                </div>
+
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Background-checked professionals</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Eco-friendly cleaning products</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Photo documentation</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>Flexible scheduling</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span>100% satisfaction guarantee</span>
+                  </li>
+                </ul>
+
+                <div className="text-center">
+                  <span className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold group-hover:bg-primary-700 transition-colors">
+                    Book Cleaning →
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </div>
+
           {/* How It Works */}
-          <div className="max-w-5xl mx-auto mt-20">
+          <div className="max-w-5xl mx-auto mt-24">
             <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
             <div className="grid md:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
                   1
                 </div>
-                <h3 className="font-bold mb-2">Select & Schedule</h3>
+                <h3 className="font-bold mb-2">Book Online</h3>
                 <p className="text-gray-600 text-sm">
                   Choose your service, pick a time slot, and get instant pricing
                 </p>
@@ -288,42 +236,11 @@ export default function Home() {
                 <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
                   3
                 </div>
-                <h3 className="font-bold mb-2">Relax & Enjoy</h3>
+                <h3 className="font-bold mb-2">Delivered Fresh</h3>
                 <p className="text-gray-600 text-sm">
-                  Get your clean items delivered or come home to a spotless space
+                  Get your items delivered or come home to a spotless space
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* Services Overview */}
-          <div className="max-w-5xl mx-auto mt-20 grid md:grid-cols-2 gap-8">
-            <div className="card hover:shadow-lg transition-shadow">
-              <div className="text-4xl mb-4">🧺</div>
-              <h3 className="text-2xl font-bold mb-2">Laundry Service</h3>
-              <p className="text-gray-600 mb-4">
-                Professional wash & fold starting at $1.75/lb. 48-hour turnaround.
-              </p>
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li>✓ Free pickup & delivery</li>
-                <li>✓ Eco-friendly detergents</li>
-                <li>✓ QR-coded bags for tracking</li>
-                <li>✓ Rush service available</li>
-              </ul>
-            </div>
-
-            <div className="card hover:shadow-lg transition-shadow">
-              <div className="text-4xl mb-4">✨</div>
-              <h3 className="text-2xl font-bold mb-2">Home Cleaning</h3>
-              <p className="text-gray-600 mb-4">
-                Deep or standard cleaning from $89. Professional cleaners, flexible scheduling.
-              </p>
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li>✓ Background-checked professionals</li>
-                <li>✓ Eco-friendly products</li>
-                <li>✓ Photo documentation</li>
-                <li>✓ 100% satisfaction guarantee</li>
-              </ul>
             </div>
           </div>
         </main>
@@ -335,12 +252,12 @@ export default function Home() {
               © 2025 Tidyhood. Supporting Harlem businesses.
             </p>
             <div className="mt-4 space-x-4">
-              <a href="/terms" className="text-gray-400 hover:text-white">
+              <Link href="/terms" className="text-gray-400 hover:text-white">
                 Terms
-              </a>
-              <a href="/privacy" className="text-gray-400 hover:text-white">
+              </Link>
+              <Link href="/privacy" className="text-gray-400 hover:text-white">
                 Privacy
-              </a>
+              </Link>
               <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white">
                 Contact
               </a>
