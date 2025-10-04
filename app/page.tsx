@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Header } from '@/components/Header'
 
 const ALLOWED_ZIPS = ['10026', '10027', '10030']
 
@@ -98,20 +99,7 @@ export default function Home() {
       />
       
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-        {/* Header */}
-      <header className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-primary-900">Tidyhood</h1>
-          <nav className="space-x-4">
-            <a href="/login" className="text-gray-600 hover:text-primary-600">
-              Login
-            </a>
-            <a href="/signup" className="btn-primary">
-              Sign Up
-            </a>
-          </nav>
-        </div>
-      </header>
+        <Header />
 
       {/* Hero Section */}
       <main className="container mx-auto px-4 py-16">

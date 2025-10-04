@@ -1,0 +1,61 @@
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+
+export function Header() {
+  const { user, signOut } = useAuth()
+  const router = useRouter()
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    // Smart navigation: logged in users go to orders, others to home
+    router.push(user ? '/orders' : '/')
+  }
+
+  const handleLogout = async () => {
+    await signOut()
+    router.push('/')
+  }
+
+  return (
+    <header className="container mx-auto px-4 py-6">
+      <div className="flex items-center justify-between">
+        <Link 
+          href={user ? '/orders' : '/'}
+          onClick={handleLogoClick}
+          className="text-3xl font-bold text-primary-900"
+        >
+          Tidyhood
+        </Link>
+        <nav className="space-x-4">
+          {user ? (
+            // Logged in navigation
+            <>
+              <Link href="/orders" className="text-gray-600 hover:text-primary-600">
+                My Orders
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-primary-600"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            // Logged out navigation
+            <>
+              <Link href="/login" className="text-gray-600 hover:text-primary-600">
+                Login
+              </Link>
+              <Link href="/signup" className="btn-primary">
+                Sign Up
+              </Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  )
+}

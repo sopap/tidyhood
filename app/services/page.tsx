@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Header } from '@/components/Header'
 
 // This would normally be in a separate metadata export, but since this is a client component,
 // we'll need to handle SEO differently or make this a server component with client components inside
@@ -74,22 +75,7 @@ export default function ServicesPage() {
       />
 
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-        {/* Header */}
-        <header className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-3xl font-bold text-primary-900">
-              Tidyhood
-            </Link>
-            <nav className="space-x-4">
-              <Link href="/login" className="text-gray-600 hover:text-primary-600">
-                Login
-              </Link>
-              <Link href="/signup" className="btn-primary">
-                Sign Up
-              </Link>
-            </nav>
-          </div>
-        </header>
+        <Header />
 
         {/* Main Content */}
         <main className="container mx-auto px-4 py-16">
