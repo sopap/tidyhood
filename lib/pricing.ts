@@ -57,7 +57,7 @@ async function getPricingRules(serviceType: 'LAUNDRY' | 'CLEANING', zip: string)
   // Filter by geozone (if specified)
   return rules.filter(rule => {
     if (!rule.geozone) return true
-    const zones = rule.geozone.split(',').map(z => z.trim())
+    const zones = rule.geozone.split(',').map((z: string) => z.trim())
     return zones.includes(zip)
   })
 }
