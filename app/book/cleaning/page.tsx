@@ -3,6 +3,17 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
+// Type for available time slots from API
+interface TimeSlot {
+  partner_id: string
+  partner_name: string
+  slot_start: string
+  slot_end: string
+  available_units: number
+  max_units: number
+  service_type: string
+}
+
 // Multi-step booking form for cleaning service
 export default function BookCleaningPage() {
   const [step, setStep] = useState(1)
@@ -13,8 +24,9 @@ export default function BookCleaningPage() {
     deep: false,
     addons: [] as string[],
     date: '',
-    timeSlot: '',
-    address: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
     phone: '',
     specialInstructions: ''
   })
@@ -25,7 +37,8 @@ export default function BookCleaningPage() {
     total: 0
   })
   const [loading, setLoading] = useState(false)
-  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
 
   const addons = [
     { id: 'CLN_FRIDGE_INSIDE', name: 'Refrigerator Interior', price: 25 },
@@ -94,27 +107,36 @@ export default function BookCleaningPage() {
         return
       }
       await calculatePrice()
+      setStep(2)
     } else if (step === 2) {
       if (!formData.date) {
         alert('Please select a service date')
         return
       }
-      if (!formData.timeSlot) {
+      // Fetch slots when date is selected, if not already fetched
+      if (availableSlots.length === 0) {
+        await fetchAvailableSlots()
+      }
+      if (!selectedSlot) {
         alert('Please select a time slot')
         return
       }
-      await fetchAvailableSlots()
+      setStep(3)
     } else if (step === 3) {
-      if (!formData.address) {
-        alert('Please enter your address')
+      if (!formData.addressLine1) {
+        alert('Please enter your street address')
+        return
+      }
+      if (!formData.city) {
+        alert('Please enter your city')
         return
       }
       if (!formData.phone) {
         alert('Please enter your phone number')
         return
       }
+      setStep(4)
     }
-    setStep(prev => Math.min(prev + 1, 4))
   }
 
   const fetchAvailableSlots = async () => {
@@ -142,25 +164,47 @@ export default function BookCleaningPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!selectedSlot) {
+      alert('Please select a time slot')
+      return
+    }
+    
     try {
       setLoading(true)
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service: 'CLEANING',
+      
+      // Generate idempotency key
+      const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
+      
+      // Format request body to match API schema
+      const requestBody = {
+        service_type: 'CLEANING',
+        slot: {
+          partner_id: selectedSlot.partner_id,
+          slot_start: selectedSlot.slot_start,
+          slot_end: selectedSlot.slot_end
+        },
+        address: {
+          line1: formData.addressLine1,
+          line2: formData.addressLine2 || undefined,
+          city: formData.city,
           zip: formData.zip,
+          notes: formData.specialInstructions || undefined
+        },
+        details: {
           bedrooms: formData.bedrooms,
           bathrooms: formData.bathrooms,
           deep: formData.deep,
-          addons: formData.addons,
-          pickup_date: formData.date,
-          pickup_slot: formData.timeSlot,
-          address: formData.address,
-          phone: formData.phone,
-          special_instructions: formData.specialInstructions,
-          idempotency_key: `cleaning-${Date.now()}-${Math.random()}`
-        })
+          addons: formData.addons
+        }
+      }
+      
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey
+        },
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
@@ -339,7 +383,7 @@ export default function BookCleaningPage() {
             {/* Step 2: Schedule */}
             {step === 2 && (
               <div className="bg-white rounded-lg shadow-md p-8">
-                <h2 className="text-3xl font-bold mb-6">Select Service Date</h2>
+                <h2 className="text-3xl font-bold mb-6">Select Service Date & Time</h2>
                 
                 <div className="space-y-6">
                   <div>
@@ -349,34 +393,86 @@ export default function BookCleaningPage() {
                     <input
                       type="date"
                       value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      onChange={async (e) => {
+                        setFormData({...formData, date: e.target.value})
+                        setSelectedSlot(null)
+                        // Fetch slots when date changes
+                        if (e.target.value) {
+                          setLoading(true)
+                          try {
+                            const response = await fetch(
+                              `/api/slots?service=CLEANING&zip=${formData.zip}&date=${e.target.value}`
+                            )
+                            if (response.ok) {
+                              const data = await response.json()
+                              setAvailableSlots(data.slots || [])
+                            }
+                          } catch (err) {
+                            console.error('Failed to fetch slots:', err)
+                          } finally {
+                            setLoading(false)
+                          }
+                        }
+                      }}
                       min={new Date().toISOString().split('T')[0]}
                       className="input-field"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Time Slot
-                    </label>
-                    <select
-                      value={formData.timeSlot}
-                      onChange={(e) => setFormData({...formData, timeSlot: e.target.value})}
-                      className="input-field"
-                      required
-                    >
-                      <option value="">Select a time slot</option>
-                      <option value="09:00-11:00">9:00 AM - 11:00 AM</option>
-                      <option value="11:00-13:00">11:00 AM - 1:00 PM</option>
-                      <option value="13:00-15:00">1:00 PM - 3:00 PM</option>
-                      <option value="15:00-17:00">3:00 PM - 5:00 PM</option>
-                      <option value="17:00-19:00">5:00 PM - 7:00 PM</option>
-                    </select>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Estimated duration: {formData.deep ? '4-6 hours' : '2-4 hours'} depending on unit size
-                    </p>
-                  </div>
+                  {formData.date && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Available Time Slots
+                      </label>
+                      {loading ? (
+                        <p className="text-gray-500">Loading available slots...</p>
+                      ) : availableSlots.length === 0 ? (
+                        <p className="text-red-600">No slots available for this date. Please select a different date.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {availableSlots.map((slot) => (
+                            <label
+                              key={`${slot.partner_id}-${slot.slot_start}`}
+                              className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                                selectedSlot?.slot_start === slot.slot_start ? 'border-primary-600 bg-primary-50' : ''
+                              }`}
+                            >
+                              <div className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="slot"
+                                  checked={selectedSlot?.slot_start === slot.slot_start}
+                                  onChange={() => setSelectedSlot(slot)}
+                                  className="mr-3"
+                                />
+                                <div>
+                                  <div className="font-medium">
+                                    {new Date(slot.slot_start).toLocaleTimeString('en-US', { 
+                                      hour: 'numeric', 
+                                      minute: '2-digit',
+                                      hour12: true 
+                                    })} - {new Date(slot.slot_end).toLocaleTimeString('en-US', { 
+                                      hour: 'numeric', 
+                                      minute: '2-digit',
+                                      hour12: true 
+                                    })}
+                                  </div>
+                                  <div className="text-sm text-gray-600">{slot.partner_name}</div>
+                                </div>
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                {slot.available_units} spots available
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      <p className="mt-2 text-sm text-gray-500">
+                        Estimated duration: {formData.deep ? '4-6 hours' : '2-4 hours'} depending on unit size
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-8 flex justify-between">
@@ -386,7 +482,7 @@ export default function BookCleaningPage() {
                   <button 
                     type="button" 
                     onClick={nextStep} 
-                    disabled={loading}
+                    disabled={loading || !selectedSlot}
                     className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Loading...' : 'Continue to Contact Info →'}
@@ -403,13 +499,40 @@ export default function BookCleaningPage() {
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Service Address
+                      Street Address
                     </label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      placeholder="123 Main St, Apt 4B, Harlem, NY 10027"
-                      rows={3}
+                    <input
+                      type="text"
+                      value={formData.addressLine1}
+                      onChange={(e) => setFormData({...formData, addressLine1: e.target.value})}
+                      placeholder="123 Main St"
+                      className="input-field"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Apartment, Suite, etc. (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.addressLine2}
+                      onChange={(e) => setFormData({...formData, addressLine2: e.target.value})}
+                      placeholder="Apt 4B"
+                      className="input-field"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      placeholder="New York"
                       className="input-field"
                       required
                     />
@@ -485,12 +608,33 @@ export default function BookCleaningPage() {
 
                   <div className="border-b pb-4">
                     <h3 className="font-bold text-lg mb-3">Schedule</h3>
-                    <p className="text-sm">Service Date: {formData.date} at {formData.timeSlot}</p>
+                    <p className="text-sm">
+                      Service Date: {formData.date} at {selectedSlot ? (
+                        <>
+                          {new Date(selectedSlot.slot_start).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })} - {new Date(selectedSlot.slot_end).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
+                        </>
+                      ) : 'No slot selected'}
+                    </p>
+                    {selectedSlot && (
+                      <p className="text-sm text-gray-600">Partner: {selectedSlot.partner_name}</p>
+                    )}
                   </div>
 
                   <div className="border-b pb-4">
                     <h3 className="font-bold text-lg mb-3">Contact</h3>
-                    <p className="text-sm">{formData.address}</p>
+                    <p className="text-sm">
+                      {formData.addressLine1}
+                      {formData.addressLine2 && `, ${formData.addressLine2}`}
+                    </p>
+                    <p className="text-sm">{formData.city}, NY {formData.zip}</p>
                     <p className="text-sm">{formData.phone}</p>
                   </div>
 
