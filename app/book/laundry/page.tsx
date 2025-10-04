@@ -1,18 +1,58 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+
+// Type for available time slots from API
+interface TimeSlot {
+  partner_id: string
+  partner_name: string
+  slot_start: string
+  slot_end: string
+  available_units: number
+  max_units: number
+  service_type: string
+}
+
+// Type for saved booking data
+interface SavedBookingData {
+  formData: {
+    zip: string
+    pounds: number
+    addons: string[]
+    date: string
+    addressLine1: string
+    addressLine2: string
+    city: string
+    phone: string
+    specialInstructions: string
+  }
+  selectedSlot: TimeSlot | null
+  pricing: {
+    subtotal: number
+    tax: number
+    total: number
+  }
+  step: number
+}
 
 // Multi-step booking form for laundry service
-export default function BookLaundryPage() {
+function BookingForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user } = useAuth()
+  
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     zip: '',
     pounds: 15,
     addons: [] as string[],
     date: '',
-    timeSlot: '',
-    address: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
     phone: '',
     specialInstructions: ''
   })
@@ -23,7 +63,29 @@ export default function BookLaundryPage() {
     total: 0
   })
   const [loading, setLoading] = useState(false)
-  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+
+  // Restore booking data from sessionStorage if returning from login
+  useEffect(() => {
+    const shouldRestore = searchParams.get('restore') === 'true'
+    if (shouldRestore) {
+      try {
+        const savedData = sessionStorage.getItem('pending-laundry-order')
+        if (savedData) {
+          const parsed: SavedBookingData = JSON.parse(savedData)
+          setFormData(parsed.formData)
+          setSelectedSlot(parsed.selectedSlot)
+          setPricing(parsed.pricing)
+          setStep(parsed.step)
+          sessionStorage.removeItem('pending-laundry-order')
+          router.replace('/book/laundry')
+        }
+      } catch (err) {
+        console.error('Failed to restore booking data:', err)
+      }
+    }
+  }, [searchParams, router])
 
   const addons = [
     { id: 'LND_RUSH_24HR', name: 'Rush Service (24hr)', price: 10 },
@@ -74,7 +136,6 @@ export default function BookLaundryPage() {
   }
 
   const nextStep = async () => {
-    // Validate required fields before proceeding
     if (step === 1) {
       if (!formData.zip || formData.zip.length !== 5) {
         alert('Please enter a valid 5-digit ZIP code')
@@ -85,27 +146,35 @@ export default function BookLaundryPage() {
         return
       }
       await calculatePrice()
+      setStep(2)
     } else if (step === 2) {
       if (!formData.date) {
         alert('Please select a pickup date')
         return
       }
-      if (!formData.timeSlot) {
+      if (availableSlots.length === 0) {
+        await fetchAvailableSlots()
+      }
+      if (!selectedSlot) {
         alert('Please select a time slot')
         return
       }
-      await fetchAvailableSlots()
+      setStep(3)
     } else if (step === 3) {
-      if (!formData.address) {
-        alert('Please enter your address')
+      if (!formData.addressLine1) {
+        alert('Please enter your street address')
+        return
+      }
+      if (!formData.city) {
+        alert('Please enter your city')
         return
       }
       if (!formData.phone) {
         alert('Please enter your phone number')
         return
       }
+      setStep(4)
     }
-    setStep(prev => Math.min(prev + 1, 4))
   }
 
   const fetchAvailableSlots = async () => {
