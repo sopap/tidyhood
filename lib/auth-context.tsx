@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
-import { supabase } from './db'
+import { supabaseClient } from './supabase-client'
 
 interface AuthContextType {
   user: User | null
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabaseClient.auth.getUser()
       setUser(user)
     } catch (error) {
       console.error('Error fetching user:', error)
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser().finally(() => setLoading(false))
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
         setLoading(false)
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      await supabase.auth.signOut()
+      await supabaseClient.auth.signOut()
       setUser(null)
     } catch (error) {
       console.error('Error signing out:', error)
