@@ -33,28 +33,11 @@ function PaymentForm({ orderId, amount, onSuccess, onError }: PaymentFormProps) 
     setProcessing(true)
 
     try {
-      // Call backend to create PaymentIntent
-      const response = await fetch(`/api/orders/${orderId}/pay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': `pay-${orderId}-${Date.now()}`
-        }
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Payment failed')
-      }
-
-      const { client_secret } = await response.json()
-
-      // Confirm payment with Stripe
+      // Confirm payment with Stripe (client secret already obtained when modal opened)
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
-        clientSecret: client_secret,
         confirmParams: {
-          return_url: `${window.location.origin}/orders/${orderId}/success`
+          return_url: `${window.location.origin}/orders/${orderId}`
         },
         redirect: 'if_required'
       })
