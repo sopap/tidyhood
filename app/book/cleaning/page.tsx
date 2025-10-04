@@ -24,6 +24,8 @@ export default function BookCleaningPage() {
     tax: 0,
     total: 0
   })
+  const [loading, setLoading] = useState(false)
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
 
   const addons = [
     { id: 'CLN_FRIDGE_INSIDE', name: 'Refrigerator Interior', price: 25 },
@@ -49,34 +51,111 @@ export default function BookCleaningPage() {
     }))
   }
 
-  const calculatePrice = () => {
-    const basePrice = basePrices[Math.min(formData.bedrooms, 4)]
-    const cleaningPrice = formData.deep ? basePrice * 1.5 : basePrice
-    
-    const addonsCost = formData.addons.reduce((sum, addonId) => {
-      const addon = addons.find(a => a.id === addonId)
-      return sum + (addon?.price || 0)
-    }, 0)
-    
-    const subtotal = cleaningPrice + addonsCost
-    const tax = subtotal * 0.08875 // Cleaning services are taxable
-    const total = subtotal + tax
+  const calculatePrice = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/price/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'CLEANING',
+          zip: formData.zip,
+          bedrooms: formData.bedrooms,
+          bathrooms: formData.bathrooms,
+          deep: formData.deep,
+          addons: formData.addons
+        })
+      })
 
-    setPricing({ subtotal, tax, total })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to calculate price')
+      }
+
+      const quote = await response.json()
+      setPricing({
+        subtotal: quote.subtotal_cents / 100,
+        tax: quote.tax_cents / 100,
+        total: quote.total_cents / 100
+      })
+    } catch (err) {
+      console.error('Price calculation error:', err)
+      alert('Failed to calculate price. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const nextStep = () => {
-    if (step === 1) calculatePrice()
+  const nextStep = async () => {
+    if (step === 1) {
+      await calculatePrice()
+    } else if (step === 2 && formData.date) {
+      await fetchAvailableSlots()
+    }
     setStep(prev => Math.min(prev + 1, 4))
+  }
+
+  const fetchAvailableSlots = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(
+        `/api/slots?service=CLEANING&zip=${formData.zip}&date=${formData.date}`
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch slots')
+      }
+
+      const data = await response.json()
+      setAvailableSlots(data.slots || [])
+    } catch (err) {
+      console.error('Slots fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Call API to create order
-    console.log('Booking cleaning service:', formData)
-    alert('Booking submitted! (API integration pending)')
+    
+    try {
+      setLoading(true)
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'CLEANING',
+          zip: formData.zip,
+          bedrooms: formData.bedrooms,
+          bathrooms: formData.bathrooms,
+          deep: formData.deep,
+          addons: formData.addons,
+          pickup_date: formData.date,
+          pickup_slot: formData.timeSlot,
+          address: formData.address,
+          phone: formData.phone,
+          special_instructions: formData.specialInstructions,
+          idempotency_key: `cleaning-${Date.now()}-${Math.random()}`
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create order')
+      }
+
+      const order = await response.json()
+      alert(`Order created successfully! Order ID: ${order.id}`)
+      // TODO: Redirect to payment or order confirmation page
+      window.location.href = `/orders/${order.id}`
+    } catch (err: any) {
+      console.error('Order creation error:', err)
+      alert(err.message || 'Failed to create order. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -223,8 +302,13 @@ export default function BookCleaningPage() {
                 </div>
 
                 <div className="mt-8 flex justify-end">
-                  <button type="button" onClick={nextStep} className="btn-primary">
-                    Continue to Schedule →
+                  <button 
+                    type="button" 
+                    onClick={nextStep} 
+                    disabled={loading}
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Loading...' : 'Continue to Schedule →'}
                   </button>
                 </div>
               </div>
@@ -277,8 +361,13 @@ export default function BookCleaningPage() {
                   <button type="button" onClick={prevStep} className="btn-secondary">
                     ← Back
                   </button>
-                  <button type="button" onClick={nextStep} className="btn-primary">
-                    Continue to Contact Info →
+                  <button 
+                    type="button" 
+                    onClick={nextStep} 
+                    disabled={loading}
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Loading...' : 'Continue to Contact Info →'}
                   </button>
                 </div>
               </div>
@@ -404,8 +493,12 @@ export default function BookCleaningPage() {
                   <button type="button" onClick={prevStep} className="btn-secondary">
                     ← Back
                   </button>
-                  <button type="submit" className="btn-primary">
-                    Proceed to Payment →
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Creating Order...' : 'Proceed to Payment →'}
                   </button>
                 </div>
               </div>
