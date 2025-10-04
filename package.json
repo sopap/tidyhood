@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.0.1",
-    "@stripe/stripe-js": "^2.4.0",
+    "@stripe/react-stripe-js": "^5.0.0",
+    "@stripe/stripe-js": "^8.0.0",
     "@supabase/ssr": "^0.0.10",
     "@supabase/supabase-js": "^2.39.1",
     "next": "14.1.0",

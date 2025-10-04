@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
+import { PaymentModal } from '@/components/PaymentModal'
 
 interface Address {
   line1: string
@@ -48,6 +49,10 @@ function LaundryBookingForm() {
   // Pricing
   const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
   const [loading, setLoading] = useState(false)
+  
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
 
   const addonsList = [
     { id: 'LND_RUSH_24HR', name: 'Rush Service (24hr)', price: 10 },
@@ -217,12 +222,21 @@ function LaundryBookingForm() {
       }
 
       const order = await response.json()
-      router.push(`/orders/${order.id}`)
+      
+      // Show payment modal instead of redirecting
+      setCreatedOrderId(order.id)
+      setShowPaymentModal(true)
     } catch (err: any) {
       console.error('Order creation error:', err)
       alert(err.message || 'Failed to create order. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePaymentSuccess = () => {
+    if (createdOrderId) {
+      router.push(`/orders/${createdOrderId}`)
     }
   }
 
@@ -496,6 +510,17 @@ function LaundryBookingForm() {
               </p>
             </div>
           </form>
+
+          {/* Payment Modal */}
+          {createdOrderId && (
+            <PaymentModal
+              isOpen={showPaymentModal}
+              onClose={() => setShowPaymentModal(false)}
+              orderId={createdOrderId}
+              amount={Math.round(pricing.total * 100)}
+              onSuccess={handlePaymentSuccess}
+            />
+          )}
         </div>
       </main>
     </div>
