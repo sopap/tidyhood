@@ -43,8 +43,19 @@ function LoginForm() {
       await refreshUser()
 
       // Success - redirect to intended page or orders page
-      const redirectTo = searchParams.get('redirect') || '/orders'
-      router.push(redirectTo)
+      const returnTo = searchParams.get('returnTo')
+      const shouldRestore = searchParams.get('restore')
+      
+      if (returnTo && shouldRestore) {
+        // Redirect back to booking page with restore parameter
+        router.push(`${returnTo}?restore=true`)
+      } else if (returnTo) {
+        router.push(returnTo)
+      } else {
+        // Default fallback
+        const redirectTo = searchParams.get('redirect') || '/orders'
+        router.push(redirectTo)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid email or password')
     } finally {

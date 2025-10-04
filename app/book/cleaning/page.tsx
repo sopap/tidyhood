@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
 
 // Type for available time slots from API
 interface TimeSlot {
@@ -14,8 +16,36 @@ interface TimeSlot {
   service_type: string
 }
 
+// Type for saved booking data
+interface SavedBookingData {
+  formData: {
+    zip: string
+    bedrooms: number
+    bathrooms: number
+    deep: boolean
+    addons: string[]
+    date: string
+    addressLine1: string
+    addressLine2: string
+    city: string
+    phone: string
+    specialInstructions: string
+  }
+  selectedSlot: TimeSlot | null
+  pricing: {
+    subtotal: number
+    tax: number
+    total: number
+  }
+  step: number
+}
+
 // Multi-step booking form for cleaning service
 export default function BookCleaningPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user } = useAuth()
+  
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     zip: '',
@@ -39,6 +69,29 @@ export default function BookCleaningPage() {
   const [loading, setLoading] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+
+  // Restore booking data from sessionStorage if returning from login
+  useEffect(() => {
+    const shouldRestore = searchParams.get('restore') === 'true'
+    if (shouldRestore) {
+      try {
+        const savedData = sessionStorage.getItem('pending-cleaning-order')
+        if (savedData) {
+          const parsed: SavedBookingData = JSON.parse(savedData)
+          setFormData(parsed.formData)
+          setSelectedSlot(parsed.selectedSlot)
+          setPricing(parsed.pricing)
+          setStep(parsed.step)
+          // Clear the saved data
+          sessionStorage.removeItem('pending-cleaning-order')
+          // Remove restore param from URL
+          router.replace('/book/cleaning')
+        }
+      } catch (err) {
+        console.error('Failed to restore booking data:', err)
+      }
+    }
+  }, [searchParams, router])
 
   const addons = [
     { id: 'CLN_FRIDGE_INSIDE', name: 'Refrigerator Interior', price: 25 },
@@ -161,11 +214,30 @@ export default function BookCleaningPage() {
 
   const prevStep = () => setStep(prev => Math.max(prev - 1, 1))
 
+  const saveBookingData = () => {
+    const bookingData: SavedBookingData = {
+      formData,
+      selectedSlot,
+      pricing,
+      step
+    }
+    sessionStorage.setItem('pending-cleaning-order', JSON.stringify(bookingData))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!selectedSlot) {
       alert('Please select a time slot')
+      return
+    }
+
+    // Check if user is authenticated
+    if (!user) {
+      // Save booking data before redirecting to login
+      saveBookingData()
+      // Redirect to login with return URL
+      router.push('/login?returnTo=/book/cleaning&restore=true')
       return
     }
     
@@ -214,6 +286,8 @@ export default function BookCleaningPage() {
 
       const order = await response.json()
       alert(`Order created successfully! Order ID: ${order.id}`)
+      // Clear any saved booking data
+      sessionStorage.removeItem('pending-cleaning-order')
       // TODO: Redirect to payment or order confirmation page
       window.location.href = `/orders/${order.id}`
     } catch (err: any) {
