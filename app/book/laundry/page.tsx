@@ -75,7 +75,7 @@ function BookingForm() {
     const shouldRestore = searchParams.get('restore') === 'true'
     if (shouldRestore) {
       try {
-        const savedData = sessionStorage.getItem('pending-cleaning-order')
+        const savedData = sessionStorage.getItem('pending-laundry-order')
         if (savedData) {
           const parsed: SavedBookingData = JSON.parse(savedData)
           setFormData(parsed.formData)
@@ -83,9 +83,9 @@ function BookingForm() {
           setPricing(parsed.pricing)
           setStep(parsed.step)
           // Clear the saved data
-          sessionStorage.removeItem('pending-cleaning-order')
+          sessionStorage.removeItem('pending-laundry-order')
           // Remove restore param from URL
-          router.replace('/book/cleaning')
+          router.replace('/book/laundry')
         }
       } catch (err) {
         console.error('Failed to restore booking data:', err)
@@ -124,11 +124,9 @@ function BookingForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          service: 'CLEANING',
+          service: 'LAUNDRY',
           zip: formData.zip,
           lbs: formData.pounds,
-          // bathrooms removed
-          // deep removed
           addons: formData.addons
         })
       })
@@ -196,7 +194,7 @@ function BookingForm() {
     try {
       setLoading(true)
       const response = await fetch(
-        `/api/slots?service=CLEANING&zip=${formData.zip}&date=${formData.date}`
+        `/api/slots?service=LAUNDRY&zip=${formData.zip}&date=${formData.date}`
       )
 
       if (!response.ok) {
@@ -221,7 +219,7 @@ function BookingForm() {
       pricing,
       step
     }
-    sessionStorage.setItem('pending-cleaning-order', JSON.stringify(bookingData))
+    sessionStorage.setItem('pending-laundry-order', JSON.stringify(bookingData))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -237,7 +235,7 @@ function BookingForm() {
       // Save booking data before redirecting to login
       saveBookingData()
       // Redirect to login with return URL
-      router.push('/login?returnTo=/book/cleaning&restore=true')
+      router.push('/login?returnTo=/book/laundry&restore=true')
       return
     }
     
@@ -245,11 +243,11 @@ function BookingForm() {
       setLoading(true)
       
       // Generate idempotency key
-      const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
+      const idempotencyKey = `laundry-${Date.now()}-${Math.random()}`
       
       // Format request body to match API schema
       const requestBody = {
-        service_type: 'CLEANING',
+        service_type: 'LAUNDRY',
         slot: {
           partner_id: selectedSlot.partner_id,
           slot_start: selectedSlot.slot_start,
@@ -287,7 +285,7 @@ function BookingForm() {
       const order = await response.json()
       alert(`Order created successfully! Order ID: ${order.id}`)
       // Clear any saved booking data
-      sessionStorage.removeItem('pending-cleaning-order')
+      sessionStorage.removeItem('pending-laundry-order')
       // TODO: Redirect to payment or order confirmation page
       window.location.href = `/orders/${order.id}`
     } catch (err: any) {
@@ -441,7 +439,7 @@ function BookingForm() {
                           setLoading(true)
                           try {
                             const response = await fetch(
-                              `/api/slots?service=CLEANING&zip=${formData.zip}&date=${e.target.value}`
+                              `/api/slots?service=LAUNDRY&zip=${formData.zip}&date=${e.target.value}`
                             )
                             if (response.ok) {
                               const data = await response.json()
