@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { refreshUser } = useAuth()
   const [formData, setFormData] = useState({
     fullName: '',
@@ -64,8 +65,19 @@ export default function SignupPage() {
       // Refresh the user session
       await refreshUser()
 
-      // Success - redirect to services page
-      router.push('/services')
+      // Success - redirect to intended page or services page
+      const returnTo = searchParams.get('returnTo')
+      const shouldRestore = searchParams.get('restore')
+      
+      if (returnTo && shouldRestore) {
+        // Redirect back to booking page with restore parameter
+        router.push(`${returnTo}?restore=true`)
+      } else if (returnTo) {
+        router.push(returnTo)
+      } else {
+        // Default fallback
+        router.push('/services')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.')
     } finally {
@@ -84,7 +96,10 @@ export default function SignupPage() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-primary-600 hover:text-primary-500">
+          <Link 
+            href={`/login${searchParams.toString() ? `?${searchParams.toString()}` : ''}`}
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
             Sign in
           </Link>
         </p>
@@ -268,5 +283,20 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   )
 }

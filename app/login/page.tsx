@@ -74,7 +74,10 @@ function LoginForm() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{' '}
-          <Link href="/signup" className="font-medium text-primary-600 hover:text-primary-500">
+          <Link 
+            href={`/signup${searchParams.toString() ? `?${searchParams.toString()}` : ''}`}
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
             create a new account
           </Link>
         </p>
