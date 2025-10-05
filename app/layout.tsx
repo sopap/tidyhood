@@ -4,14 +4,18 @@ import { AuthProvider } from '@/lib/auth-context'
 import SiteFooter from '@/components/SiteFooter'
 import StructuredData from '@/components/StructuredData'
 
+// Get allowed ZIP codes for metadata
+const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+const zipsDisplay = allowedZips.join(', ')
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: {
     default: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
     template: '%s | Tidyhood'
   },
-  description: 'Professional laundry and home cleaning services in Harlem (10026, 10027, 10030). Wash & fold from $1.75/lb, house cleaning from $89. Same-day delivery available.',
-  keywords: ['harlem laundry service', 'harlem house cleaning', 'wash and fold nyc', 'home cleaning harlem', 'laundry delivery 10027', 'cleaning service 10026', 'harlem laundromat', 'apartment cleaning nyc'],
+  description: `Professional laundry and home cleaning services in Harlem (${zipsDisplay}). Wash & fold from $1.75/lb, house cleaning from $89. Same-day delivery available.`,
+  keywords: ['harlem laundry service', 'harlem house cleaning', 'wash and fold nyc', 'home cleaning harlem', `laundry delivery ${allowedZips[0]}`, `cleaning service ${allowedZips[0]}`, 'harlem laundromat', 'apartment cleaning nyc'],
   authors: [{ name: 'Tidyhood' }],
   creator: 'Tidyhood',
   publisher: 'Tidyhood',

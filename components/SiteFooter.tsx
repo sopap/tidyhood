@@ -1,6 +1,11 @@
+'use client'
+
 import Link from 'next/link'
 
 export default function SiteFooter() {
+  const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+  const zipsDisplay = allowedZips.join(', ')
+
   return (
     <footer className="mt-16 border-t border-slate-200 bg-white/70 backdrop-blur">
       <div className="mx-auto max-w-5xl px-4 py-10 text-sm text-slate-600">
@@ -10,7 +15,7 @@ export default function SiteFooter() {
             <strong className="text-base text-gray-900">Tidyhood</strong> — Harlem Laundry Pickup & Home Cleaning
           </div>
           <div>
-            Service Area: Harlem, NYC (ZIPs 10026, 10027, 10030)
+            Service Area: Harlem, NYC (ZIPs {zipsDisplay})
           </div>
           <div>
             Hours: Mon–Sun 8:00–20:00 • Phone:{' '}

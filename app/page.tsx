@@ -47,6 +47,10 @@ export default function Home() {
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
+  // Get ZIP codes from environment variable
+  const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+  const zipsDisplay = allowedZips.join(', ')
+
   // Fetch user's last order for "Book Again" prompt
   useEffect(() => {
     const fetchLastOrder = async () => {
@@ -99,7 +103,7 @@ export default function Home() {
               Same-day pickup, spotless results — powered by local pros you can trust.
             </p>
             <p className="text-sm md:text-base text-text-tertiary mb-4">
-              Serving Harlem ZIPs: 10026, 10027, 10030
+              Serving Harlem ZIPs: {zipsDisplay}
             </p>
             
             {/* Primary CTAs - Hidden on mobile (shown in sticky bar) */}
@@ -350,18 +354,12 @@ export default function Home() {
                 We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup and delivery service covers ZIP codes:
               </p>
               <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-4">
-                <div className="flex items-center">
-                  <span className="text-primary-600 text-2xl mr-2">📍</span>
-                  <span className="font-bold">10026</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-primary-600 text-2xl mr-2">📍</span>
-                  <span className="font-bold">10027</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-primary-600 text-2xl mr-2">📍</span>
-                  <span className="font-bold">10030</span>
-                </div>
+                {allowedZips.map((zip) => (
+                  <div key={zip} className="flex items-center">
+                    <span className="text-primary-600 text-2xl mr-2">📍</span>
+                    <span className="font-bold">{zip}</span>
+                  </div>
+                ))}
               </div>
               <p className="text-sm text-text-tertiary">
                 Near the border? Contact us — we may be able to accommodate your location.
@@ -427,7 +425,7 @@ export default function Home() {
                   </svg>
                 </summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  Yes. Schedule before 11 AM for same-day pickup in most Harlem ZIP codes (10026, 10027, 10030). Next-day pickup is guaranteed for all bookings.
+                  Yes. Schedule before 11 AM for same-day pickup in most Harlem ZIP codes ({zipsDisplay}). Next-day pickup is guaranteed for all bookings.
                 </p>
               </details>
               
@@ -451,7 +449,7 @@ export default function Home() {
                   </svg>
                 </summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  We serve all of Harlem including Central Harlem, South Harlem, and Morningside Heights — ZIP codes 10026, 10027, and 10030.
+                  We serve all of Harlem including Central Harlem, South Harlem, and Morningside Heights — ZIP codes {zipsDisplay}.
                 </p>
               </details>
               
@@ -589,7 +587,7 @@ export default function Home() {
                     <span className="mr-2 mt-0.5">📍</span>
                     <span className="text-gray-400">
                       Serving Harlem, NYC<br />
-                      ZIPs: 10026, 10027, 10030
+                      ZIPs: {zipsDisplay}
                     </span>
                   </li>
                 </ul>

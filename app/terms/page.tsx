@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 }
 
 export default function TermsPage() {
+  const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+  const zipsDisplay = allowedZips.join(', ')
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -39,7 +42,7 @@ export default function TermsPage() {
                 <li>Wash & fold laundry services with pickup and delivery</li>
                 <li>Professional home cleaning services for apartments and houses</li>
                 <li>Online booking and payment processing</li>
-                <li>Service area: Harlem (ZIP codes 10026, 10027, 10030)</li>
+                <li>Service area: Harlem (ZIP codes {zipsDisplay})</li>
               </ul>
             </section>
 

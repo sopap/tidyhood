@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 
-const ALLOWED_ZIPS = ['10026', '10027', '10030']
+// Get allowed ZIP codes from environment variable
+const ALLOWED_ZIPS = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
 
 // Load Google Maps script
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
