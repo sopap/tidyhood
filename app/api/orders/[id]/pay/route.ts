@@ -28,9 +28,10 @@ export async function POST(
       throw new NotFoundError('Order not found')
     }
     
-    // Check if already paid
-    if (order.status !== 'PENDING') {
-      throw new ConflictError('Order already processed')
+    // Check if order can be paid
+    // Allow PENDING (cleaning upfront) and awaiting_payment (laundry after quote)
+    if (order.status !== 'PENDING' && order.status !== 'awaiting_payment') {
+      throw new ConflictError('Order already processed or not ready for payment')
     }
     
     // Check idempotency
@@ -39,10 +40,13 @@ export async function POST(
       throw new ConflictError('Missing Idempotency-Key header')
     }
     
+    // Use quote amount if available (for laundry after weighing), otherwise use estimate
+    const amountToCharge = order.quote_cents || order.total_cents
+    
     // Create Stripe PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create(
       {
-        amount: order.total_cents,
+        amount: amountToCharge,
         currency: 'usd',
         metadata: {
           order_id: order.id,
@@ -57,12 +61,13 @@ export async function POST(
       }
     )
     
-    // Update order with payment ID
+    // Update order with payment ID and set status to paid_processing
     const { error: updateError } = await db
       .from('orders')
       .update({
         payment_id: paymentIntent.id,
-        status: 'PAID',
+        status: 'paid_processing',
+        paid_at: new Date().toISOString()
       })
       .eq('id', order.id)
     
@@ -93,7 +98,8 @@ export async function POST(
     return NextResponse.json({
       client_secret: paymentIntent.client_secret,
       order_id: order.id,
-      status: 'PAID',
+      status: 'paid_processing',
+      amount_charged: amountToCharge,
     })
   } catch (error) {
     const apiError = handleApiError(error)
