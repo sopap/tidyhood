@@ -225,12 +225,33 @@ export default function EditPartner({ params }: { params: { id: string } }) {
                   Business Address
                 </label>
                 <input
+                  ref={(el) => {
+                    if (el && !el.dataset.autocompleteInitialized) {
+                      // Initialize Google Places Autocomplete
+                      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+                      if (apiKey && typeof window !== 'undefined' && window.google?.maps?.places) {
+                        const autocomplete = new window.google.maps.places.Autocomplete(el, {
+                          componentRestrictions: { country: 'us' },
+                          fields: ['formatted_address'],
+                          types: ['address']
+                        });
+                        autocomplete.addListener('place_changed', () => {
+                          const place = autocomplete.getPlace();
+                          if (place.formatted_address) {
+                            setFormData(prev => ({ ...prev, address: place.formatted_address || '' }));
+                          }
+                        });
+                        el.dataset.autocompleteInitialized = 'true';
+                      }
+                    }
+                  }}
                   type="text"
                   id="address"
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., 2280 Frederick Douglass Blvd, New York, NY"
                 />
               </div>
             </div>

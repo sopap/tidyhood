@@ -54,6 +54,18 @@ export default async function AdminLayout({
                   Partners
                 </Link>
                 <Link
+                  href="/admin/users"
+                  className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+                >
+                  Users
+                </Link>
+                <Link
+                  href="/admin/capacity"
+                  className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+                >
+                  Capacity
+                </Link>
+                <Link
                   href="/admin/settings"
                   className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
                 >

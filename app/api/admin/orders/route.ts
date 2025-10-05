@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const serviceType = searchParams.get('service_type')
     const partnerId = searchParams.get('partner_id')
+    const userId = searchParams.get('user_id')
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '25')
@@ -47,6 +48,10 @@ export async function GET(request: NextRequest) {
 
     if (partnerId) {
       query = query.eq('partner_id', partnerId)
+    }
+
+    if (userId) {
+      query = query.eq('user_id', userId)
     }
 
     // Search filter (order ID, customer phone, or name)

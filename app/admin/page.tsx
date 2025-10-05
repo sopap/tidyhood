@@ -22,6 +22,12 @@ interface Metrics {
   partners: {
     active: number
   }
+  users: {
+    total: number
+    customers: number
+    partners: number
+    newThisMonth: number
+  }
 }
 
 export default function AdminDashboard() {
@@ -115,6 +121,33 @@ export default function AdminDashboard() {
         />
       </div>
 
+      {/* User Statistics */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">User Statistics</h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <p className="text-2xl font-bold text-gray-900">{metrics.users.total}</p>
+              <p className="text-sm text-gray-600 mt-1">Total Users</p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <p className="text-2xl font-bold text-blue-600">{metrics.users.customers}</p>
+              <p className="text-sm text-gray-600 mt-1">Customers</p>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <p className="text-2xl font-bold text-green-600">{metrics.users.partners}</p>
+              <p className="text-sm text-gray-600 mt-1">Partners</p>
+            </div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <p className="text-2xl font-bold text-purple-600">{metrics.users.newThisMonth}</p>
+              <p className="text-sm text-gray-600 mt-1">New This Month</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -145,6 +178,21 @@ export default function AdminDashboard() {
                 <p className="font-medium text-gray-900">Manage Partners</p>
                 <p className="text-sm text-gray-600">
                   {metrics.partners.active} active
+                </p>
+              </div>
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+
+            <Link
+              href="/admin/users"
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+            >
+              <div>
+                <p className="font-medium text-gray-900">Manage Users</p>
+                <p className="text-sm text-gray-600">
+                  {metrics.users.total} total
                 </p>
               </div>
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

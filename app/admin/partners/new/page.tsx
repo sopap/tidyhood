@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -166,6 +166,26 @@ export default function NewPartner() {
                   Business Address
                 </label>
                 <input
+                  ref={(el) => {
+                    if (el && !el.dataset.autocompleteInitialized) {
+                      // Initialize Google Places Autocomplete
+                      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+                      if (apiKey && typeof window !== 'undefined' && window.google?.maps?.places) {
+                        const autocomplete = new window.google.maps.places.Autocomplete(el, {
+                          componentRestrictions: { country: 'us' },
+                          fields: ['formatted_address'],
+                          types: ['address']
+                        });
+                        autocomplete.addListener('place_changed', () => {
+                          const place = autocomplete.getPlace();
+                          if (place.formatted_address) {
+                            setFormData(prev => ({ ...prev, address: place.formatted_address || '' }));
+                          }
+                        });
+                        el.dataset.autocompleteInitialized = 'true';
+                      }
+                    }
+                  }}
                   type="text"
                   id="address"
                   name="address"

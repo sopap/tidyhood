@@ -70,6 +70,26 @@ export async function GET(request: NextRequest) {
     
     if (pendingError) throw pendingError
 
+    // Get user statistics
+    const { data: allUsers, error: usersError } = await db
+      .from('profiles')
+      .select('id, role, created_at')
+    
+    if (usersError) throw usersError
+
+    const totalUsers = allUsers?.length || 0
+    const customers = allUsers?.filter(u => u.role === 'customer' || !u.role).length || 0
+    const partners = allUsers?.filter(u => u.role === 'partner').length || 0
+    
+    // Calculate new users this month
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+    
+    const newThisMonth = allUsers?.filter(u => 
+      new Date(u.created_at) >= startOfMonth
+    ).length || 0
+
     return NextResponse.json({
       orders: {
         today: todayOrderCount,
@@ -88,6 +108,12 @@ export async function GET(request: NextRequest) {
       },
       partners: {
         active: partnersCount || 0
+      },
+      users: {
+        total: totalUsers,
+        customers: customers,
+        partners: partners,
+        newThisMonth: newThisMonth
       }
     })
   } catch (error) {
