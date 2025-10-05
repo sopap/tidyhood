@@ -17,6 +17,13 @@ interface Order {
   tax_cents: number
   delivery_cents: number
   total_cents: number
+  actual_weight_lbs?: number
+  quote_cents?: number
+  quoted_at?: string
+  paid_at?: string
+  partner_notes?: string
+  intake_photos_json?: string[]
+  outtake_photos_json?: string[]
   order_details: {
     lbs?: number
     bedrooms?: number
@@ -98,20 +105,66 @@ export default function OrderDetailPage() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'CONFIRMED':
+    switch (status.toLowerCase()) {
+      case 'pending_pickup':
         return 'bg-blue-100 text-blue-800'
-      case 'IN_PROGRESS':
+      case 'at_facility':
+        return 'bg-indigo-100 text-indigo-800'
+      case 'awaiting_payment':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'paid_processing':
         return 'bg-purple-100 text-purple-800'
-      case 'COMPLETED':
+      case 'completed':
         return 'bg-green-100 text-green-800'
-      case 'CANCELLED':
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'paid':
+        return 'bg-purple-100 text-purple-800'
+      case 'canceled':
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'pending_pickup': 'Pickup Scheduled',
+      'at_facility': 'At Facility',
+      'awaiting_payment': 'Awaiting Payment',
+      'paid_processing': 'Processing',
+      'completed': 'Completed',
+      'pending': 'Pending',
+      'paid': 'Paid',
+      'canceled': 'Canceled'
+    }
+    return statusMap[status.toLowerCase()] || status
+  }
+
+  const getStatusTimeline = () => {
+    const laundrySteps = [
+      { key: 'pending_pickup', label: 'Pickup Scheduled', icon: '📅' },
+      { key: 'at_facility', label: 'At Facility', icon: '🏢' },
+      { key: 'awaiting_payment', label: 'Quote Ready', icon: '💰' },
+      { key: 'paid_processing', label: 'Processing', icon: '🧺' },
+      { key: 'completed', label: 'Completed', icon: '✅' }
+    ]
+
+    const cleaningSteps = [
+      { key: 'paid_processing', label: 'Paid', icon: '✅' },
+      { key: 'completed', label: 'Completed', icon: '🎉' }
+    ]
+
+    const steps = order?.service_type === 'LAUNDRY' ? laundrySteps : cleaningSteps
+    const currentStatus = order?.status.toLowerCase()
+
+    const currentIndex = steps.findIndex(s => s.key === currentStatus)
+
+    return steps.map((step, index) => ({
+      ...step,
+      completed: index <= currentIndex,
+      current: step.key === currentStatus
+    }))
   }
 
   const formatAddonName = (key: string) => {
@@ -211,6 +264,69 @@ export default function OrderDetailPage() {
               </p>
             </div>
           </div>
+
+          {/* Status Timeline */}
+          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Order Status</h2>
+            <div className="relative">
+              {getStatusTimeline().map((step, index, arr) => (
+                <div key={step.key} className="flex items-start mb-8 last:mb-0">
+                  <div className="flex flex-col items-center mr-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                      step.completed ? 'bg-green-100' : 'bg-gray-100'
+                    } ${step.current ? 'ring-4 ring-primary-200' : ''}`}>
+                      {step.icon}
+                    </div>
+                    {index < arr.length - 1 && (
+                      <div className={`w-1 h-16 ${step.completed ? 'bg-green-300' : 'bg-gray-200'}`} />
+                    )}
+                  </div>
+                  <div className="flex-1 pt-2">
+                    <h3 className={`font-semibold ${step.current ? 'text-primary-600' : 'text-gray-900'}`}>
+                      {step.label}
+                    </h3>
+                    {step.current && (
+                      <p className="text-sm text-gray-600 mt-1">Current status</p>
+                    )}
+                    {step.completed && !step.current && (
+                      <p className="text-sm text-green-600 mt-1">✓ Completed</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quote Information (if applicable) */}
+          {order.service_type === 'LAUNDRY' && order.actual_weight_lbs && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+              <h2 className="text-lg font-bold text-blue-900 mb-4">📊 Actual Weight & Quote</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm font-medium text-blue-700">Estimated Weight:</span>
+                  <p className="text-lg text-blue-900">{order.order_details.lbs} lbs</p>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-blue-700">Actual Weight:</span>
+                  <p className="text-lg font-bold text-blue-900">{order.actual_weight_lbs} lbs</p>
+                </div>
+              </div>
+              {order.quote_cents && (
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-blue-700">Final Quote:</span>
+                    <span className="text-2xl font-bold text-blue-900">{formatMoney(order.quote_cents)}</span>
+                  </div>
+                </div>
+              )}
+              {order.partner_notes && (
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <span className="text-sm font-medium text-blue-700 block mb-1">Partner Notes:</span>
+                  <p className="text-blue-800">{order.partner_notes}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Service Details */}
           <div className="bg-white rounded-lg shadow-md p-8 mb-6">
@@ -320,16 +436,47 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Actions */}
-          {order.status === 'PENDING' && (
+          {(order.status === 'PENDING' || order.status === 'awaiting_payment') && (
             <div className="bg-white rounded-lg shadow-md p-8">
               <div className="text-center">
-                <p className="text-gray-600 mb-4">Your order is pending payment</p>
-                <button
-                  onClick={() => router.push(`/orders/${order.id}/pay`)}
-                  className="btn-primary"
-                >
-                  Proceed to Payment
-                </button>
+                {order.status === 'awaiting_payment' ? (
+                  <>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">💰 Your Quote is Ready!</h3>
+                    <p className="text-gray-600 mb-4">
+                      We've weighed your laundry: {order.actual_weight_lbs} lbs
+                    </p>
+                    <p className="text-2xl font-bold text-primary-600 mb-6">
+                      Total: {formatMoney(order.quote_cents || order.total_cents)}
+                    </p>
+                    <button
+                      onClick={() => router.push(`/orders/${order.id}/pay`)}
+                      className="btn-primary text-lg px-8 py-3"
+                    >
+                      Pay Now
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-gray-600 mb-4">Your order is pending payment</p>
+                    <button
+                      onClick={() => router.push(`/orders/${order.id}/pay`)}
+                      className="btn-primary"
+                    >
+                      Proceed to Payment
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {order.status === 'pending_pickup' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-blue-900 mb-2">📅 Pickup Scheduled</h3>
+                <p className="text-blue-700">
+                  No payment required yet. We'll send you a quote after weighing your items.
+                </p>
               </div>
             </div>
           )}
