@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
+import { Header } from '@/components/Header'
 
 interface Order {
   id: string
@@ -195,13 +196,7 @@ export default function OrderDetailPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm">
-          <div className="container mx-auto px-4 py-4">
-            <Link href="/" className="text-2xl font-bold text-primary-900">
-              Tidyhood
-            </Link>
-          </div>
-        </header>
+        <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
             <div className="text-red-600 mb-4">
@@ -226,14 +221,7 @@ export default function OrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="text-2xl font-bold text-primary-900">
-            Tidyhood
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
