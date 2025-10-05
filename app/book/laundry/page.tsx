@@ -46,6 +46,12 @@ function LaundryBookingForm() {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
   
+  // Delivery
+  const [deliveryDate, setDeliveryDate] = useState('')
+  const [availableDeliverySlots, setAvailableDeliverySlots] = useState<TimeSlot[]>([])
+  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<TimeSlot | null>(null)
+  const [useDefaultDelivery, setUseDefaultDelivery] = useState(true)
+  
   // Pricing
   const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
   const [loading, setLoading] = useState(false)
@@ -162,6 +168,50 @@ function LaundryBookingForm() {
     fetchSlots()
   }, [date, address])
 
+  // Auto-calculate delivery date/time (48h after pickup) when pickup slot selected
+  useEffect(() => {
+    if (!selectedSlot || !useDefaultDelivery) return
+
+    const pickupTime = new Date(selectedSlot.slot_start)
+    const defaultDeliveryTime = new Date(pickupTime.getTime() + 48 * 60 * 60 * 1000) // 48 hours later
+    
+    // Set delivery date
+    const deliveryDateStr = defaultDeliveryTime.toISOString().split('T')[0]
+    setDeliveryDate(deliveryDateStr)
+
+    // Create a default delivery slot (2-hour window starting at same time as pickup)
+    const deliverySlotEnd = new Date(defaultDeliveryTime.getTime() + 2 * 60 * 60 * 1000)
+    setSelectedDeliverySlot({
+      partner_id: selectedSlot.partner_id,
+      partner_name: 'Available',
+      slot_start: defaultDeliveryTime.toISOString(),
+      slot_end: deliverySlotEnd.toISOString(),
+      available_units: 1,
+      max_units: 1,
+      service_type: 'LAUNDRY'
+    })
+  }, [selectedSlot, useDefaultDelivery])
+
+  // Fetch delivery slots when custom delivery date selected
+  useEffect(() => {
+    if (!useDefaultDelivery && deliveryDate && address) {
+      const fetchDeliverySlots = async () => {
+        try {
+          const response = await fetch(
+            `/api/slots?service=LAUNDRY&zip=${address.zip}&date=${deliveryDate}`
+          )
+          if (response.ok) {
+            const data = await response.json()
+            setAvailableDeliverySlots(data.slots || [])
+          }
+        } catch (err) {
+          console.error('Failed to fetch delivery slots:', err)
+        }
+      }
+      fetchDeliverySlots()
+    }
+  }, [useDefaultDelivery, deliveryDate, address])
+
   const handleAddonToggle = (addonId: string) => {
     setAddons(prev =>
       prev.includes(addonId)
@@ -201,6 +251,10 @@ function LaundryBookingForm() {
             slot_start: selectedSlot.slot_start,
             slot_end: selectedSlot.slot_end
           },
+          delivery_slot: selectedDeliverySlot ? {
+            slot_start: selectedDeliverySlot.slot_start,
+            slot_end: selectedDeliverySlot.slot_end
+          } : undefined,
           address: {
             line1: address.line1,
             line2: addressLine2 || undefined,
@@ -425,6 +479,126 @@ function LaundryBookingForm() {
                 )}
               </div>
             </div>
+
+            {/* Delivery Window */}
+            {selectedSlot && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">🚚 Delivery Window</h2>
+                
+                <div className="space-y-4">
+                  {/* Default delivery notice */}
+                  {useDefaultDelivery && selectedDeliverySlot && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <div className="text-2xl mr-3">✓</div>
+                        <div>
+                          <p className="font-semibold text-green-900 mb-1">
+                            Delivery scheduled for {new Date(selectedDeliverySlot.slot_start).toLocaleDateString('en-US', { 
+                              weekday: 'long', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                          <p className="text-sm text-green-700">
+                            {new Date(selectedDeliverySlot.slot_start).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })} - {new Date(selectedDeliverySlot.slot_end).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })} (48 hours after pickup)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Option to customize delivery */}
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={!useDefaultDelivery}
+                        onChange={(e) => {
+                          setUseDefaultDelivery(!e.target.checked)
+                          if (e.target.checked) {
+                            setSelectedDeliverySlot(null)
+                          }
+                        }}
+                        className="mr-3"
+                      />
+                      <span className="text-sm text-gray-700">Choose a different delivery time</span>
+                    </label>
+                  </div>
+
+                  {/* Custom delivery slot selection */}
+                  {!useDefaultDelivery && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Delivery Date
+                        </label>
+                        <input
+                          type="date"
+                          value={deliveryDate}
+                          onChange={(e) => {
+                            setDeliveryDate(e.target.value)
+                            setSelectedDeliverySlot(null)
+                          }}
+                          min={new Date(new Date(selectedSlot.slot_start).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                          className="input-field"
+                        />
+                      </div>
+
+                      {deliveryDate && availableDeliverySlots.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Available Delivery Slots
+                          </label>
+                          <div className="space-y-2">
+                            {availableDeliverySlots.map(slot => (
+                              <label
+                                key={`${slot.partner_id}-${slot.slot_start}`}
+                                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                                  selectedDeliverySlot?.slot_start === slot.slot_start
+                                    ? 'border-primary-600 bg-primary-50'
+                                    : ''
+                                }`}
+                              >
+                                <div className="flex items-center">
+                                  <input
+                                    type="radio"
+                                    name="deliverySlot"
+                                    checked={selectedDeliverySlot?.slot_start === slot.slot_start}
+                                    onChange={() => setSelectedDeliverySlot(slot)}
+                                    className="mr-3"
+                                  />
+                                  <div className="font-medium">
+                                    {new Date(slot.slot_start).toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}{' '}
+                                    -{' '}
+                                    {new Date(slot.slot_end).toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Contact & Notes */}
             <div className="bg-white rounded-lg shadow-md p-6">

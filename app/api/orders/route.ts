@@ -56,6 +56,10 @@ const createOrderSchema = z.object({
     slot_start: z.string(),
     slot_end: z.string(),
   }),
+  delivery_slot: z.object({
+    slot_start: z.string(),
+    slot_end: z.string(),
+  }).optional(),
   address: z.object({
     line1: z.string(),
     line2: z.string().optional(),
@@ -172,6 +176,8 @@ export async function POST(request: NextRequest) {
         partner_id: params.slot.partner_id,
         slot_start: params.slot.slot_start,
         slot_end: params.slot.slot_end,
+        delivery_slot_start: params.delivery_slot?.slot_start || null,
+        delivery_slot_end: params.delivery_slot?.slot_end || null,
         status: initialStatus,
         subtotal_cents: pricing.subtotal_cents,
         tax_cents: pricing.tax_cents,
