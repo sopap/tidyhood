@@ -33,6 +33,7 @@ interface Address {
 
 interface AddressAutocompleteProps {
   onAddressSelect: (address: Address) => void
+  onValidityChange?: (isValid: boolean) => void
   defaultValue?: string
   savedAddresses?: Array<{
     id: string
@@ -46,7 +47,8 @@ interface AddressAutocompleteProps {
 }
 
 export function AddressAutocomplete({ 
-  onAddressSelect, 
+  onAddressSelect,
+  onValidityChange,
   defaultValue,
   savedAddresses = [],
   onSelectSavedAddress,
@@ -115,12 +117,14 @@ export function AddressAutocomplete({
 
           // Validate ZIP code
           if (!ALLOWED_ZIPS.includes(zip)) {
-            setError(`We're not yet serving ${zip}. Currently available in: ${ALLOWED_ZIPS.join(', ')}`)
+            setError(`We're not in this area yet. Enter a different address or join the waitlist.`)
             setInputValue('')
+            onValidityChange?.(false)
             return
           }
 
           setError(null)
+          onValidityChange?.(true)
           
           const address: Address = {
             line1: `${streetNumber} ${route}`.trim(),
@@ -152,6 +156,7 @@ export function AddressAutocomplete({
     setInputValue(formattedAddress)
     setShowSavedAddresses(false)
     setError(null)
+    onValidityChange?.(true)
     
     onAddressSelect({
       line1: address.line1,
@@ -177,11 +182,13 @@ export function AddressAutocomplete({
 
     // Validate ZIP code
     if (!ALLOWED_ZIPS.includes(manualAddress.zip)) {
-      setError(`We're not yet serving ${manualAddress.zip}. Currently available in: ${ALLOWED_ZIPS.join(', ')}`)
+      setError(`We're not in this area yet. Enter a different address or join the waitlist.`)
+      onValidityChange?.(false)
       return
     }
 
     setError(null)
+    onValidityChange?.(true)
     
     const address: Address = {
       line1: manualAddress.line1,
@@ -322,14 +329,16 @@ export function AddressAutocomplete({
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
-          {error}
+        <div className="flex items-center gap-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2" role="alert" aria-live="polite">
+          <span>⚠️</span>
+          <span>
+            {error}{' '}
+            <a href="/waitlist" className="underline text-amber-900 hover:text-amber-800">
+              Join waitlist
+            </a>
+          </span>
         </div>
       )}
-
-      <p className="text-sm text-gray-500">
-        Currently serving ZIP codes: {ALLOWED_ZIPS.join(', ')}
-      </p>
     </div>
   )
 }

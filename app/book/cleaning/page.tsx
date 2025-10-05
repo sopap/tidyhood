@@ -34,6 +34,7 @@ function CleaningBookingForm() {
   
   // Address state
   const [address, setAddress] = useState<Address | null>(null)
+  const [isAddressValid, setIsAddressValid] = useState(false)
   const [addressLine2, setAddressLine2] = useState('')
   const [phone, setPhone] = useState('')
   const [specialInstructions, setSpecialInstructions] = useState('')
@@ -295,6 +296,7 @@ function CleaningBookingForm() {
                 <div className="space-y-4">
                   <AddressAutocomplete
                     onAddressSelect={setAddress}
+                    onValidityChange={setIsAddressValid}
                     defaultValue={address?.formatted}
                     showLabel={false}
                   />
@@ -534,7 +536,7 @@ function CleaningBookingForm() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <button
                 type="submit"
-                disabled={loading || !address || !selectedSlot}
+                disabled={loading || !address || !isAddressValid || !selectedSlot}
                 className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : `Confirm & Pay $${pricing.total.toFixed(2)}`}

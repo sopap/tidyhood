@@ -37,6 +37,7 @@ function LaundryBookingForm() {
 
   // Address state
   const [address, setAddress] = useState<Address | null>(null);
+  const [isAddressValid, setIsAddressValid] = useState(false);
   const [addressLine2, setAddressLine2] = useState('');
   const [phone, setPhone] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
@@ -327,7 +328,12 @@ function LaundryBookingForm() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <AddressAutocomplete onAddressSelect={setAddress} defaultValue={address?.formatted} showLabel={false} />
+                  <AddressAutocomplete 
+                    onAddressSelect={setAddress} 
+                    onValidityChange={setIsAddressValid}
+                    defaultValue={address?.formatted} 
+                    showLabel={false} 
+                  />
                   <input
                     type="text"
                     value={addressLine2}
@@ -590,7 +596,7 @@ function LaundryBookingForm() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <button
                 type="submit"
-                disabled={loading || !address || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
+                disabled={loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
                 className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : 'Schedule Pickup'}
