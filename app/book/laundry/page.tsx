@@ -343,7 +343,7 @@ function LaundryBookingForm() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
-            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
+            <div className="ui-dense bg-white rounded-lg shadow-md p-6" id="address-section">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">📍 Service Address</h2>
                 {isAddressCollapsed && (
@@ -438,20 +438,22 @@ function LaundryBookingForm() {
                   <button
                     type="button"
                     onClick={() => {
-                      const addressSection = document.querySelector('[data-section="address"]');
+                      const addressSection = document.getElementById('address-section');
                       if (addressSection) {
                         addressSection.scrollIntoView({ 
                           behavior: 'smooth', 
-                          block: 'center' 
+                          block: 'start' 
                         });
                         // Focus on address input after scroll
                         setTimeout(() => {
-                          const addressInput = document.querySelector('input[placeholder*="address"]') as HTMLInputElement;
-                          addressInput?.focus();
-                        }, 500);
+                          const addressInput = addressSection.querySelector('input[type="text"]') as HTMLInputElement;
+                          if (addressInput) {
+                            addressInput.focus();
+                          }
+                        }, 600);
                       }
                     }}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-2 py-1"
                     aria-label="Scroll to and focus on address section"
                   >
                     ↑ Go to address section
