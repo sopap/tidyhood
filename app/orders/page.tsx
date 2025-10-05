@@ -2,13 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/lib/auth-context'
 import { Header } from '@/components/Header'
+import { Order } from '@/lib/types'
+import { groupOrders } from '@/lib/orders'
+import Section from '@/components/orders/Section'
+import StickyActions from '@/components/orders/StickyActions'
+import EmptyState from '@/components/orders/EmptyState'
 
 function OrdersContent() {
-  const { user, signOut } = useAuth()
-  const [orders, setOrders] = useState<any[]>([])
+  const router = useRouter()
+  const { user } = useAuth()
+  const [orders, setOrders] = useState<Order[]>([])
   const [recurringPlans, setRecurringPlans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -65,50 +72,63 @@ function OrdersContent() {
       console.error('Error updating plan:', err)
     }
   }
-  
-  const handleLogout = async () => {
-    await signOut()
+
+  const handleOpenOrder = (id: string) => {
+    router.push(`/orders/${id}`)
   }
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      pending_pickup: 'bg-blue-100 text-blue-800',
-      at_facility: 'bg-indigo-100 text-indigo-800',
-      awaiting_payment: 'bg-yellow-100 text-yellow-800',
-      paid_processing: 'bg-purple-100 text-purple-800',
-      completed: 'bg-green-100 text-green-800',
-      canceled: 'bg-red-100 text-red-800'
-    }
-    
-    const labels: Record<string, string> = {
-      pending: 'Pending',
-      pending_pickup: 'Pickup Scheduled',
-      at_facility: 'At Facility',
-      awaiting_payment: 'Awaiting Payment',
-      paid_processing: 'Processing',
-      completed: 'Completed',
-      canceled: 'Canceled'
-    }
-
-    const statusKey = status.toLowerCase()
+  if (loading) {
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[statusKey] || 'bg-gray-100 text-gray-800'}`}>
-        {labels[statusKey] || status}
-      </span>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-lg shadow-md p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your orders...</p>
+            </div>
+          </div>
+        </main>
+      </div>
     )
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-lg shadow-md p-12 text-center">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Orders</h2>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button onClick={fetchOrders} className="btn-primary">
+                Try Again
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  const grouped = groupOrders(orders)
+  const hasOrders = orders.length > 0
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       <Header />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-            <Link href="/services" className="btn-primary">
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        <div className="max-w-3xl mx-auto">
+          {/* Page Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-xl font-semibold text-gray-900">My Orders</h1>
+            <Link 
+              href="/services" 
+              className="hidden md:inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
               Book New Service
             </Link>
           </div>
@@ -116,61 +136,55 @@ function OrdersContent() {
           {/* Recurring Plans Section */}
           {recurringPlans.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Active Recurring Plans</h2>
-              <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">Active Recurring Plans</h2>
+              <div className="space-y-3">
                 {recurringPlans.map((plan) => (
-                  <div key={plan.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg shadow-md p-6">
+                  <div key={plan.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg shadow-sm p-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-bold text-gray-900">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <h3 className="text-base font-bold text-gray-900">
                             {plan.frequency.charAt(0) + plan.frequency.slice(1).toLowerCase()} Cleaning
                           </h3>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             plan.active 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-gray-100 text-gray-800'
                           }`}>
                             {plan.active ? 'Active' : 'Paused'}
                           </span>
-                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-600 text-white">
                             {plan.discount_pct * 100}% off visits 2+
                           </span>
                         </div>
                         
-                        <div className="space-y-1 text-sm text-gray-700">
+                        <div className="space-y-0.5 text-sm text-gray-700">
                           <p>
-                            <span className="font-medium">Visits Completed:</span> {plan.visits_completed}
+                            <span className="font-medium">Visits:</span> {plan.visits_completed}
                           </p>
                           {plan.next_date && (
                             <p>
-                              <span className="font-medium">Next Scheduled:</span>{' '}
+                              <span className="font-medium">Next:</span>{' '}
                               {new Date(plan.next_date).toLocaleDateString('en-US', { 
-                                weekday: 'long', 
-                                month: 'long', 
+                                weekday: 'short', 
+                                month: 'short', 
                                 day: 'numeric',
-                                year: 'numeric'
                               })}
-                            </p>
-                          )}
-                          {plan.first_visit_deep && plan.visits_completed === 0 && (
-                            <p className="text-blue-700 font-medium">
-                              ✨ First visit will be deep clean at regular rate
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2 ml-4">
+                      <div className="flex flex-col gap-1.5 ml-3 shrink-0">
                         <Link
                           href={`/orders/recurring/${plan.id}`}
-                          className="btn-secondary text-sm whitespace-nowrap"
+                          className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 bg-white font-medium text-blue-700 hover:bg-blue-50 transition-colors whitespace-nowrap"
                         >
-                          Manage Plan
+                          Manage
                         </Link>
                         <button
                           onClick={() => handlePauseResume(plan.id, plan.active)}
-                          className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${
+                          className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
                             plan.active
                               ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                               : 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -186,119 +200,58 @@ function OrdersContent() {
             </div>
           )}
 
-          {loading ? (
-            // Loading State
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading your orders...</p>
-            </div>
-          ) : error ? (
-            // Error State
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Orders</h2>
-              <p className="text-gray-600 mb-6">{error}</p>
-              <button onClick={fetchOrders} className="btn-primary">
-                Try Again
-              </button>
-            </div>
-          ) : orders.length === 0 ? (
-            // Empty State
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <div className="text-6xl mb-4">📦</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No orders yet</h2>
-              <p className="text-gray-600 mb-6">
-                Start by booking your first laundry or cleaning service
-              </p>
-              <Link href="/services" className="btn-primary">
-                Browse Services
-              </Link>
-            </div>
+          {/* Orders Sections */}
+          {!hasOrders ? (
+            <EmptyState />
           ) : (
-            // Orders List
-            <div className="space-y-4">
-              {orders.map((order) => (
-                <div key={order.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-bold text-gray-900">
-                          {order.service_type === 'LAUNDRY' ? 'Laundry' : 'Cleaning'} Service
-                        </h3>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p>
-                          <span className="font-medium">Order ID:</span> {order.id.slice(0, 8)}
-                        </p>
-                        <p>
-                          <span className="font-medium">Date:</span> {new Date(order.slot_start).toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </p>
-                        <p>
-                          <span className="font-medium">Time Slot:</span> {new Date(order.slot_start).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                          })} - {new Date(order.slot_end).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </p>
-                        <p className="text-lg font-bold text-primary-600 mt-2">
-                          Total: ${((order.quote_cents || order.total_cents) / 100).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2 ml-4">
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="btn-secondary text-sm"
-                      >
-                        View Details
-                      </Link>
-                      {order.status === 'awaiting_payment' && (
-                        <Link
-                          href={`/orders/${order.id}/pay`}
-                          className="btn-primary text-sm"
-                        >
-                          Pay Now
-                        </Link>
-                      )}
-                      {order.status === 'completed' && (
-                        <Link
-                          href={`/book/${order.service_type.toLowerCase()}`}
-                          className="btn-primary text-sm"
-                        >
-                          Reorder
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <>
+              <Section
+                title="Upcoming Pickups"
+                orders={grouped.upcoming}
+                initialCount={3}
+                emptyHint="No upcoming pickups scheduled."
+                onOpen={handleOpenOrder}
+              />
+              
+              <Section
+                title="In Progress"
+                orders={grouped.inProgress}
+                initialCount={3}
+                emptyHint="No orders currently in progress."
+                onOpen={handleOpenOrder}
+              />
+              
+              <Section
+                title="Completed"
+                orders={grouped.completed}
+                initialCount={4}
+                emptyHint="No recent completed orders."
+                onOpen={handleOpenOrder}
+              />
+              
+              <Section
+                title="Past Orders"
+                orders={grouped.past}
+                initialCount={5}
+                collapsed
+                emptyHint="No older orders."
+                onOpen={handleOpenOrder}
+              />
+            </>
           )}
 
           {/* Help Section */}
-          <div className="mt-12 bg-primary-50 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Need Help?</h3>
-            <p className="text-gray-600 mb-4">
+          <div className="mt-8 bg-blue-50 rounded-lg p-4 md:p-6">
+            <h3 className="text-base font-bold text-gray-900 mb-1">Need Help?</h3>
+            <p className="text-sm text-gray-600 mb-3">
               Have questions about your order? We're here to help!
             </p>
-            <div className="flex gap-4">
-              <a href="mailto:support@tidyhood.com" className="text-primary-600 hover:text-primary-700 font-medium">
+            <div className="flex flex-wrap gap-3 text-sm">
+              <a href="mailto:support@tidyhood.com" className="text-blue-600 hover:text-blue-700 font-medium">
                 Email Support
               </a>
               <span className="text-gray-300">|</span>
-              <a href="tel:+1234567890" className="text-primary-600 hover:text-primary-700 font-medium">
+              <a href="tel:+1234567890" className="text-blue-600 hover:text-blue-700 font-medium">
                 Call Us
               </a>
             </div>
@@ -306,25 +259,8 @@ function OrdersContent() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-24 py-12">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-400">
-            © 2025 Tidyhood. Supporting Harlem businesses.
-          </p>
-          <div className="mt-4 space-x-4">
-            <Link href="/terms" className="text-gray-400 hover:text-white">
-              Terms
-            </Link>
-            <Link href="/privacy" className="text-gray-400 hover:text-white">
-              Privacy
-            </Link>
-            <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white">
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
+      {/* Mobile Sticky CTA */}
+      <StickyActions />
     </div>
   )
 }

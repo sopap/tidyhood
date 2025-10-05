@@ -129,3 +129,32 @@ export const ADDON_INFO: Record<AddonKey, { label: string; description: string; 
     price: 5,
   },
 };
+
+// Order types for orders list page
+export type OrderStatus = 
+  | 'pending' 
+  | 'pending_pickup' 
+  | 'at_facility' 
+  | 'awaiting_payment' 
+  | 'paid_processing' 
+  | 'completed' 
+  | 'canceled';
+
+export interface Order {
+  id: string;
+  user_id: string;
+  service_type: 'LAUNDRY' | 'CLEANING';
+  status: OrderStatus;
+  slot_start: string;
+  slot_end: string;
+  delivery_slot_start?: string;
+  delivery_slot_end?: string;
+  subtotal_cents: number;
+  tax_cents: number;
+  delivery_cents: number;
+  total_cents: number;
+  quote_cents?: number;
+  created_at: string;
+  order_details?: any;
+  address_snapshot?: any;
+}
