@@ -108,6 +108,36 @@ export async function POST(
       await sendStatusUpdateSMS(customerPhone, status, order.service_type, params.id)
     }
     
+    // If order is completed and linked to a subscription, increment visit counter
+    if (status === 'completed' && order.subscription_id) {
+      try {
+        const visitResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/recurring/visit-complete`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscription_id: order.subscription_id,
+              order_id: params.id,
+            }),
+          }
+        )
+        
+        if (visitResponse.ok) {
+          const visitData = await visitResponse.json()
+          console.log(
+            `[Recurring] Visit completed for subscription ${order.subscription_id}. ` +
+            `Visits: ${visitData.visits_completed}, Next: ${visitData.next_date}`
+          )
+        } else {
+          console.error('[Recurring] Failed to increment visit counter:', await visitResponse.text())
+        }
+      } catch (visitError) {
+        console.error('[Recurring] Error incrementing visit counter:', visitError)
+        // Don't throw - visit tracking failure shouldn't block status update
+      }
+    }
+    
     return NextResponse.json({ 
       success: true, 
       order: updatedOrder 

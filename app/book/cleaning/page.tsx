@@ -11,7 +11,8 @@ import { Header } from '@/components/Header'
 import CleaningTypeSelector from '@/components/cleaning/CleaningTypeSelector'
 import CleaningAddons from '@/components/cleaning/CleaningAddons'
 import EstimateBadge from '@/components/cleaning/EstimateBadge'
-import { CleaningType, CleaningAddonKey } from '@/lib/types'
+import FrequencySelector from '@/components/cleaning/FrequencySelector'
+import { CleaningType, CleaningAddonKey, Frequency } from '@/lib/types'
 import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
 
 interface Address {
@@ -65,6 +66,8 @@ function CleaningBookingForm() {
   const [bathrooms, setBathrooms] = useState(1)
   const [cleaningType, setCleaningType] = useState<CleaningType>('standard')
   const [addons, setAddons] = useState<Record<CleaningAddonKey, boolean>>({} as Record<CleaningAddonKey, boolean>)
+  const [frequency, setFrequency] = useState<Frequency>('oneTime')
+  const [firstVisitDeep, setFirstVisitDeep] = useState(false)
   
   // Schedule
   const [date, setDate] = useState('')
@@ -160,6 +163,9 @@ function CleaningBookingForm() {
       if (!address) return
 
       try {
+        // Determine deep clean: explicit selection OR first visit deep for recurring
+        const isDeep = cleaningType === 'deep' || (frequency !== 'oneTime' && firstVisitDeep)
+        
         const response = await fetch('/api/price/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -168,8 +174,11 @@ function CleaningBookingForm() {
             zip: address.zip,
             bedrooms,
             bathrooms,
-            cleaningType,
-            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey])
+            deep: isDeep,
+            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
+            frequency,
+            visitsCompleted: 0, // First visit, so no recurring discount yet
+            firstVisitDeep: frequency !== 'oneTime' && firstVisitDeep
           })
         })
 
@@ -187,7 +196,7 @@ function CleaningBookingForm() {
     }
 
     calculatePrice()
-  }, [address, bedrooms, bathrooms, cleaningType, addons])
+  }, [address, bedrooms, bathrooms, cleaningType, addons, frequency, firstVisitDeep])
 
   // Fetch slots when date changes
   useEffect(() => {
@@ -229,6 +238,38 @@ function CleaningBookingForm() {
 
     try {
       setLoading(true)
+      
+      // Step 1: Create subscription if recurring
+      let subscriptionId: string | undefined
+      if (frequency !== 'oneTime') {
+        const subResponse = await fetch('/api/recurring/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            service_type: 'CLEANING',
+            frequency,
+            day_of_week: new Date(selectedSlot.slot_start).getDay(),
+            time_window: new Date(selectedSlot.slot_start).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              hour12: true
+            }).replace(' ', '–') + new Date(selectedSlot.slot_end).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              hour12: true
+            }),
+            default_addons: addons,
+            first_visit_deep: firstVisitDeep,
+            next_date: null, // Will be set after first visit completes
+          })
+        })
+
+        if (subResponse.ok) {
+          const { plan } = await subResponse.json()
+          subscriptionId = plan.id
+        }
+      }
+
+      // Step 2: Create order
       const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
 
       const response = await fetch('/api/orders', {
@@ -255,8 +296,11 @@ function CleaningBookingForm() {
             bedrooms,
             bathrooms,
             cleaningType,
-            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey])
-          }
+            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
+            frequency,
+            firstVisitDeep
+          },
+          subscription_id: subscriptionId
         })
       })
 
@@ -405,6 +449,19 @@ function CleaningBookingForm() {
                       <option value="4">4+ BA</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Frequency Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Service Frequency
+                  </label>
+                  <FrequencySelector 
+                    value={frequency} 
+                    onChange={setFrequency}
+                    firstVisitDeep={firstVisitDeep}
+                    onFirstVisitDeepChange={setFirstVisitDeep}
+                  />
                 </div>
 
                 {/* Cleaning Type Selector */}

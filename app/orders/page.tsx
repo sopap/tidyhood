@@ -9,11 +9,13 @@ import { Header } from '@/components/Header'
 function OrdersContent() {
   const { user, signOut } = useAuth()
   const [orders, setOrders] = useState<any[]>([])
+  const [recurringPlans, setRecurringPlans] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOrders()
+    fetchRecurringPlans()
   }, [])
 
   const fetchOrders = async () => {
@@ -32,6 +34,35 @@ function OrdersContent() {
       setError(err.message || 'Failed to load orders')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchRecurringPlans = async () => {
+    try {
+      if (!user?.id) return
+      const response = await fetch(`/api/recurring/plan?userId=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setRecurringPlans(data.plans || [])
+      }
+    } catch (err) {
+      console.error('Error fetching recurring plans:', err)
+    }
+  }
+
+  const handlePauseResume = async (planId: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/recurring/plan/${planId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !currentStatus })
+      })
+      
+      if (response.ok) {
+        fetchRecurringPlans() // Refresh
+      }
+    } catch (err) {
+      console.error('Error updating plan:', err)
     }
   }
   
@@ -81,6 +112,79 @@ function OrdersContent() {
               Book New Service
             </Link>
           </div>
+
+          {/* Recurring Plans Section */}
+          {recurringPlans.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Active Recurring Plans</h2>
+              <div className="space-y-4">
+                {recurringPlans.map((plan) => (
+                  <div key={plan.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg shadow-md p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-bold text-gray-900">
+                            {plan.frequency.charAt(0) + plan.frequency.slice(1).toLowerCase()} Cleaning
+                          </h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            plan.active 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {plan.active ? 'Active' : 'Paused'}
+                          </span>
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                            {plan.discount_pct * 100}% off visits 2+
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-1 text-sm text-gray-700">
+                          <p>
+                            <span className="font-medium">Visits Completed:</span> {plan.visits_completed}
+                          </p>
+                          {plan.next_date && (
+                            <p>
+                              <span className="font-medium">Next Scheduled:</span>{' '}
+                              {new Date(plan.next_date).toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                month: 'long', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          )}
+                          {plan.first_visit_deep && plan.visits_completed === 0 && (
+                            <p className="text-blue-700 font-medium">
+                              ✨ First visit will be deep clean at regular rate
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 ml-4">
+                        <Link
+                          href={`/orders/recurring/${plan.id}`}
+                          className="btn-secondary text-sm whitespace-nowrap"
+                        >
+                          Manage Plan
+                        </Link>
+                        <button
+                          onClick={() => handlePauseResume(plan.id, plan.active)}
+                          className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${
+                            plan.active
+                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                              : 'bg-green-100 text-green-800 hover:bg-green-200'
+                          }`}
+                        >
+                          {plan.active ? 'Pause' : 'Resume'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             // Loading State

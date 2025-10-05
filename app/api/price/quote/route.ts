@@ -18,6 +18,9 @@ const cleaningSchema = z.object({
   bathrooms: z.number().min(1).max(5),
   deep: z.boolean().optional(),
   addons: z.array(z.string()).optional(),
+  frequency: z.enum(['oneTime', 'weekly', 'biweekly', 'monthly']).optional(),
+  visitsCompleted: z.number().min(0).optional(),
+  firstVisitDeep: z.boolean().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -61,6 +64,9 @@ export async function POST(request: NextRequest) {
         bathrooms: params.bathrooms,
         deep: params.deep,
         addons: params.addons,
+        frequency: params.frequency,
+        visitsCompleted: params.visitsCompleted,
+        firstVisitDeep: params.firstVisitDeep,
       })
     }
     

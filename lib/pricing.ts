@@ -37,6 +37,9 @@ export interface CleaningQuoteParams {
   bathrooms: number
   deep?: boolean
   addons?: string[]
+  frequency?: 'oneTime' | 'weekly' | 'biweekly' | 'monthly'
+  visitsCompleted?: number
+  firstVisitDeep?: boolean
 }
 
 /**
@@ -142,7 +145,16 @@ export async function quoteLaundry(params: LaundryQuoteParams): Promise<PricingB
  * Calculate cleaning pricing
  */
 export async function quoteCleaning(params: CleaningQuoteParams): Promise<PricingBreakdown> {
-  const { zip, bedrooms, bathrooms, deep = false, addons = [] } = params
+  const { 
+    zip, 
+    bedrooms, 
+    bathrooms, 
+    deep = false, 
+    addons = [],
+    frequency = 'oneTime',
+    visitsCompleted = 0,
+    firstVisitDeep = false
+  } = params
   
   const rules = await getPricingRules('CLEANING', zip)
   const items: PricingLineItem[] = []
@@ -162,17 +174,23 @@ export async function quoteCleaning(params: CleaningQuoteParams): Promise<Pricin
   
   let baseCents = baseRule.unit_price_cents
   
+  // For recurring plans with firstVisitDeep option on first visit
+  const isFirstVisit = frequency !== 'oneTime' && visitsCompleted === 0
+  const shouldApplyDeepMultiplier = deep || (firstVisitDeep && isFirstVisit)
+  
   // Apply deep clean multiplier
-  if (deep) {
+  if (shouldApplyDeepMultiplier) {
     const deepMultRule = rules.find(r => r.unit_type === 'MULTIPLIER' && r.unit_key === 'CLN_DEEP_MULTI')
     if (deepMultRule) {
       baseCents = Math.round(baseCents * deepMultRule.multiplier)
     }
   }
   
+  const cleaningTypeLabel = shouldApplyDeepMultiplier ? 'Deep' : 'Standard'
+  
   items.push({
     key: unitKey,
-    label: `${deep ? 'Deep' : 'Standard'} Cleaning (${formatUnitSize(bedrooms, bathrooms)})`,
+    label: `${cleaningTypeLabel} Cleaning (${formatUnitSize(bedrooms, bathrooms)})`,
     unit_price_cents: baseCents,
     total_cents: baseCents,
     taxable: true, // Cleaning services are taxable
@@ -196,8 +214,41 @@ export async function quoteCleaning(params: CleaningQuoteParams): Promise<Pricin
   const serviceRule = rules.find(r => r.unit_type === 'DELIVERY' && r.unit_key === 'CLN_SERVICE_FEE')
   const serviceCents = serviceRule?.unit_price_cents || 0
   
-  // Calculate totals
-  const subtotal_cents = items.reduce((sum, item) => sum + item.total_cents, 0)
+  // Calculate base subtotal
+  let subtotal_cents = items.reduce((sum, item) => sum + item.total_cents, 0)
+  
+  // Apply recurring discount (only from visit #2 onward)
+  const RECURRING_DISCOUNTS: Record<string, number> = {
+    weekly: 0.20,
+    biweekly: 0.15,
+    monthly: 0.10,
+  }
+  
+  if (frequency !== 'oneTime' && visitsCompleted >= 1) {
+    const discountRate = RECURRING_DISCOUNTS[frequency] || 0
+    const discountAmount = Math.round(subtotal_cents * discountRate)
+    
+    items.push({
+      key: 'RECURRING_DISCOUNT',
+      label: `Recurring ${frequency} discount (${Math.round(discountRate * 100)}% off)`,
+      unit_price_cents: -discountAmount,
+      total_cents: -discountAmount,
+      taxable: true, // Discount applies to taxable items
+    })
+    
+    subtotal_cents -= discountAmount
+  } else if (frequency !== 'oneTime' && visitsCompleted === 0) {
+    // Add informational line for first visit
+    items.push({
+      key: 'RECURRING_INFO',
+      label: `First visit at regular rate (${frequency} discount starts next visit)`,
+      unit_price_cents: 0,
+      total_cents: 0,
+      taxable: false,
+    })
+  }
+  
+  // Recalculate tax on final subtotal (after discount)
   const taxable_subtotal = items.filter(i => i.taxable).reduce((sum, item) => sum + item.total_cents, 0)
   const tax_cents = Math.round(taxable_subtotal * NYC_TAX_RATE)
   const total_cents = subtotal_cents + tax_cents

@@ -13,6 +13,31 @@ export type CleaningAddonKey =
   | 'junkQuote';
 export type AddonCategory = 'core' | 'premium' | 'moveOut';
 
+// Recurring cleaning types
+export type Frequency = 'oneTime' | 'weekly' | 'biweekly' | 'monthly';
+
+export interface RecurringPlan {
+  id: string;
+  user_id: string;
+  service_type: 'LAUNDRY' | 'CLEANING';
+  frequency: Exclude<Frequency, 'oneTime'>; // DB stores as uppercase
+  visits_completed: number;
+  day_of_week?: number; // 0=Sunday, 6=Saturday
+  time_window?: string; // e.g., '8–10am'
+  default_addons: Record<string, boolean>;
+  first_visit_deep: boolean;
+  discount_pct: number;
+  next_date?: string; // ISO date
+  active: boolean;
+  created_at: string;
+}
+
+export const RECURRING_DISCOUNT: Record<Exclude<Frequency, 'oneTime'>, number> = {
+  weekly: 0.20,
+  biweekly: 0.15,
+  monthly: 0.10,
+};
+
 export interface CleaningAddon {
   key: CleaningAddonKey;
   label: string;
