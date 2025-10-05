@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       .from('orders')
       .select(`
         *,
-        profiles!orders_customer_id_fkey(email, phone),
+        profiles!orders_user_id_fkey(phone, full_name),
         partners(name)
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -49,12 +49,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('partner_id', partnerId)
     }
 
-    // Search filter (order ID, customer email, or phone)
+    // Search filter (order ID, customer phone, or name)
     if (search) {
       query = query.or(
         `id.ilike.%${search}%,` +
-        `profiles.email.ilike.%${search}%,` +
-        `profiles.phone.ilike.%${search}%`
+        `profiles.phone.ilike.%${search}%,` +
+        `profiles.full_name.ilike.%${search}%`
       )
     }
 
