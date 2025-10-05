@@ -1,56 +1,68 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/lib/auth-context'
 
-// Mock data for demonstration
-const mockOrders = [
-  {
-    id: 'ORD-001',
-    service: 'Laundry',
-    status: 'in_progress',
-    date: '2025-01-05',
-    total: 32.24,
-    pickup: '9:00 AM - 11:00 AM'
-  },
-  {
-    id: 'ORD-002',
-    service: 'Cleaning',
-    status: 'completed',
-    date: '2025-01-03',
-    total: 149.00,
-    pickup: '1:00 PM - 3:00 PM'
-  }
-]
-
 function OrdersContent() {
   const { user, signOut } = useAuth()
-  const [orders] = useState(mockOrders)
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/orders')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders')
+      }
+
+      const data = await response.json()
+      setOrders(data.orders || [])
+    } catch (err: any) {
+      console.error('Error fetching orders:', err)
+      setError(err.message || 'Failed to load orders')
+    } finally {
+      setLoading(false)
+    }
+  }
   
   const handleLogout = async () => {
     await signOut()
   }
 
   const getStatusBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
-      in_progress: 'bg-blue-100 text-blue-800',
+      pending_pickup: 'bg-blue-100 text-blue-800',
+      at_facility: 'bg-indigo-100 text-indigo-800',
+      awaiting_payment: 'bg-yellow-100 text-yellow-800',
+      paid_processing: 'bg-purple-100 text-purple-800',
       completed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800'
+      canceled: 'bg-red-100 text-red-800'
     }
     
-    const labels = {
+    const labels: Record<string, string> = {
       pending: 'Pending',
-      in_progress: 'In Progress',
+      pending_pickup: 'Pickup Scheduled',
+      at_facility: 'At Facility',
+      awaiting_payment: 'Awaiting Payment',
+      paid_processing: 'Processing',
       completed: 'Completed',
-      cancelled: 'Cancelled'
+      canceled: 'Canceled'
     }
 
+    const statusKey = status.toLowerCase()
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[statusKey] || 'bg-gray-100 text-gray-800'}`}>
+        {labels[statusKey] || status}
       </span>
     )
   }
@@ -97,7 +109,23 @@ function OrdersContent() {
             </Link>
           </div>
 
-          {orders.length === 0 ? (
+          {loading ? (
+            // Loading State
+            <div className="bg-white rounded-lg shadow-md p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your orders...</p>
+            </div>
+          ) : error ? (
+            // Error State
+            <div className="bg-white rounded-lg shadow-md p-12 text-center">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Orders</h2>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button onClick={fetchOrders} className="btn-primary">
+                Try Again
+              </button>
+            </div>
+          ) : orders.length === 0 ? (
             // Empty State
             <div className="bg-white rounded-lg shadow-md p-12 text-center">
               <div className="text-6xl mb-4">📦</div>
@@ -118,17 +146,17 @@ function OrdersContent() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-bold text-gray-900">
-                          {order.service} Service
+                          {order.service_type === 'LAUNDRY' ? 'Laundry' : 'Cleaning'} Service
                         </h3>
                         {getStatusBadge(order.status)}
                       </div>
                       
                       <div className="space-y-1 text-sm text-gray-600">
                         <p>
-                          <span className="font-medium">Order ID:</span> {order.id}
+                          <span className="font-medium">Order ID:</span> {order.id.slice(0, 8)}
                         </p>
                         <p>
-                          <span className="font-medium">Date:</span> {new Date(order.date).toLocaleDateString('en-US', { 
+                          <span className="font-medium">Date:</span> {new Date(order.slot_start).toLocaleDateString('en-US', { 
                             weekday: 'long', 
                             year: 'numeric', 
                             month: 'long', 
@@ -136,10 +164,18 @@ function OrdersContent() {
                           })}
                         </p>
                         <p>
-                          <span className="font-medium">Time Slot:</span> {order.pickup}
+                          <span className="font-medium">Time Slot:</span> {new Date(order.slot_start).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })} - {new Date(order.slot_end).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
                         </p>
                         <p className="text-lg font-bold text-primary-600 mt-2">
-                          Total: ${order.total.toFixed(2)}
+                          Total: ${((order.quote_cents || order.total_cents) / 100).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -151,10 +187,21 @@ function OrdersContent() {
                       >
                         View Details
                       </Link>
+                      {order.status === 'awaiting_payment' && (
+                        <Link
+                          href={`/orders/${order.id}/pay`}
+                          className="btn-primary text-sm"
+                        >
+                          Pay Now
+                        </Link>
+                      )}
                       {order.status === 'completed' && (
-                        <button className="btn-primary text-sm">
+                        <Link
+                          href={`/book/${order.service_type.toLowerCase()}`}
+                          className="btn-primary text-sm"
+                        >
                           Reorder
-                        </button>
+                        </Link>
                       )}
                     </div>
                   </div>
