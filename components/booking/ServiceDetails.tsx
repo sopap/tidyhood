@@ -3,6 +3,9 @@
 import { ServiceType, WeightTier, AddonKey } from '@/lib/types';
 import ServiceTypeSelector from './ServiceTypeSelector';
 import Addons from './Addons';
+import Tooltip from '@/components/ui/Tooltip';
+import DryPriceTooltip from '@/components/dryclean/DryPriceTooltip';
+import { Info } from 'lucide-react';
 
 interface ServiceDetailsProps {
   serviceType: ServiceType;
@@ -74,9 +77,23 @@ export default function ServiceDetails({
         <ServiceTypeSelector value={serviceType} onChange={onServiceTypeChange} />
       </div>
 
-      {/* Info Row */}
+      {/* Info Row with optional dry-clean pricing tooltip */}
       <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-        {getInfoText()}
+        <div className="flex items-center justify-between gap-2">
+          <span>{getInfoText()}</span>
+          {(serviceType === 'dryClean' || serviceType === 'mixed') && (
+            <Tooltip content={<DryPriceTooltip />} position="top">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md border border-blue-300 bg-white px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 transition-colors"
+                aria-label="View sample dry-clean prices"
+              >
+                <Info className="h-3.5 w-3.5" />
+                <span>Prices</span>
+              </button>
+            </Tooltip>
+          )}
+        </div>
       </div>
 
       {/* Weight Tier Chips - only for washFold */}

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, ReactNode } from 'react';
 import { trapFocus } from '@/lib/a11y';
 
 interface TooltipProps {
-  content: string;
+  content: ReactNode;
   children: ReactNode;
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
@@ -60,22 +60,11 @@ export default function Tooltip({ content, children, position = 'top' }: Tooltip
       {isVisible && (
         <div
           ref={tooltipRef}
-          role="tooltip"
+          role="dialog"
           onKeyDown={handleKeyDown}
-          className={`absolute z-50 w-48 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg ${positionClasses[position]}`}
+          className={`absolute z-50 px-3 py-3 text-sm bg-white border border-gray-200 rounded-lg shadow-lg ${positionClasses[position]}`}
         >
           {content}
-          <div
-            className={`absolute w-2 h-2 bg-gray-900 transform rotate-45 ${
-              position === 'top'
-                ? 'bottom-[-4px] left-1/2 -translate-x-1/2'
-                : position === 'bottom'
-                ? 'top-[-4px] left-1/2 -translate-x-1/2'
-                : position === 'left'
-                ? 'right-[-4px] top-1/2 -translate-y-1/2'
-                : 'left-[-4px] top-1/2 -translate-y-1/2'
-            }`}
-          />
         </div>
       )}
     </span>
