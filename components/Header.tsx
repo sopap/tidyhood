@@ -31,10 +31,10 @@ export function Header() {
           <Image 
             src="/logo.svg"
             alt="Tidyhood"
-            width={160}
-            height={40}
+            width={780}
+            height={195}
             priority
-            className="h-10 w-auto"
+            className="h-44 w-auto"
           />
         </Link>
         <nav className="space-x-4">
