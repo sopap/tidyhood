@@ -11,24 +11,78 @@ import { ValidationError, ConflictError, handleApiError } from '@/lib/errors'
 // Force dynamic rendering (uses cookies for auth)
 export const dynamic = 'force-dynamic'
 
-// GET /api/orders - Fetch user's orders
+/**
+ * GET /api/orders - Fetch user's orders with filtering and pagination
+ * 
+ * Query Parameters:
+ * - limit: number (1-100, default: 50) - Number of orders per page
+ * - cursor: string (optional) - Cursor for pagination (order ID)
+ * - status: string (optional) - Filter by order status
+ * - service_type: 'LAUNDRY' | 'CLEANING' (optional) - Filter by service type
+ * - from_date: ISO string (optional) - Filter orders from this date
+ * - to_date: ISO string (optional) - Filter orders until this date
+ * - sort: 'created_at' | 'slot_start' (default: 'created_at') - Sort field
+ * - order: 'asc' | 'desc' (default: 'desc') - Sort order
+ * 
+ * Response includes pagination metadata for cursor-based navigation
+ */
 export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
     const db = getServiceClient()
     
-    // Get query parameters
+    // Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100
-    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
+    const limit = Math.min(
+      Math.max(1, parseInt(searchParams.get('limit') || '50')),
+      100
+    )
+    const cursor = searchParams.get('cursor')
+    const statusFilter = searchParams.get('status')
+    const serviceTypeFilter = searchParams.get('service_type')
+    const fromDate = searchParams.get('from_date')
+    const toDate = searchParams.get('to_date')
+    const sortField = searchParams.get('sort') === 'slot_start' ? 'slot_start' : 'created_at'
+    const sortOrder = searchParams.get('order') === 'asc' ? 'asc' : 'desc'
     
-    // Fetch orders for the user
-    const { data: orders, error } = await db
+    // Build query
+    let query = db
       .from('orders')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
+    
+    // Apply filters
+    if (statusFilter) {
+      query = query.eq('status', statusFilter)
+    }
+    
+    if (serviceTypeFilter && (serviceTypeFilter === 'LAUNDRY' || serviceTypeFilter === 'CLEANING')) {
+      query = query.eq('service_type', serviceTypeFilter)
+    }
+    
+    if (fromDate) {
+      query = query.gte('created_at', fromDate)
+    }
+    
+    if (toDate) {
+      query = query.lte('created_at', toDate)
+    }
+    
+    // Apply cursor-based pagination
+    if (cursor) {
+      // Cursor pagination: fetch orders after/before the cursor
+      if (sortOrder === 'desc') {
+        query = query.lt(sortField, cursor)
+      } else {
+        query = query.gt(sortField, cursor)
+      }
+    }
+    
+    // Apply sorting and limit
+    query = query.order(sortField, { ascending: sortOrder === 'asc' })
+    query = query.limit(limit + 1) // Fetch one extra to determine if there's a next page
+    
+    const { data: orders, error, count } = await query
     
     if (error) {
       console.error('Error fetching orders:', error)
@@ -38,12 +92,30 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    return NextResponse.json({ orders: orders || [] })
+    // Determine if there are more pages
+    const hasMore = orders ? orders.length > limit : false
+    const returnOrders = hasMore ? orders.slice(0, limit) : orders || []
+    
+    // Generate next cursor if there are more results
+    const nextCursor = hasMore && returnOrders.length > 0
+      ? returnOrders[returnOrders.length - 1][sortField]
+      : null
+    
+    return NextResponse.json({
+      orders: returnOrders,
+      pagination: {
+        limit,
+        hasMore,
+        nextCursor,
+        total: count || 0,
+      },
+    })
   } catch (error) {
     console.error('Orders GET error:', error)
+    const apiError = handleApiError(error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: apiError.error, code: apiError.code },
+      { status: apiError.statusCode }
     )
   }
 }

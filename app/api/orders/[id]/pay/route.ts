@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { requireAuth } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
-import { NotFoundError, ConflictError, handleApiError } from '@/lib/errors'
+import { canTransition, validateTransition } from '@/lib/orderStateMachine'
+import { NotFoundError, ConflictError, ValidationError, handleApiError } from '@/lib/errors'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 })
+
+/**
+ * POST /api/orders/:id/pay - Process payment for an order
+ * 
+ * For LAUNDRY orders: Payment after quote acceptance (awaiting_payment → processing)
+ * For CLEANING orders: Upfront payment (scheduled → processing)
+ * 
+ * Uses unified state machine to validate transitions
+ * Requires idempotency key for safe retries
+ */
 
 export async function POST(
   request: NextRequest,
@@ -28,20 +39,47 @@ export async function POST(
       throw new NotFoundError('Order not found')
     }
     
-    // Check if order can be paid
-    // Allow PENDING (cleaning upfront) and awaiting_payment (laundry after quote)
-    if (order.status !== 'PENDING' && order.status !== 'awaiting_payment') {
-      throw new ConflictError('Order already processed or not ready for payment')
+    // Validate payment eligibility using state machine
+    const targetStatus = 'processing'
+    const serviceType = order.service_type as 'LAUNDRY' | 'CLEANING'
+    
+    // Check if transition is valid
+    if (!canTransition(order.status, targetStatus, serviceType, order)) {
+      throw new ValidationError(
+        `Payment not allowed for order in ${order.status} status`,
+        'PAYMENT_NOT_ALLOWED'
+      )
+    }
+    
+    // For laundry orders, ensure quote exists and payment field is set
+    if (serviceType === 'LAUNDRY' && order.status === 'awaiting_payment') {
+      if (!order.quote && !order.quote_cents) {
+        throw new ValidationError(
+          'No quote available for this order',
+          'MISSING_QUOTE'
+        )
+      }
     }
     
     // Check idempotency
     const idempotencyKey = request.headers.get('idempotency-key')
     if (!idempotencyKey) {
-      throw new ConflictError('Missing Idempotency-Key header')
+      throw new ValidationError('Missing Idempotency-Key header')
     }
     
-    // Use quote amount if available (for laundry after weighing), otherwise use estimate
-    const amountToCharge = order.quote_cents || order.total_cents
+    // Determine amount to charge based on service type and status
+    let amountToCharge: number
+    
+    if (serviceType === 'LAUNDRY' && order.quote_cents) {
+      // Use quote amount for laundry after inspection
+      amountToCharge = order.quote_cents
+    } else if (order.quote && order.quote.totalCents) {
+      // Use structured quote if available
+      amountToCharge = order.quote.totalCents
+    } else {
+      // Fall back to original estimate
+      amountToCharge = order.total_cents
+    }
     
     // Create Stripe PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create(
@@ -61,13 +99,27 @@ export async function POST(
       }
     )
     
-    // Update order with payment ID and set status to paid_processing
+    // Validate the full transition before updating
+    const validation = validateTransition(order.status, targetStatus, serviceType, {
+      ...order,
+      paid_at: new Date().toISOString()
+    })
+    
+    if (!validation.valid) {
+      throw new ValidationError(
+        validation.error || 'Cannot process payment at this time',
+        'INVALID_TRANSITION'
+      )
+    }
+    
+    // Update order with payment ID and transition to processing
     const { error: updateError } = await db
       .from('orders')
       .update({
         payment_id: paymentIntent.id,
-        status: 'paid_processing',
-        paid_at: new Date().toISOString()
+        status: targetStatus,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .eq('id', order.id)
     
@@ -98,8 +150,9 @@ export async function POST(
     return NextResponse.json({
       client_secret: paymentIntent.client_secret,
       order_id: order.id,
-      status: 'paid_processing',
+      status: targetStatus,
       amount_charged: amountToCharge,
+      previous_status: order.status,
     })
   } catch (error) {
     const apiError = handleApiError(error)
