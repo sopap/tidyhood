@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     
     // Get query parameters
     const searchParams = request.nextUrl.searchParams
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 10
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0
     
     // Fetch orders for the user
