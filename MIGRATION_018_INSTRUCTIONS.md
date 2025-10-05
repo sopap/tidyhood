@@ -51,20 +51,18 @@ WHERE id = 'another-partner-id';
 Run this query to check the results:
 
 ```sql
--- First, let's see what columns exist
+-- Simple verification - just check capabilities column
 SELECT 
   id,
   capabilities,
-  service_areas,
-  coverage_zips,
   created_at
 FROM partners
 ORDER BY created_at DESC;
 ```
 
-Expected output: All partners should have capabilities array populated.
+Expected output: All partners should have `capabilities` array with values like `{wash_fold,dry_clean,mixed}`.
 
-**To see all columns in partners table:**
+**To see all available columns:**
 ```sql
 SELECT column_name, data_type 
 FROM information_schema.columns 
