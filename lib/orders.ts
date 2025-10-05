@@ -1,4 +1,11 @@
 import { Order, OrderStatus } from './types';
+import { 
+  getStatusLabel, 
+  getStatusColor, 
+  getStatusSection,
+  isTerminal,
+  mapLegacyStatus 
+} from './orderStateMachine';
 
 export interface GroupedOrders {
   upcoming: Order[];
@@ -14,19 +21,35 @@ export interface StatusUIConfig {
 
 /**
  * Maps database status to user-friendly UI label and color tone
+ * Uses unified state machine helpers
  */
 export function statusToUI(status: OrderStatus): StatusUIConfig {
-  const map: Record<OrderStatus, StatusUIConfig> = {
-    pending: { label: 'Pending', tone: 'yellow' },
-    pending_pickup: { label: 'Pickup Scheduled', tone: 'blue' },
-    at_facility: { label: 'In Progress', tone: 'indigo' },
-    paid_processing: { label: 'In Progress', tone: 'indigo' },
-    awaiting_payment: { label: 'Awaiting Payment', tone: 'yellow' },
-    completed: { label: 'Completed', tone: 'green' },
-    canceled: { label: 'Canceled', tone: 'gray' },
+  const label = getStatusLabel(status);
+  const color = getStatusColor(status);
+  
+  // Map state machine colors to UI tones
+  const colorMap: Record<string, StatusUIConfig['tone']> = {
+    'blue': 'blue',
+    'yellow': 'yellow',
+    'purple': 'indigo',
+    'orange': 'yellow',
+    'indigo': 'indigo',
+    'green': 'green',
+    'red': 'gray',
+    'gray': 'gray'
   };
   
-  return map[status] || { label: status, tone: 'gray' };
+  return {
+    label,
+    tone: colorMap[color] || 'gray'
+  };
+}
+
+/**
+ * Backward compatibility: convert legacy status to unified status
+ */
+export function normalizeLegacyStatus(status: string): OrderStatus {
+  return mapLegacyStatus(status);
 }
 
 /**
@@ -38,6 +61,11 @@ export function formatMoney(cents: number): string {
 
 /**
  * Groups orders into sections based on status and date
+ * Uses unified state machine helpers
+ * 
+ * IMPORTANT: Orders are only "completed" when:
+ * - LAUNDRY: Status is 'delivered' (items returned to customer)
+ * - CLEANING: Status is 'cleaned' (service finished)
  */
 export function groupOrders(orders: Order[]): GroupedOrders {
   const now = new Date();
@@ -55,26 +83,32 @@ export function groupOrders(orders: Order[]): GroupedOrders {
     const isFuture = slotDate > now;
     const isRecent = slotDate > thirtyDaysAgo;
     
+    // Use state machine helper to categorize
+    const section = getStatusSection(order.status);
+    const terminal = isTerminal(order.status);
+    
     // Upcoming: scheduled orders in the future
-    if (order.status === 'pending_pickup' && isFuture) {
+    if (section === 'upcoming' && isFuture) {
       grouped.upcoming.push(order);
     }
-    // In Progress: active orders (at facility, being processed)
-    else if (order.status === 'at_facility' || order.status === 'paid_processing') {
+    // In Progress: orders actively being worked on
+    else if (section === 'in_progress') {
       grouped.inProgress.push(order);
     }
-    // Completed: finished orders from last 30 days
-    else if ((order.status === 'completed' || order.status === 'awaiting_payment') && isRecent) {
+    // Completed: terminal success states (delivered/cleaned) that are recent
+    else if (section === 'completed' && isRecent) {
       grouped.completed.push(order);
     }
-    // Past: everything older than 30 days
-    else if (!isRecent) {
+    // Past: older completed orders, canceled orders, or terminal states that aren't recent
+    else if (!isRecent || section === 'canceled' || terminal) {
       grouped.past.push(order);
     }
-    // Fallback: put pending/canceled in completed if recent, otherwise past
-    else if (isRecent) {
-      grouped.completed.push(order);
-    } else {
+    // Fallback: scheduled orders in the past go to inProgress
+    else if (section === 'upcoming' && !isFuture) {
+      grouped.inProgress.push(order);
+    }
+    // Final fallback
+    else {
       grouped.past.push(order);
     }
   }

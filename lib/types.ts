@@ -130,31 +130,113 @@ export const ADDON_INFO: Record<AddonKey, { label: string; description: string; 
   },
 };
 
-// Order types for orders list page
-export type OrderStatus = 
+// Order types - Import unified state machine types
+import type { OrderStatus as UnifiedOrderStatus, ServiceType as StateMachineServiceType, Action as OrderAction } from './orderStateMachine';
+export type { OrderStatus, ServiceType as OrderServiceType, Action } from './orderStateMachine';
+
+// Legacy order status type for backward compatibility
+export type LegacyOrderStatus = 
   | 'pending' 
   | 'pending_pickup' 
   | 'at_facility' 
   | 'awaiting_payment' 
   | 'paid_processing' 
-  | 'completed' 
+  | 'in_progress'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'completed'
   | 'canceled';
 
+// Quote structure for laundry orders
+export interface QuoteItem {
+  label: string;
+  qty?: number;
+  amountCents: number;
+  notes?: string;
+}
+
+export interface Quote {
+  items: QuoteItem[];
+  totalCents: number;
+  expiresAtISO: string;
+  acceptedAtISO?: string;
+}
+
+// Address type
+export interface Address {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+// Time window type
+export interface TimeWindow {
+  startISO: string;
+  endISO: string;
+}
+
+// Rating type
+export interface Rating {
+  stars: 1 | 2 | 3 | 4 | 5;
+  comment?: string;
+  ratedAt: string;
+}
+
+// Cleaning order details
+export interface CleaningDetails {
+  bedrooms: number;
+  bathrooms: number;
+  addOns: string[];
+  frequency?: Frequency;
+  visitsCompleted?: number;
+}
+
+// Order interface - unified with state machine
 export interface Order {
   id: string;
   user_id: string;
   service_type: 'LAUNDRY' | 'CLEANING';
-  status: OrderStatus;
+  status: UnifiedOrderStatus;
+  partner_id?: string;
+  phone?: string;
+  
+  // Time windows
   slot_start: string;
   slot_end: string;
   delivery_slot_start?: string;
   delivery_slot_end?: string;
+  
+  // Money (all in cents)
   subtotal_cents: number;
   tax_cents: number;
   delivery_cents: number;
   total_cents: number;
-  quote_cents?: number;
+  
+  // Quote (laundry only)
+  quote?: Quote;
+  quote_cents?: number; // Legacy field
+  quoted_at?: string;
+  paid_at?: string;
+  
+  // Cleaning specifics
+  cleaning?: CleaningDetails;
+  
+  // Additional details
+  actual_weight_lbs?: number;
+  partner_notes?: string;
+  intake_photos_json?: string[];
+  outtake_photos_json?: string[];
+  
+  // Rating
+  rating?: Rating;
+  
+  // Timestamps
   created_at: string;
+  updated_at?: string;
+  
+  // Legacy fields
   order_details?: any;
-  address_snapshot?: any;
+  address_snapshot?: any | Address;
 }
