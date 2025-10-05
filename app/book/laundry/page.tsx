@@ -12,6 +12,7 @@ import EstimatePanel from '@/components/booking/EstimatePanel';
 import StickyCTA from '@/components/booking/StickyCTA';
 import { ServiceType, WeightTier, AddonKey, EstimateResult } from '@/lib/types';
 import { estimateLaundry } from '@/lib/estimate';
+import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking';
 
 interface Address {
   line1: string;
@@ -36,11 +37,28 @@ function LaundryBookingForm() {
   const router = useRouter();
   const { user } = useAuth();
 
+  // Persistent booking data
+  const {
+    loaded: persistedLoaded,
+    remember,
+    toggleRemember,
+    phone: persistedPhone,
+    updatePhone: updatePersistedPhone,
+    address: persistedAddress,
+    updateAddress: updatePersistedAddress,
+    homeSize: persistedHomeSize,
+    updateHomeSize: updatePersistedHomeSize,
+    prefillMsg,
+    clearAll,
+  } = usePersistentBooking();
+
   // Address state
   const [address, setAddress] = useState<Address | null>(null);
   const [isAddressValid, setIsAddressValid] = useState(false);
   const [addressLine2, setAddressLine2] = useState('');
   const [phone, setPhone] = useState('');
+  const [bedrooms, setBedrooms] = useState<number>(1);
+  const [bathrooms, setBathrooms] = useState<number>(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isAddressCollapsed, setIsAddressCollapsed] = useState(false);
 
@@ -71,6 +89,30 @@ function LaundryBookingForm() {
 
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
+
+  // Hydrate form from persisted data on mount
+  useEffect(() => {
+    if (!persistedLoaded) return;
+
+    // Set phone with formatting
+    if (persistedPhone) {
+      setPhone(formatPhone(persistedPhone));
+    }
+
+    // Set address fields
+    if (persistedAddress?.line1) {
+      setAddressLine2(persistedAddress.line2 || '');
+      // Note: Full address will need to be re-geocoded or set via AddressAutocomplete
+    }
+
+    // Set home size
+    if (persistedHomeSize?.bedrooms !== undefined) {
+      setBedrooms(persistedHomeSize.bedrooms);
+    }
+    if (persistedHomeSize?.bathrooms !== undefined) {
+      setBathrooms(persistedHomeSize.bathrooms);
+    }
+  }, [persistedLoaded, persistedPhone, persistedAddress, persistedHomeSize]);
 
   // Load last order for smart defaults
   useEffect(() => {
@@ -336,7 +378,16 @@ function LaundryBookingForm() {
               ) : (
                 <div className="space-y-4">
                   <AddressAutocomplete 
-                    onAddressSelect={setAddress} 
+                    onAddressSelect={(addr) => {
+                      setAddress(addr);
+                      if (addr) {
+                        updatePersistedAddress({
+                          line1: addr.line1,
+                          line2: addressLine2,
+                          zip: addr.zip,
+                        });
+                      }
+                    }}
                     onValidityChange={setIsAddressValid}
                     defaultValue={address?.formatted} 
                     showLabel={false} 
@@ -344,7 +395,16 @@ function LaundryBookingForm() {
                   <input
                     type="text"
                     value={addressLine2}
-                    onChange={(e) => setAddressLine2(e.target.value)}
+                    onChange={(e) => {
+                      setAddressLine2(e.target.value);
+                      if (address) {
+                        updatePersistedAddress({
+                          line1: address.line1,
+                          line2: e.target.value,
+                          zip: address.zip,
+                        });
+                      }
+                    }}
                     placeholder="Apartment, Suite, etc. (optional)"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                   />
@@ -591,11 +651,94 @@ function LaundryBookingForm() {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const formatted = formatPhone(e.target.value);
+                      setPhone(formatted);
+                      updatePersistedPhone(e.target.value);
+                    }}
                     placeholder="(555) 123-4567"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                     required
                   />
+                  <div className="flex items-center justify-between mt-2">
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(e) => toggleRemember(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                      />
+                      <span className="group-hover:text-gray-900">
+                        Remember my details on this device
+                      </span>
+                      <span 
+                        className="text-gray-400 hover:text-gray-600 cursor-help" 
+                        title="Saved in your browser only. You can clear anytime."
+                      >
+                        ⓘ
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearAll();
+                        setPhone('');
+                        setAddressLine2('');
+                        setBedrooms(1);
+                        setBathrooms(1);
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 underline"
+                    >
+                      Not you? Clear saved details
+                    </button>
+                  </div>
+                </div>
+
+                {/* Home Size - New Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bedrooms
+                    </label>
+                    <select
+                      value={bedrooms}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value);
+                        setBedrooms(value);
+                        updatePersistedHomeSize({ bedrooms: value, bathrooms });
+                      }}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                    >
+                      <option value="0">Studio</option>
+                      <option value="1">1 BR</option>
+                      <option value="2">2 BR</option>
+                      <option value="3">3 BR</option>
+                      <option value="4">4 BR</option>
+                      <option value="5">5+ BR</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bathrooms
+                    </label>
+                    <select
+                      value={bathrooms}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value);
+                        setBathrooms(value);
+                        updatePersistedHomeSize({ bedrooms, bathrooms: value });
+                      }}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                    >
+                      <option value="1">1 BA</option>
+                      <option value="1.5">1.5 BA</option>
+                      <option value="2">2 BA</option>
+                      <option value="2.5">2.5 BA</option>
+                      <option value="3">3 BA</option>
+                      <option value="3.5">3.5 BA</option>
+                      <option value="4">4+ BA</option>
+                    </select>
+                  </div>
                 </div>
 
                 {serviceType !== 'mixed' && (
@@ -617,7 +760,7 @@ function LaundryBookingForm() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <button
                 type="submit"
-                disabled={loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
+                disabled={!persistedLoaded || loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
                 className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-disabled={loading}
               >
@@ -637,6 +780,13 @@ function LaundryBookingForm() {
                 </p>
               </div>
             </div>
+
+            {/* Accessibility: Prefill announcement */}
+            {prefillMsg && (
+              <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+                {prefillMsg}
+              </div>
+            )}
           </form>
         </div>
       </main>

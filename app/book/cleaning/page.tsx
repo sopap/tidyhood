@@ -12,6 +12,7 @@ import CleaningTypeSelector from '@/components/cleaning/CleaningTypeSelector'
 import CleaningAddons from '@/components/cleaning/CleaningAddons'
 import EstimateBadge from '@/components/cleaning/EstimateBadge'
 import { CleaningType, CleaningAddonKey } from '@/lib/types'
+import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
 
 interface Address {
   line1: string
@@ -35,6 +36,21 @@ interface TimeSlot {
 function CleaningBookingForm() {
   const router = useRouter()
   const { user } = useAuth()
+  
+  // Persistent booking data
+  const {
+    loaded: persistedLoaded,
+    remember,
+    toggleRemember,
+    phone: persistedPhone,
+    updatePhone: updatePersistedPhone,
+    address: persistedAddress,
+    updateAddress: updatePersistedAddress,
+    homeSize: persistedHomeSize,
+    updateHomeSize: updatePersistedHomeSize,
+    prefillMsg,
+    clearAll,
+  } = usePersistentBooking()
   
   // Address state
   const [address, setAddress] = useState<Address | null>(null)
@@ -66,6 +82,28 @@ function CleaningBookingForm() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
 
+  // Hydrate form from persisted data on mount
+  useEffect(() => {
+    if (!persistedLoaded) return
+
+    // Set phone with formatting
+    if (persistedPhone) {
+      setPhone(formatPhone(persistedPhone))
+    }
+
+    // Set address fields
+    if (persistedAddress?.line1) {
+      setAddressLine2(persistedAddress.line2 || '')
+    }
+
+    // Set home size
+    if (persistedHomeSize?.bedrooms !== undefined) {
+      setBedrooms(persistedHomeSize.bedrooms)
+    }
+    if (persistedHomeSize?.bathrooms !== undefined) {
+      setBathrooms(persistedHomeSize.bathrooms)
+    }
+  }, [persistedLoaded, persistedPhone, persistedAddress, persistedHomeSize])
 
   // Load last order for smart defaults
   useEffect(() => {
@@ -287,7 +325,16 @@ function CleaningBookingForm() {
               ) : (
                 <div className="space-y-4">
                   <AddressAutocomplete
-                    onAddressSelect={setAddress}
+                    onAddressSelect={(addr) => {
+                      setAddress(addr)
+                      if (addr) {
+                        updatePersistedAddress({
+                          line1: addr.line1,
+                          line2: addressLine2,
+                          zip: addr.zip,
+                        })
+                      }
+                    }}
                     onValidityChange={setIsAddressValid}
                     defaultValue={address?.formatted}
                     showLabel={false}
@@ -295,7 +342,16 @@ function CleaningBookingForm() {
                   <input
                     type="text"
                     value={addressLine2}
-                    onChange={(e) => setAddressLine2(e.target.value)}
+                    onChange={(e) => {
+                      setAddressLine2(e.target.value)
+                      if (address) {
+                        updatePersistedAddress({
+                          line1: address.line1,
+                          line2: e.target.value,
+                          zip: address.zip,
+                        })
+                      }
+                    }}
                     placeholder="Apartment, Suite, etc. (optional)"
                     className="input-field"
                   />
@@ -315,7 +371,11 @@ function CleaningBookingForm() {
                     </label>
                     <select
                       value={bedrooms}
-                      onChange={(e) => setBedrooms(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value)
+                        setBedrooms(value)
+                        updatePersistedHomeSize({ bedrooms: value, bathrooms })
+                      }}
                       className="input-field"
                     >
                       <option value="0">Studio</option>
@@ -332,7 +392,11 @@ function CleaningBookingForm() {
                     </label>
                     <select
                       value={bathrooms}
-                      onChange={(e) => setBathrooms(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value)
+                        setBathrooms(value)
+                        updatePersistedHomeSize({ bedrooms, bathrooms: value })
+                      }}
                       className="input-field"
                     >
                       <option value="1">1 BA</option>
@@ -480,11 +544,47 @@ function CleaningBookingForm() {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const formatted = formatPhone(e.target.value)
+                      setPhone(formatted)
+                      updatePersistedPhone(e.target.value)
+                    }}
                     placeholder="(555) 123-4567"
                     className="input-field"
                     required
                   />
+                  <div className="flex items-center justify-between mt-2">
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(e) => toggleRemember(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                      />
+                      <span className="group-hover:text-gray-900">
+                        Remember my details on this device
+                      </span>
+                      <span 
+                        className="text-gray-400 hover:text-gray-600 cursor-help" 
+                        title="Saved in your browser only. You can clear anytime."
+                      >
+                        ⓘ
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearAll()
+                        setPhone('')
+                        setAddressLine2('')
+                        setBedrooms(1)
+                        setBathrooms(1)
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 underline"
+                    >
+                      Not you? Clear saved details
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -506,7 +606,7 @@ function CleaningBookingForm() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <button
                 type="submit"
-                disabled={loading || !address || !isAddressValid || !selectedSlot}
+                disabled={!persistedLoaded || loading || !address || !isAddressValid || !selectedSlot}
                 className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : `Confirm & Pay $${pricing.total.toFixed(2)}`}
@@ -515,6 +615,12 @@ function CleaningBookingForm() {
                 You'll be charged after cleaning. Secure payment by Stripe.
               </p>
             </div>
+            {/* Accessibility: Prefill announcement */}
+            {prefillMsg && (
+              <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+                {prefillMsg}
+              </div>
+            )}
           </form>
 
           {/* Payment Modal */}
