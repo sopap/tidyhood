@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { PaymentModal } from '@/components/PaymentModal'
+import { Toast } from '@/components/Toast'
 
 interface Address {
   line1: string
@@ -55,6 +56,9 @@ function LaundryBookingForm() {
   // Pricing
   const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
   const [loading, setLoading] = useState(false)
+  
+  // Toast notifications
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null)
   
   // No payment modal needed for laundry - pay after pickup
 
@@ -229,7 +233,7 @@ function LaundryBookingForm() {
     }
 
     if (!address || !selectedSlot) {
-      alert('Please complete all required fields')
+      setToast({ message: 'Please complete all required fields', type: 'warning' })
       return
     }
 
@@ -280,7 +284,10 @@ function LaundryBookingForm() {
       router.push(`/orders/${order.id}`)
     } catch (err: any) {
       console.error('Order creation error:', err)
-      alert(err.message || 'Failed to create order. Please try again.')
+      setToast({ 
+        message: err.message || 'Failed to create order. Please try again.', 
+        type: 'error' 
+      })
     } finally {
       setLoading(false)
     }
@@ -689,6 +696,16 @@ function LaundryBookingForm() {
           </form>
         </div>
       </main>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={!!toast}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
