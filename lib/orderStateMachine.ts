@@ -1,22 +1,23 @@
 /**
- * Order State Machine
- * Phase 1, Week 1, Days 2-4
+ * Order State Machine - Legacy System
  * 
- * Implements unified state transitions for laundry (quote-first) and 
- * cleaning (pay-to-book) services with validation and action helpers.
+ * Updated to work with migration 009 statuses.
+ * Implements order lifecycle for laundry (quote-first) and 
+ * cleaning (pay-to-book) services with improved status tracking.
  */
 
+// Legacy status names matching migration 009
 export type OrderStatus =
-  | 'scheduled'           // booked, future
-  | 'picked_up'           // items collected (laundry) / crew en route (cleaning optional)
-  | 'at_facility'         // laundry only (intake)
-  | 'quote_sent'          // laundry only
-  | 'awaiting_payment'    // laundry only (after quote_sent)
-  | 'processing'          // laundry processing / cleaning in progress
-  | 'out_for_delivery'    // laundry only (return trip)
-  | 'delivered'           // laundry terminal
-  | 'cleaned'             // cleaning terminal
-  | 'canceled';           // any service
+  | 'pending'             // Initial state
+  | 'pending_pickup'      // Scheduled for pickup
+  | 'at_facility'         // Laundry: items at facility
+  | 'awaiting_payment'    // Laundry: quote sent, waiting for payment
+  | 'paid_processing'     // Laundry: paid, being processed
+  | 'in_progress'         // NEW: Active work (laundry processing or cleaning in progress)
+  | 'out_for_delivery'    // NEW: Laundry returning to customer
+  | 'delivered'           // NEW: Laundry items returned (terminal for laundry)
+  | 'completed'           // Cleaning finished (terminal for cleaning)
+  | 'canceled';           // Canceled (terminal)
 
 export type ServiceType = 'LAUNDRY' | 'CLEANING';
 
@@ -34,7 +35,7 @@ export type Action =
  */
 export const TERMINAL_STATUSES: OrderStatus[] = [
   'delivered',
-  'cleaned',
+  'completed',
   'canceled'
 ];
 
@@ -42,10 +43,9 @@ export const TERMINAL_STATUSES: OrderStatus[] = [
  * Statuses where cancellation is allowed
  */
 export const CANCELLABLE_STATUSES: OrderStatus[] = [
-  'scheduled',
-  'picked_up',
+  'pending',
+  'pending_pickup',
   'at_facility',
-  'quote_sent',
   'awaiting_payment'
 ];
 
@@ -53,15 +53,15 @@ export const CANCELLABLE_STATUSES: OrderStatus[] = [
  * Status display labels for UI
  */
 export const STATUS_LABELS: Record<OrderStatus, string> = {
-  scheduled: 'Scheduled',
-  picked_up: 'Picked Up',
+  pending: 'Pending',
+  pending_pickup: 'Pending Pickup',
   at_facility: 'At Facility',
-  quote_sent: 'Quote Sent',
   awaiting_payment: 'Awaiting Payment',
-  processing: 'Processing',
+  paid_processing: 'Processing',
+  in_progress: 'In Progress',
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
-  cleaned: 'Completed',
+  completed: 'Completed',
   canceled: 'Canceled'
 };
 
@@ -69,15 +69,15 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
  * Status colors for UI badges
  */
 export const STATUS_COLORS: Record<OrderStatus, string> = {
-  scheduled: 'blue',
-  picked_up: 'yellow',
+  pending: 'blue',
+  pending_pickup: 'blue',
   at_facility: 'yellow',
-  quote_sent: 'purple',
   awaiting_payment: 'orange',
-  processing: 'indigo',
+  paid_processing: 'indigo',
+  in_progress: 'indigo',
   out_for_delivery: 'blue',
   delivered: 'green',
-  cleaned: 'green',
+  completed: 'green',
   canceled: 'red'
 };
 
@@ -93,28 +93,28 @@ interface TransitionRule {
  */
 const TRANSITIONS: TransitionRule[] = [
   // Laundry transitions
-  { from: 'scheduled', to: 'picked_up', service: 'LAUNDRY' },
-  { from: 'picked_up', to: 'at_facility', service: 'LAUNDRY' },
-  { from: 'at_facility', to: 'quote_sent', service: 'LAUNDRY' },
-  { from: 'quote_sent', to: 'awaiting_payment', service: 'LAUNDRY' },
+  { from: 'pending', to: 'pending_pickup', service: 'LAUNDRY' },
+  { from: 'pending_pickup', to: 'at_facility', service: 'LAUNDRY' },
+  { from: 'at_facility', to: 'awaiting_payment', service: 'LAUNDRY' },
   { 
     from: 'awaiting_payment', 
-    to: 'processing', 
+    to: 'paid_processing', 
     service: 'LAUNDRY',
     condition: (order) => !!order.paid_at
   },
-  { from: 'processing', to: 'out_for_delivery', service: 'LAUNDRY' },
+  { from: 'paid_processing', to: 'in_progress', service: 'LAUNDRY' },
+  { from: 'in_progress', to: 'out_for_delivery', service: 'LAUNDRY' },
   { from: 'out_for_delivery', to: 'delivered', service: 'LAUNDRY' },
   
   // Cleaning transitions
-  { from: 'scheduled', to: 'processing', service: 'CLEANING' },
-  { from: 'processing', to: 'cleaned', service: 'CLEANING' },
+  { from: 'pending', to: 'pending_pickup', service: 'CLEANING' },
+  { from: 'pending_pickup', to: 'in_progress', service: 'CLEANING' },
+  { from: 'in_progress', to: 'completed', service: 'CLEANING' },
   
   // Cancellation (any service, pre-terminal)
-  { from: 'scheduled', to: 'canceled' },
-  { from: 'picked_up', to: 'canceled' },
+  { from: 'pending', to: 'canceled' },
+  { from: 'pending_pickup', to: 'canceled' },
   { from: 'at_facility', to: 'canceled' },
-  { from: 'quote_sent', to: 'canceled' },
   { from: 'awaiting_payment', to: 'canceled' },
 ];
 
@@ -163,7 +163,7 @@ export function getAvailableActions(
   actions.push('view');
   
   // Status-specific actions
-  if (status === 'scheduled') {
+  if (status === 'pending' || status === 'pending_pickup') {
     actions.push('edit', 'cancel');
   }
   
@@ -171,11 +171,11 @@ export function getAvailableActions(
     actions.push('pay_quote');
   }
   
-  if (['picked_up', 'at_facility', 'processing', 'out_for_delivery'].includes(status)) {
+  if (['at_facility', 'paid_processing', 'in_progress', 'out_for_delivery'].includes(status)) {
     actions.push('track');
   }
   
-  if (['delivered', 'cleaned'].includes(status)) {
+  if (['delivered', 'completed'].includes(status)) {
     actions.push('rate', 'rebook');
   }
   
@@ -212,12 +212,15 @@ export function getStatusColor(status: OrderStatus): string {
 
 /**
  * Group statuses by section for orders list
+ * CRITICAL: Orders only show as "completed" when truly done:
+ * - LAUNDRY: status === 'delivered'
+ * - CLEANING: status === 'completed'
  */
 export function getStatusSection(status: OrderStatus): 'upcoming' | 'in_progress' | 'completed' | 'canceled' {
-  if (status === 'scheduled') return 'upcoming';
+  if (status === 'pending' || status === 'pending_pickup') return 'upcoming';
   if (status === 'canceled') return 'canceled';
-  if (['delivered', 'cleaned'].includes(status)) return 'completed';
-  return 'in_progress';
+  if (status === 'delivered' || status === 'completed') return 'completed';
+  return 'in_progress'; // at_facility, awaiting_payment, paid_processing, in_progress, out_for_delivery
 }
 
 /**
@@ -255,20 +258,21 @@ export function validateTransition(
  */
 export function getProgress(status: OrderStatus, service: ServiceType): number {
   const laundryFlow: OrderStatus[] = [
-    'scheduled',
-    'picked_up',
+    'pending',
+    'pending_pickup',
     'at_facility',
-    'quote_sent',
     'awaiting_payment',
-    'processing',
+    'paid_processing',
+    'in_progress',
     'out_for_delivery',
     'delivered'
   ];
   
   const cleaningFlow: OrderStatus[] = [
-    'scheduled',
-    'processing',
-    'cleaned'
+    'pending',
+    'pending_pickup',
+    'in_progress',
+    'completed'
   ];
   
   const flow = service === 'LAUNDRY' ? laundryFlow : cleaningFlow;
@@ -281,34 +285,21 @@ export function getProgress(status: OrderStatus, service: ServiceType): number {
 }
 
 /**
- * Legacy status mapping for backward compatibility
+ * Legacy uppercase status mapping for backward compatibility
+ * Maps old UPPERCASE statuses to current lowercase statuses
  */
 export function mapLegacyStatus(legacyStatus: string): OrderStatus {
   const mapping: Record<string, OrderStatus> = {
-    'pending_pickup': 'scheduled',
-    'paid_processing': 'processing',
-    'completed': 'delivered', // Default to delivered, may need service context
+    'PENDING': 'pending',
+    'PAID': 'paid_processing',
+    'RECEIVED': 'at_facility',
+    'IN_PROGRESS': 'in_progress',
+    'READY': 'out_for_delivery',
+    'OUT_FOR_DELIVERY': 'out_for_delivery',
+    'DELIVERED': 'delivered',
+    'CANCELED': 'canceled',
+    'REFUNDED': 'canceled',
   };
   
-  return (mapping[legacyStatus] || legacyStatus) as OrderStatus;
-}
-
-/**
- * Map unified status back to legacy
- */
-export function mapToLegacyStatus(status: OrderStatus): string {
-  const mapping: Record<OrderStatus, string> = {
-    'scheduled': 'pending_pickup',
-    'processing': 'paid_processing',
-    'delivered': 'completed',
-    'cleaned': 'completed',
-    'picked_up': 'picked_up',
-    'at_facility': 'at_facility',
-    'quote_sent': 'quote_sent',
-    'awaiting_payment': 'awaiting_payment',
-    'out_for_delivery': 'out_for_delivery',
-    'canceled': 'canceled'
-  };
-  
-  return mapping[status] || status;
+  return (mapping[legacyStatus] || legacyStatus.toLowerCase()) as OrderStatus;
 }

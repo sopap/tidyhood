@@ -40,7 +40,7 @@ export async function POST(
     }
     
     // Validate payment eligibility using state machine
-    const targetStatus = 'processing'
+    const targetStatus = 'paid_processing'
     const serviceType = order.service_type as 'LAUNDRY' | 'CLEANING'
     
     // Check if transition is valid
