@@ -50,9 +50,7 @@ function LaundryBookingForm() {
   const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
   const [loading, setLoading] = useState(false)
   
-  // Payment modal state
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  // No payment modal needed for laundry - pay after pickup
 
   const addonsList = [
     { id: 'LND_RUSH_24HR', name: 'Rush Service (24hr)', price: 10 },
@@ -223,9 +221,8 @@ function LaundryBookingForm() {
 
       const order = await response.json()
       
-      // Show payment modal instead of redirecting
-      setCreatedOrderId(order.id)
-      setShowPaymentModal(true)
+      // Redirect to order page (no payment required for laundry)
+      router.push(`/orders/${order.id}`)
     } catch (err: any) {
       console.error('Order creation error:', err)
       alert(err.message || 'Failed to create order. Please try again.')
@@ -234,11 +231,6 @@ function LaundryBookingForm() {
     }
   }
 
-  const handlePaymentSuccess = () => {
-    if (createdOrderId) {
-      router.push(`/orders/${createdOrderId}`)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -503,24 +495,19 @@ function LaundryBookingForm() {
                 disabled={loading || !address || !selectedSlot}
                 className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Processing...' : `Confirm & Pay $${pricing.total.toFixed(2)}`}
+                {loading ? 'Processing...' : `Schedule Pickup`}
               </button>
-              <p className="text-xs text-gray-500 text-center mt-3">
-                You'll be charged after pickup. Secure payment by Stripe.
-              </p>
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900 font-medium">💰 Pay After Pickup</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  No payment required now. We'll weigh your items after pickup and send you a quote to approve.
+                </p>
+                <p className="text-xs text-blue-600 mt-2">
+                  Estimated: ${pricing.total.toFixed(2)} (based on {pounds} lbs)
+                </p>
+              </div>
             </div>
           </form>
-
-          {/* Payment Modal */}
-          {createdOrderId && (
-            <PaymentModal
-              isOpen={showPaymentModal}
-              onClose={() => setShowPaymentModal(false)}
-              orderId={createdOrderId}
-              amount={Math.round(pricing.total * 100)}
-              onSuccess={handlePaymentSuccess}
-            />
-          )}
         </div>
       </main>
     </div>

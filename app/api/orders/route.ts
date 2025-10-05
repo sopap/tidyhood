@@ -156,13 +156,19 @@ export async function POST(request: NextRequest) {
     
     // Create order
     console.log('[POST /api/orders] Creating order in database...')
+    
+    // Set initial status based on service type
+    // LAUNDRY: pay after pickup → pending_pickup
+    // CLEANING: pay upfront → paid_processing
+    const initialStatus = params.service_type === 'LAUNDRY' ? 'pending_pickup' : 'paid_processing'
+    
     const orderData = {
         user_id: user.id,
         service_type: params.service_type,
         partner_id: params.slot.partner_id,
         slot_start: params.slot.slot_start,
         slot_end: params.slot.slot_end,
-        status: 'PENDING',
+        status: initialStatus,
         subtotal_cents: pricing.subtotal_cents,
         tax_cents: pricing.tax_cents,
         delivery_cents: pricing.delivery_cents,
