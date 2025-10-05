@@ -60,14 +60,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create profile
+    // Create profile with role determination
+    // Check if this email matches the bootstrap admin email
+    const isBootstrapAdmin = email.toLowerCase() === process.env.SEED_ADMIN_EMAIL?.toLowerCase()
+    const userRole = isBootstrapAdmin ? 'admin' : 'user'
+
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
         id: authData.user.id,
         full_name: fullName,
         phone,
-        role: 'user',
+        role: userRole,
       })
 
     if (profileError) {

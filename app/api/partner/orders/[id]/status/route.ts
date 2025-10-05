@@ -11,8 +11,11 @@ const updateStatusSchema = z.object({
     'at_facility',
     'awaiting_payment',
     'paid_processing',
+    'in_progress',
+    'out_for_delivery',
+    'delivered',
     'completed',
-    'CANCELED'
+    'canceled'
   ]),
   notes: z.string().optional()
 })
@@ -108,8 +111,13 @@ export async function POST(
       await sendStatusUpdateSMS(customerPhone, status, order.service_type, params.id)
     }
     
-    // If order is completed and linked to a subscription, increment visit counter
-    if (status === 'completed' && order.subscription_id) {
+    // Increment recurring subscription visit counter only when order is truly complete:
+    // - LAUNDRY: status = 'delivered' (items returned to customer)
+    // - CLEANING: status = 'completed' (service finished)
+    const isLaundry = order.service_type === 'LAUNDRY'
+    const isTrulyComplete = (isLaundry && status === 'delivered') || (!isLaundry && status === 'completed')
+    
+    if (isTrulyComplete && order.subscription_id) {
       try {
         const visitResponse = await fetch(
           `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/recurring/visit-complete`,
@@ -161,12 +169,16 @@ export async function POST(
 
 // Helper function to send SMS based on status
 async function sendStatusUpdateSMS(phone: string, status: string, serviceType: string, orderId: string) {
+  const isLaundry = serviceType === 'LAUNDRY'
   const messages: Record<string, string> = {
     'pending_pickup': `Tidyhood: Your ${serviceType.toLowerCase()} pickup is scheduled! We'll text you when the driver is on the way.`,
-    'at_facility': `Tidyhood: We've received your ${serviceType.toLowerCase()} items! ${serviceType === 'LAUNDRY' ? "We'll weigh them and send you a quote shortly." : "Cleaning in progress."}`,
+    'at_facility': `Tidyhood: We've received your ${serviceType.toLowerCase()} items! ${isLaundry ? "We'll weigh them and send you a quote shortly." : "Work is in progress."}`,
     'awaiting_payment': `Tidyhood: Your quote is ready! View and pay: ${process.env.NEXT_PUBLIC_BASE_URL || 'https://tidyhood.vercel.app'}/orders/${orderId}/pay`,
     'paid_processing': `Tidyhood: Payment received! Your ${serviceType.toLowerCase()} is now being processed.`,
-    'completed': `Tidyhood: Your ${serviceType.toLowerCase()} order is complete! ${serviceType === 'LAUNDRY' ? 'Items are ready for delivery.' : 'Thank you for choosing Tidyhood!'}`
+    'in_progress': `Tidyhood: Your ${serviceType.toLowerCase()} service is now in progress. We'll notify you when complete!`,
+    'out_for_delivery': `Tidyhood: Great news! Your clean laundry is out for delivery and will arrive soon.`,
+    'delivered': `Tidyhood: Your laundry has been delivered! Thank you for choosing Tidyhood.`,
+    'completed': `Tidyhood: Your ${serviceType.toLowerCase()} service is complete! ${isLaundry ? 'Items are ready for pickup/delivery.' : 'Thank you for choosing Tidyhood!'}`
   }
   
   const message = messages[status]
