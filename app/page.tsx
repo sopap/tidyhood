@@ -84,7 +84,7 @@ export default function Home() {
         <Header />
 
         {/* Hero Section */}
-        <main className="container mx-auto px-4 py-8 md:py-12 lg:py-16">
+        <main className="container mx-auto px-4 py-4 md:py-8 lg:py-12">
           <motion.div 
             className="max-w-4xl mx-auto text-center mb-8 md:mb-12"
             initial="hidden"
@@ -348,7 +348,7 @@ export default function Home() {
               <p className="text-text-secondary mb-4">
                 We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup and delivery service covers ZIP codes:
               </p>
-              <div className="flex justify-center gap-8 mb-4">
+              <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-4">
                 <div className="flex items-center">
                   <span className="text-primary-600 text-2xl mr-2">📍</span>
                   <span className="font-bold">10026</span>

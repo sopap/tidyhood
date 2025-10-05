@@ -21,7 +21,7 @@ export function Header() {
   }
 
   return (
-    <header className="container mx-auto px-4 py-6">
+    <header className="container mx-auto px-4 py-3 md:py-4">
       <div className="flex items-center justify-between">
         <Link 
           href={user ? '/orders' : '/'}
@@ -31,10 +31,10 @@ export function Header() {
           <Image 
             src="/logo.svg"
             alt="Tidyhood"
-            width={780}
-            height={195}
+            width={200}
+            height={50}
             priority
-            className="h-44 w-auto"
+            className="h-8 md:h-10 lg:h-12 w-auto"
           />
         </Link>
         <nav className="space-x-4">
