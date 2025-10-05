@@ -131,6 +131,7 @@ function CleaningBookingForm() {
                 formatted: `${lastOrder.address_snapshot.line1}, ${lastOrder.address_snapshot.city}, NY ${lastOrder.address_snapshot.zip}`
               })
               setAddressLine2(lastOrder.address_snapshot.line2 || '')
+              setIsAddressValid(true) // Mark the pre-filled address as valid
               setIsAddressCollapsed(true)
             }
             

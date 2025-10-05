@@ -253,8 +253,8 @@ export async function POST(request: NextRequest) {
     
     // Set initial status based on service type
     // LAUNDRY: pay after pickup → pending_pickup
-    // CLEANING: pay upfront → paid_processing
-    const initialStatus = params.service_type === 'LAUNDRY' ? 'pending_pickup' : 'paid_processing'
+    // CLEANING: pay upfront → starts as pending, moves to paid_processing after payment
+    const initialStatus = params.service_type === 'LAUNDRY' ? 'pending_pickup' : 'pending'
     
     const orderData = {
         user_id: user.id,
