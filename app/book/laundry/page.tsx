@@ -338,6 +338,7 @@ function LaundryBookingForm() {
                   <AddressAutocomplete
                     onAddressSelect={setAddress}
                     defaultValue={address?.formatted}
+                    showLabel={false}
                   />
                   <input
                     type="text"

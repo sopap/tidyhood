@@ -42,13 +42,15 @@ interface AddressAutocompleteProps {
     zip: string
   }>
   onSelectSavedAddress?: (addressId: string) => void
+  showLabel?: boolean
 }
 
 export function AddressAutocomplete({ 
   onAddressSelect, 
   defaultValue,
   savedAddresses = [],
-  onSelectSavedAddress
+  onSelectSavedAddress,
+  showLabel = true
 }: AddressAutocompleteProps) {
   const [inputValue, setInputValue] = useState(defaultValue || '')
   const [showSavedAddresses, setShowSavedAddresses] = useState(false)
@@ -197,9 +199,11 @@ export function AddressAutocomplete({
   return (
     <div className="space-y-3">
       <div>
-        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-          Service Address
-        </label>
+        {showLabel && (
+          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+            Service Address
+          </label>
+        )}
         
         {savedAddresses.length > 0 && !showSavedAddresses && !manualMode && (
           <button
