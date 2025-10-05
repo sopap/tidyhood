@@ -16,7 +16,7 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
 
   return (
     <>
-      {/* Mobile: horizontal scroll */}
+      {/* Mobile: horizontal scroll - icon only */}
       <div className="md:hidden">
         <div 
           ref={scrollContainerRef}
@@ -25,33 +25,34 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
           role="region"
           aria-label="Order progress timeline"
         >
-          <ol className="flex min-w-max items-center gap-2 px-2 py-3" aria-label="Order progress">
+          <ol className="flex items-center justify-center gap-3 px-2 py-3" aria-label="Order progress">
             {ORDER_STEPS.map((s, i) => {
               const done = i <= idx;
               return (
-                <li key={s.key} className="flex items-center gap-2">
+                <li key={s.key} className="flex flex-col items-center gap-1">
                   <span 
-                    className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-base transition-colors ${
+                    className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-full text-lg transition-colors ${
                       done ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
                     } ${i === idx ? 'ring-2 ring-blue-300 ring-offset-2' : ''}`}
                     aria-current={i === idx ? 'step' : undefined}
                     role="img"
                     aria-label={`${s.label} ${done ? '(completed)' : '(pending)'}`}
+                    title={s.label}
                   >
                     {s.icon}
                   </span>
-                  <span className={`text-xs whitespace-nowrap ${done ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                    {s.label}
-                  </span>
+                  {i === idx && (
+                    <span className="text-[10px] font-medium text-blue-600 text-center">Current</span>
+                  )}
                   {i < ORDER_STEPS.length - 1 && (
-                    <span className="mx-1 h-px w-6 flex-shrink-0 bg-gray-300" aria-hidden="true" />
+                    <span className="absolute left-[calc(50%+24px)] h-px w-6 bg-gray-300 top-5" aria-hidden="true" />
                   )}
                 </li>
               );
             })}
           </ol>
         </div>
-        <p className="mt-1 text-xs text-gray-500 text-center">Scroll to view all steps →</p>
+        <p className="mt-2 text-xs text-gray-500 text-center">Tap icon to see step name</p>
       </div>
 
       {/* Desktop: slim vertical */}

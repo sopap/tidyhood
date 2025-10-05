@@ -170,12 +170,18 @@ export default function OrderDetailPage() {
 
   const getPricingRows = () => {
     const rows = [
-      { label: 'Subtotal', amountCents: order.subtotal_cents },
-      { label: 'Tax (8.875%)', amountCents: order.tax_cents }
+      { label: 'Subtotal', amountCents: order.subtotal_cents }
     ];
+    
+    // Only show tax if applicable (greater than $0)
+    if (order.tax_cents > 0) {
+      rows.push({ label: 'Tax (8.875%)', amountCents: order.tax_cents });
+    }
+    
     if (order.delivery_cents > 0) {
       rows.push({ label: 'Delivery Fee', amountCents: order.delivery_cents });
     }
+    
     return rows;
   };
 
