@@ -1,6 +1,127 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import StatusBadge, { StatusTone } from '@/components/orders/StatusBadge'
+
+function getStatusTone(status: string): StatusTone {
+  const toneMap: Record<string, StatusTone> = {
+    draft: 'gray',
+    scheduled: 'blue',
+    picked_up: 'indigo',
+    quote_sent: 'yellow',
+    processing: 'indigo',
+    ready: 'green',
+    delivered: 'green',
+    cleaned: 'green',
+    cancelled: 'gray',
+    refunded: 'gray'
+  }
+  return toneMap[status] || 'gray'
+}
+
+function formatStatus(status: string): string {
+  return status.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ')
+}
+
+interface Order {
+  id: string
+  service_type: string
+  status: string
+  total_amount_cents: number
+  created_at: string
+  scheduled_date?: string
+  profiles?: {
+    email: string
+    phone?: string
+  }
+  partners?: {
+    name: string
+  }
+}
+
+interface Pagination {
+  page: number
+  limit: number
+  total: number
+  pages: number
+}
 
 export default function AdminOrders() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 25,
+    total: 0,
+    pages: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [filters, setFilters] = useState({
+    status: 'all',
+    service_type: 'all',
+    search: ''
+  })
+
+  useEffect(() => {
+    fetchOrders()
+  }, [filters, pagination.page])
+
+  async function fetchOrders() {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        ...(filters.status !== 'all' && { status: filters.status }),
+        ...(filters.service_type !== 'all' && { service_type: filters.service_type }),
+        ...(filters.search && { search: filters.search })
+      })
+
+      const res = await fetch(`/api/admin/orders?${params}`)
+      if (!res.ok) throw new Error('Failed to fetch orders')
+      
+      const data = await res.json()
+      setOrders(data.orders)
+      setPagination(data.pagination)
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleSearch(search: string) {
+    setFilters({ ...filters, search })
+    setPagination({ ...pagination, page: 1 })
+  }
+
+  function handleStatusFilter(status: string) {
+    setFilters({ ...filters, status })
+    setPagination({ ...pagination, page: 1 })
+  }
+
+  function handleServiceFilter(service_type: string) {
+    setFilters({ ...filters, service_type })
+    setPagination({ ...pagination, page: 1 })
+  }
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -9,14 +130,35 @@ export default function AdminOrders() {
           <input
             type="search"
             placeholder="Search orders..."
+            value={filters.search}
+            onChange={(e) => handleSearch(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-          <select className="px-4 py-2 border border-gray-300 rounded-lg">
-            <option>All Status</option>
-            <option>Scheduled</option>
-            <option>Picked Up</option>
-            <option>Processing</option>
-            <option>Delivered</option>
+          <select
+            value={filters.status}
+            onChange={(e) => handleStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="all">All Status</option>
+            <option value="draft">Draft</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="picked_up">Picked Up</option>
+            <option value="quote_sent">Quote Sent</option>
+            <option value="processing">Processing</option>
+            <option value="ready">Ready</option>
+            <option value="delivered">Delivered</option>
+            <option value="cleaned">Cleaned</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select
+            value={filters.service_type}
+            onChange={(e) => handleServiceFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="all">All Services</option>
+            <option value="laundry">Laundry</option>
+            <option value="dry_clean">Dry Clean</option>
+            <option value="cleaning">Cleaning</option>
           </select>
         </div>
       </div>
@@ -24,35 +166,108 @@ export default function AdminOrders() {
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
           <p className="text-sm text-gray-600">
-            Order management interface coming soon.
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            This page will display all orders with filtering, sorting, and bulk actions.
+            {pagination.total} total orders
           </p>
         </div>
-        <div className="p-6">
-          <p className="text-sm text-gray-500 mb-4">
-            In the meantime, you can view orders at:
-          </p>
-          <Link
-            href="/orders"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            View Customer Orders Page
-          </Link>
-        </div>
-      </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">Coming Soon:</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Filter orders by status, service type, partner, date range</li>
-          <li>• Search by order ID, customer name, phone</li>
-          <li>• Bulk actions (assign, cancel, export)</li>
-          <li>• Status badges with color coding</li>
-          <li>• Quick actions per row (view, assign, cancel, refund)</li>
-          <li>• Real-time updates every 30 seconds</li>
-        </ul>
+        {orders.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-gray-500">No orders found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Order ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Service
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {order.id.substring(0, 8)}...
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div>
+                        <div className="font-medium">{order.profiles?.email}</div>
+                        {order.profiles?.phone && (
+                          <div className="text-xs text-gray-500">{order.profiles.phone}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {order.service_type.replace('_', ' ')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge tone={getStatusTone(order.status)}>
+                        {formatStatus(order.status)}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${((order.total_amount_cents || 0) / 100).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {new Date(order.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {pagination.pages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Page {pagination.page} of {pagination.pages}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                disabled={pagination.page === 1}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                disabled={pagination.page === pagination.pages}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
