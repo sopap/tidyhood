@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
@@ -25,9 +26,16 @@ export function Header() {
         <Link 
           href={user ? '/orders' : '/'}
           onClick={handleLogoClick}
-          className="text-3xl font-bold text-primary-900"
+          className="flex items-center hover:opacity-80 transition-opacity"
         >
-          Tidyhood
+          <Image 
+            src="/logo.svg"
+            alt="Tidyhood"
+            width={160}
+            height={40}
+            priority
+            className="h-10 w-auto"
+          />
         </Link>
         <nav className="space-x-4">
           {user ? (

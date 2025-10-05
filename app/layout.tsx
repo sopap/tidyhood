@@ -15,6 +15,13 @@ export const metadata: Metadata = {
   authors: [{ name: 'Tidyhood' }],
   creator: 'Tidyhood',
   publisher: 'Tidyhood',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', type: 'image/png' }
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   alternates: {
     canonical: '/',
   },
