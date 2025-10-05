@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { PaymentModal } from '@/components/PaymentModal'
 import { Toast } from '@/components/Toast'
+import { Header } from '@/components/Header'
 
 interface Address {
   line1: string
@@ -296,18 +297,7 @@ function LaundryBookingForm() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-primary-900">
-              Tidyhood
-            </Link>
-            <Link href="/" className="text-gray-600 hover:text-primary-600">
-              ← Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
