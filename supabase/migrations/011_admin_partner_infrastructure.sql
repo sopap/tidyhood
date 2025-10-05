@@ -112,9 +112,10 @@ CREATE POLICY "admin_notes_partner_select" ON admin_notes
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM profiles p
+      JOIN auth.users au ON au.id = p.id
       JOIN orders o ON o.partner_id IN (
         SELECT id FROM partners 
-        WHERE contact_email = p.email
+        WHERE contact_email = au.email
       )
       WHERE p.id = auth.uid() 
       AND p.role = 'partner'
