@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
 
 export const metadata = {
@@ -12,11 +12,16 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const user = await requireAuth()
+  const user = await getCurrentUser()
   
-  // Check if user is admin
+  // Redirect to login if not authenticated
+  if (!user) {
+    redirect('/login?message=Please log in to access the admin dashboard&redirect=/admin')
+  }
+  
+  // Redirect to orders if not admin
   if (user.role !== 'admin') {
-    redirect('/orders')
+    redirect('/orders?message=You do not have admin access')
   }
 
   return (
