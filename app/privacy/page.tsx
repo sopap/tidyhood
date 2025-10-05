@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { Header } from '@/components/Header'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -13,19 +14,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-primary-900">
-              Tidyhood
-            </Link>
-            <Link href="/" className="text-gray-600 hover:text-primary-600">
-              ← Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">

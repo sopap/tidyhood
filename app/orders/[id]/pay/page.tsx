@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PaymentModal } from '@/components/PaymentModal'
 import Link from 'next/link'
+import { Header } from '@/components/Header'
 
 interface Order {
   id: string
@@ -89,13 +90,7 @@ export default function PayOrderPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="text-2xl font-bold text-primary-900">
-            Tidyhood
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
