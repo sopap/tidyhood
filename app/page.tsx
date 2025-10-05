@@ -508,7 +508,7 @@ export default function Home() {
                   alt="Tidyhood"
                   width={200}
                   height={50}
-                  className="h-12 w-auto opacity-90 hover:opacity-100 transition-opacity"
+                  className="h-14 md:h-16 lg:h-18 w-auto opacity-90 hover:opacity-100 transition-opacity"
                 />
               </Link>
             </div>
