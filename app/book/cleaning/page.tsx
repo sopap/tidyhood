@@ -501,7 +501,7 @@ function CleaningBookingForm() {
 
             {/* Contact & Notes */}
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact & Special Instructions</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact Information</h2>
               
               <div className="space-y-4">
                 <div>
@@ -520,7 +520,7 @@ function CleaningBookingForm() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Special Instructions (Optional)
+                    Cleaning Notes (Optional)
                   </label>
                   <textarea
                     value={specialInstructions}
