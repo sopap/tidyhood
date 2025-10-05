@@ -3,27 +3,24 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import StatusBadge, { StatusTone } from '@/components/orders/StatusBadge'
+import { OrderStatus, STATUS_LABELS, STATUS_COLORS } from '@/lib/orderStateMachine'
 
 function getStatusTone(status: string): StatusTone {
+  const color = STATUS_COLORS[status as OrderStatus]
   const toneMap: Record<string, StatusTone> = {
-    draft: 'gray',
-    scheduled: 'blue',
-    picked_up: 'indigo',
-    quote_sent: 'yellow',
-    processing: 'indigo',
-    ready: 'green',
-    delivered: 'green',
-    cleaned: 'green',
-    cancelled: 'gray',
-    refunded: 'gray'
+    blue: 'blue',
+    yellow: 'yellow',
+    orange: 'yellow',
+    indigo: 'indigo',
+    green: 'green',
+    red: 'gray',
+    gray: 'gray'
   }
-  return toneMap[status] || 'gray'
+  return toneMap[color] || 'gray'
 }
 
 function formatStatus(status: string): string {
-  return status.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ')
+  return STATUS_LABELS[status as OrderStatus] || status
 }
 
 interface Order {
@@ -140,15 +137,16 @@ export default function AdminOrders() {
             className="px-4 py-2 border border-gray-300 rounded-lg"
           >
             <option value="all">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="picked_up">Picked Up</option>
-            <option value="quote_sent">Quote Sent</option>
-            <option value="processing">Processing</option>
-            <option value="ready">Ready</option>
+            <option value="pending">Pending</option>
+            <option value="pending_pickup">Pending Pickup</option>
+            <option value="at_facility">At Facility</option>
+            <option value="awaiting_payment">Awaiting Payment</option>
+            <option value="paid_processing">Processing</option>
+            <option value="in_progress">In Progress</option>
+            <option value="out_for_delivery">Out for Delivery</option>
             <option value="delivered">Delivered</option>
-            <option value="cleaned">Cleaned</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
+            <option value="canceled">Canceled</option>
           </select>
           <select
             value={filters.service_type}
