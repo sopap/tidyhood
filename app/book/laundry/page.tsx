@@ -316,6 +316,8 @@ function LaundryBookingForm() {
             serviceType,
             weightTier: weightTier || undefined,
             addons: Object.keys(addons).filter((key) => addons[key as AddonKey]),
+            bedrooms,
+            bathrooms,
           },
         }),
       });
