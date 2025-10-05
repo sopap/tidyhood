@@ -54,23 +54,35 @@ export async function getAvailableSlots(
   if (slotsError) throw slotsError
   if (!slots) return []
   
-  // Map partners to slots
-  const partnersMap = new Map(partners.map(p => [p.id, p]))
+  // Filter out full slots
+  const availableSlots = slots.filter(slot => slot.reserved_units < slot.max_units)
   
-  // Filter out full slots and format
-  const availableSlots: TimeSlot[] = slots
-    .filter(slot => slot.reserved_units < slot.max_units)
-    .map(slot => ({
-      partner_id: slot.partner_id,
-      partner_name: partnersMap.get(slot.partner_id)?.name || 'Unknown',
-      slot_start: slot.slot_start,
-      slot_end: slot.slot_end,
-      available_units: slot.max_units - slot.reserved_units,
-      max_units: slot.max_units,
-      service_type: slot.service_type as 'LAUNDRY' | 'CLEANING',
-    }))
+  // Consolidate slots by time window (hide partner info)
+  const consolidatedMap = new Map<string, TimeSlot>()
   
-  return availableSlots
+  for (const slot of availableSlots) {
+    const timeKey = `${slot.slot_start}-${slot.slot_end}`
+    
+    if (consolidatedMap.has(timeKey)) {
+      // Add capacity to existing time slot
+      const existing = consolidatedMap.get(timeKey)!
+      existing.available_units += (slot.max_units - slot.reserved_units)
+      existing.max_units += slot.max_units
+    } else {
+      // Create new consolidated slot
+      consolidatedMap.set(timeKey, {
+        partner_id: slot.partner_id, // Keep first partner_id for booking
+        partner_name: 'Available', // Hide partner name
+        slot_start: slot.slot_start,
+        slot_end: slot.slot_end,
+        available_units: slot.max_units - slot.reserved_units,
+        max_units: slot.max_units,
+        service_type: slot.service_type as 'LAUNDRY' | 'CLEANING',
+      })
+    }
+  }
+  
+  return Array.from(consolidatedMap.values())
 }
 
 /**

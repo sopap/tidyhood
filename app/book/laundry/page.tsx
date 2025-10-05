@@ -300,37 +300,25 @@ function LaundryBookingForm() {
               <h2 className="text-xl font-bold text-gray-900 mb-4">🧺 Service Details</h2>
               
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Weight (pounds) - Minimum 15 lbs
-                  </label>
-                  <div className="flex gap-2">
-                    {[15, 25, 35].map(weight => (
-                      <button
-                        key={weight}
-                        type="button"
-                        onClick={() => setPounds(weight)}
-                        className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
-                          pounds === weight
-                            ? 'border-primary-600 bg-primary-50 font-semibold'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        {weight} lbs
-                        <div className="text-xs text-gray-500">
-                          {weight === 15 ? 'Small' : weight === 25 ? 'Medium' : 'Large'}
-                        </div>
-                      </button>
-                    ))}
+                {/* Minimum Weight Notice */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <div className="text-2xl mr-3">⚖️</div>
+                    <div>
+                      <p className="font-semibold text-blue-900 mb-1">Minimum pickup: 15 lbs</p>
+                      <p className="text-sm text-blue-700 mb-3">
+                        We'll weigh your items after pickup and send you a quote to approve before processing.
+                      </p>
+                      <div className="text-sm text-blue-600">
+                        <p className="font-medium mb-1">💡 Estimated pricing:</p>
+                        <ul className="space-y-1 ml-4">
+                          <li>• Small load (~15 lbs): ~$26</li>
+                          <li>• Medium load (~25 lbs): ~$44</li>
+                          <li>• Large load (~35 lbs): ~$61</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <input
-                    type="number"
-                    value={pounds}
-                    onChange={(e) => setPounds(parseInt(e.target.value) || 15)}
-                    min="15"
-                    max="100"
-                    className="input-field mt-2"
-                  />
                 </div>
 
                 <div>
@@ -358,20 +346,6 @@ function LaundryBookingForm() {
                   </div>
                 </div>
 
-                {/* Live Pricing */}
-                {address && pricing.total > 0 && (
-                  <div className="bg-primary-50 rounded-lg p-4 mt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Estimated Total:</span>
-                      <span className="text-2xl font-bold text-primary-600">
-                        ${pricing.total.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      Tax-exempt service • Free pickup & delivery
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -425,21 +399,18 @@ function LaundryBookingForm() {
                                 onChange={() => setSelectedSlot(slot)}
                                 className="mr-3"
                               />
-                              <div>
-                                <div className="font-medium">
-                                  {new Date(slot.slot_start).toLocaleTimeString('en-US', {
-                                    hour: 'numeric',
-                                    minute: '2-digit',
-                                    hour12: true
-                                  })}{' '}
-                                  -{' '}
-                                  {new Date(slot.slot_end).toLocaleTimeString('en-US', {
-                                    hour: 'numeric',
-                                    minute: '2-digit',
-                                    hour12: true
-                                  })}
-                                </div>
-                                <div className="text-sm text-gray-600">{slot.partner_name}</div>
+                              <div className="font-medium">
+                                {new Date(slot.slot_start).toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}{' '}
+                                -{' '}
+                                {new Date(slot.slot_end).toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}
                               </div>
                             </div>
                             <span className="text-sm text-gray-500">
