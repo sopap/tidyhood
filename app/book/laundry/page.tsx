@@ -195,6 +195,7 @@ function LaundryBookingForm() {
         },
         body: JSON.stringify({
           service_type: 'LAUNDRY',
+          phone: phone,
           slot: {
             partner_id: selectedSlot.partner_id,
             slot_start: selectedSlot.slot_start,

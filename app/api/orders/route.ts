@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
 
 const createOrderSchema = z.object({
   service_type: z.enum(['LAUNDRY', 'CLEANING']),
+  phone: z.string().optional(),
   slot: z.object({
     partner_id: z.string().uuid(),
     slot_start: z.string(),
@@ -178,7 +179,10 @@ export async function POST(request: NextRequest) {
         total_cents: pricing.total_cents,
         idempotency_key: idempotencyKey,
         order_details: params.details,
-        address_snapshot: params.address,
+        address_snapshot: {
+          ...params.address,
+          phone: params.phone || user.phone || undefined
+        },
       }
     console.log('[POST /api/orders] Order data:', JSON.stringify(orderData, null, 2))
     
