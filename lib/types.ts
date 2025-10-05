@@ -1,5 +1,31 @@
 // Core type definitions for booking flow
 
+// Partner Capabilities
+export type LaundryCapability = 'wash_fold' | 'dry_clean' | 'mixed';
+export type CleaningCapability = 'standard' | 'deep_clean' | 'move_in_out' | 'post_construction' | 'commercial';
+
+export interface PartnerCapabilities {
+  // For LAUNDRY partners
+  wash_fold?: boolean;
+  dry_clean?: boolean;
+  mixed?: boolean;
+  
+  // For CLEANING partners
+  standard?: boolean;
+  deep_clean?: boolean;
+  move_in_out?: boolean;
+  post_construction?: boolean;
+  commercial?: boolean;
+}
+
+export interface ServiceAvailability {
+  service_type: 'LAUNDRY' | 'CLEANING';
+  zip_code: string;
+  available_capabilities: string[];
+  unavailable_capabilities: string[];
+  partner_count: number;
+}
+
 // Laundry types
 export type ServiceType = 'washFold' | 'dryClean' | 'mixed';
 export type WeightTier = 'small' | 'medium' | 'large';

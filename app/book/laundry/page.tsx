@@ -64,6 +64,7 @@ function LaundryBookingForm() {
   const [serviceType, setServiceType] = useState<ServiceType>('washFold');
   const [weightTier, setWeightTier] = useState<WeightTier>('small');
   const [addons, setAddons] = useState<Partial<Record<AddonKey, boolean>>>({});
+  const [serviceAvailability, setServiceAvailability] = useState<string[]>([]);
 
   // Schedule
   const [date, setDate] = useState('');
@@ -143,6 +144,56 @@ function LaundryBookingForm() {
 
     loadLastOrder();
   }, [user]);
+
+  // Check service availability when address changes
+  useEffect(() => {
+    const checkAvailability = async () => {
+      if (!address?.zip) {
+        setServiceAvailability([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/services/available?zip=${address.zip}&service_type=LAUNDRY`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setServiceAvailability(data.available_capabilities || []);
+          
+          // Auto-switch service type if current selection is unavailable
+          const serviceMap: Record<ServiceType, string> = {
+            'washFold': 'wash_fold',
+            'dryClean': 'dry_clean',
+            'mixed': 'mixed'
+          };
+          
+          const currentCapability = serviceMap[serviceType];
+          if (data.available_capabilities && 
+              data.available_capabilities.length > 0 &&
+              !data.available_capabilities.includes(currentCapability)) {
+            // Switch to first available service
+            const firstAvailable = data.available_capabilities[0];
+            const reverseMap: Record<string, ServiceType> = {
+              'wash_fold': 'washFold',
+              'dry_clean': 'dryClean',
+              'mixed': 'mixed'
+            };
+            if (reverseMap[firstAvailable]) {
+              setServiceType(reverseMap[firstAvailable]);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check service availability:', err);
+        // Fail open - show all services if API fails
+        setServiceAvailability(['wash_fold', 'dry_clean', 'mixed']);
+      }
+    };
+
+    checkAvailability();
+  }, [address, serviceType]);
 
   // Calculate estimate whenever service details change
   useEffect(() => {
@@ -414,6 +465,7 @@ function LaundryBookingForm() {
                 onAddonsChange={setAddons}
                 specialInstructions={specialInstructions}
                 onSpecialInstructionsChange={setSpecialInstructions}
+                availableServices={serviceAvailability}
               />
             </div>
 

@@ -16,6 +16,7 @@ interface ServiceDetailsProps {
   onAddonsChange: (addons: Partial<Record<AddonKey, boolean>>) => void;
   specialInstructions?: string;
   onSpecialInstructionsChange?: (value: string) => void;
+  availableServices?: string[];
 }
 
 // Feature flag for rush service on dry clean
@@ -30,6 +31,7 @@ export default function ServiceDetails({
   onAddonsChange,
   specialInstructions,
   onSpecialInstructionsChange,
+  availableServices,
 }: ServiceDetailsProps) {
   // Info text based on service type
   const getInfoText = () => {
@@ -74,7 +76,11 @@ export default function ServiceDetails({
       {/* Service Type Selector */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
-        <ServiceTypeSelector value={serviceType} onChange={onServiceTypeChange} />
+        <ServiceTypeSelector 
+          value={serviceType} 
+          onChange={onServiceTypeChange}
+          availableServices={availableServices}
+        />
       </div>
 
       {/* Info Row with optional dry-clean pricing tooltip */}
