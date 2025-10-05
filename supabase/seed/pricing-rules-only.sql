@@ -36,13 +36,35 @@ INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, multiplie
 VALUES 
   ('CLEANING', '10026,10027,10030', 'MULTIPLIER', 'CLN_DEEP_MULTI', 1.5, 90, true);
 
--- Cleaning addons
+-- Move-out cleaning multiplier
+INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, multiplier, priority, active)
+VALUES 
+  ('CLEANING', '10026,10027,10030', 'MULTIPLIER', 'CLN_MOVEOUT_MULTI', 1.75, 85, true);
+
+-- Cleaning addons (core - always available)
+INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, unit_price_cents, priority, active)
+VALUES 
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_LAUNDRY_PICKUP', 3000, 200, true),
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_PET_HAIR', 2500, 200, true),
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_INSIDE_CABINETS', 2500, 200, true),
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_WINDOWS_INSIDE', 3000, 200, true);
+
+-- Premium addons
+INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, unit_price_cents, priority, active)
+VALUES 
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_SANITIZATION', 5000, 200, true);
+
+-- Move-out specific addons
+INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, unit_price_cents, priority, active)
+VALUES 
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_FRIDGE_OVEN_BUNDLE', 4000, 200, true),
+  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_WALL_WIPE', 2000, 200, true);
+
+-- Legacy addons (kept for backwards compatibility)
 INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, unit_price_cents, priority, active)
 VALUES 
   ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_FRIDGE_INSIDE', 2500, 200, true),
   ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_OVEN_INSIDE', 2500, 200, true),
-  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_WINDOWS_INSIDE', 3500, 200, true),
-  ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_LAUNDRY_WASH', 2000, 200, true),
   ('CLEANING', '10026,10027,10030', 'ADDON', 'CLN_EXTRA_BATHROOM', 1500, 200, true);
 
 -- Cleaning delivery/service fee (included in base price, but tracked separately)
