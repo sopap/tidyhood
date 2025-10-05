@@ -51,16 +51,26 @@ WHERE id = 'another-partner-id';
 Run this query to check the results:
 
 ```sql
+-- First, let's see what columns exist
 SELECT 
   id,
-  business_name,
   capabilities,
-  coverage_zips
+  service_areas,
+  coverage_zips,
+  created_at
 FROM partners
-ORDER BY business_name;
+ORDER BY created_at DESC;
 ```
 
 Expected output: All partners should have capabilities array populated.
+
+**To see all columns in partners table:**
+```sql
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'partners'
+ORDER BY ordinal_position;
+```
 
 ## Step 4: Test the API
 
