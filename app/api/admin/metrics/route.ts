@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Get today's orders
     const { data: todayOrders, error: todayError } = await db
       .from('orders')
-      .select('id, total_amount_cents, status')
+      .select('id, total_cents, status')
       .gte('created_at', today.toISOString())
     
     if (todayError) throw todayError
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // Get yesterday's orders
     const { data: yesterdayOrders, error: yesterdayError } = await db
       .from('orders')
-      .select('id, total_amount_cents')
+      .select('id, total_cents')
       .gte('created_at', yesterday.toISOString())
       .lt('created_at', today.toISOString())
     
@@ -51,13 +51,13 @@ export async function GET(request: NextRequest) {
     const yesterdayOrderCount = yesterdayOrders?.length || 0
     
     const todayGMV = todayOrders?.reduce((sum, order) => 
-      sum + (order.total_amount_cents || 0), 0) || 0
+      sum + (order.total_cents || 0), 0) || 0
     const yesterdayGMV = yesterdayOrders?.reduce((sum, order) => 
-      sum + (order.total_amount_cents || 0), 0) || 0
+      sum + (order.total_cents || 0), 0) || 0
 
     // Calculate SLA (simplified - orders delivered vs late)
     const completedToday = todayOrders?.filter(o => 
-      ['delivered', 'cleaned'].includes(o.status)
+      ['DELIVERED', 'CLEANED'].includes(o.status)
     ).length || 0
     
     const slaToday = todayOrderCount > 0 ? completedToday / todayOrderCount : 1
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const { count: pendingCount, error: pendingError } = await db
       .from('orders')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['scheduled', 'picked_up', 'quote_sent', 'processing'])
+      .in('status', ['PENDING', 'PAID', 'RECEIVED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY'])
     
     if (pendingError) throw pendingError
 
