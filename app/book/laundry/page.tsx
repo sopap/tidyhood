@@ -431,48 +431,80 @@ function LaundryBookingForm() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Available Time Slots
                     </label>
+                    <p className="input-helper mb-3" id="slot-helper">
+                      We'll text you 15 min before arrival.
+                    </p>
                     {loading ? (
                       <p className="text-gray-500">Loading slots...</p>
                     ) : availableSlots.length === 0 ? (
-                      <p className="text-red-600">No slots available. Please select a different date.</p>
+                      <p className="text-error">No slots available. Please select a different date.</p>
                     ) : (
-                      <div className="space-y-2">
-                        {availableSlots.map(slot => (
-                          <label
-                            key={`${slot.partner_id}-${slot.slot_start}`}
-                            className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                              selectedSlot?.slot_start === slot.slot_start
-                                ? 'border-primary-600 bg-primary-50'
-                                : ''
-                            }`}
-                          >
-                            <div className="flex items-center">
-                              <input
-                                type="radio"
-                                name="slot"
-                                checked={selectedSlot?.slot_start === slot.slot_start}
-                                onChange={() => setSelectedSlot(slot)}
-                                className="mr-3"
-                              />
-                              <div className="font-medium">
-                                {new Date(slot.slot_start).toLocaleTimeString('en-US', {
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })}{' '}
-                                -{' '}
-                                {new Date(slot.slot_end).toLocaleTimeString('en-US', {
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })}
+                      <div className="space-y-2" role="radiogroup" aria-labelledby="slot-label" aria-describedby="slot-helper">
+                        {availableSlots.map(slot => {
+                          const isSelected = selectedSlot?.slot_start === slot.slot_start
+                          const isFull = slot.available_units === 0
+                          const isLowCapacity = slot.available_units > 0 && slot.available_units < 5
+                          const isWarning = slot.available_units >= 5 && slot.available_units < 10
+                          
+                          // Badge logic per PRD
+                          let badgeClass = 'badge-neutral'
+                          let badgeText = `${slot.available_units} available`
+                          
+                          if (isFull) {
+                            badgeClass = 'badge-error'
+                            badgeText = 'Full'
+                          } else if (isLowCapacity) {
+                            badgeClass = 'badge-error'
+                            badgeText = `Only ${slot.available_units} left`
+                          } else if (isWarning) {
+                            badgeClass = 'badge-warning'
+                            badgeText = `${slot.available_units} available`
+                          }
+
+                          return (
+                            <label
+                              key={`${slot.partner_id}-${slot.slot_start}`}
+                              className={`slot-card ${isSelected ? 'slot-card-selected' : ''} ${isFull ? 'slot-card-disabled' : ''}`}
+                              aria-label={`${new Date(slot.slot_start).toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              })} to ${new Date(slot.slot_end).toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              })}, ${badgeText}`}
+                            >
+                              <div className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="slot"
+                                  checked={isSelected}
+                                  onChange={() => !isFull && setSelectedSlot(slot)}
+                                  disabled={isFull}
+                                  className="mr-3"
+                                  aria-label={`Select time slot`}
+                                />
+                                <div className={`font-medium ${isFull ? 'line-through text-gray-400' : ''}`}>
+                                  {new Date(slot.slot_start).toLocaleTimeString('en-US', {
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  })}{' '}
+                                  -{' '}
+                                  {new Date(slot.slot_end).toLocaleTimeString('en-US', {
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                    hour12: true
+                                  })}
+                                </div>
                               </div>
-                            </div>
-                            <span className="text-sm text-gray-500">
-                              {slot.available_units} available
-                            </span>
-                          </label>
-                        ))}
+                              <span className={`badge ${badgeClass}`}>
+                                {badgeText}
+                              </span>
+                            </label>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
