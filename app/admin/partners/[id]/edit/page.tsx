@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 interface Partner {
   id: string;
@@ -221,38 +222,16 @@ export default function EditPartner({ params }: { params: { id: string } }) {
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                  Business Address
-                </label>
-                <input
-                  ref={(el) => {
-                    if (el && !el.dataset.autocompleteInitialized) {
-                      // Initialize Google Places Autocomplete
-                      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-                      if (apiKey && typeof window !== 'undefined' && window.google?.maps?.places) {
-                        const autocomplete = new window.google.maps.places.Autocomplete(el, {
-                          componentRestrictions: { country: 'us' },
-                          fields: ['formatted_address'],
-                          types: ['address']
-                        });
-                        autocomplete.addListener('place_changed', () => {
-                          const place = autocomplete.getPlace();
-                          if (place.formatted_address) {
-                            setFormData(prev => ({ ...prev, address: place.formatted_address || '' }));
-                          }
-                        });
-                        el.dataset.autocompleteInitialized = 'true';
-                      }
-                    }
+                <AddressAutocomplete
+                  showLabel={true}
+                  defaultValue={formData.address}
+                  onAddressSelect={(address) => {
+                    setFormData(prev => ({ ...prev, address: address.formatted }));
                   }}
-                  type="text"
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., 2280 Frederick Douglass Blvd, New York, NY"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional - Business location for reference
+                </p>
               </div>
             </div>
           </div>

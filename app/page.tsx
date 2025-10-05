@@ -18,7 +18,7 @@ import {
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  "name": "Tidyhood",
+  "name": "TidyHood",
   "description": "Professional laundry and home cleaning services in Harlem",
   "url": process.env.NEXT_PUBLIC_SITE_URL || "https://tidyhood.vercel.app",
   "telephone": "+1-XXX-XXX-XXXX",
@@ -503,10 +503,10 @@ export default function Home() {
               <Link href="/" className="inline-block">
                 <Image 
                   src="/logo.svg"
-                  alt="Tidyhood"
-                  width={200}
-                  height={50}
-                  className="h-14 md:h-16 lg:h-18 w-auto opacity-90 hover:opacity-100 transition-opacity"
+                  alt="TidyHood"
+                  width={280}
+                  height={70}
+                  className="h-20 md:h-22 lg:h-25 w-auto opacity-90 hover:opacity-100 transition-opacity"
                 />
               </Link>
             </div>

@@ -10,14 +10,8 @@ export async function GET(request: NextRequest) {
   try {
     const db = getServiceClient()
     
-    // Get user from session (assuming you have auth middleware)
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Extract user ID from token/session
-    // For now, we'll get it from query param for testing
+    // Extract user ID from query params (for testing)
+    // TODO: In production, get userId from authenticated session
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     

@@ -4,7 +4,7 @@ const structuredData = {
     {
       "@type": "Organization",
       "@id": "https://tidyhood.nyc/#org",
-      "name": "Tidyhood",
+      "name": "TidyHood",
       "url": "https://tidyhood.nyc",
       "logo": "https://tidyhood.nyc/static/logo.png",
       "description": "Professional laundry and home cleaning services in Harlem",
@@ -26,7 +26,7 @@ const structuredData = {
       "@type": "WebSite",
       "@id": "https://tidyhood.nyc/#website",
       "url": "https://tidyhood.nyc",
-      "name": "Tidyhood",
+      "name": "TidyHood",
       "publisher": {
         "@id": "https://tidyhood.nyc/#org"
       }
@@ -110,7 +110,7 @@ const structuredData = {
         },
         {
           "@type": "Question",
-          "name": "Are Tidyhood cleaners background-checked?",
+          "name": "Are TidyHood cleaners background-checked?",
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "Yes. Every cleaner passes comprehensive background checks and quality assessments before joining our team."

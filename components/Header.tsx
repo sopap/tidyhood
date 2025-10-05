@@ -30,11 +30,11 @@ export function Header() {
         >
           <Image 
             src="/logo.svg"
-            alt="Tidyhood"
-            width={300}
-            height={75}
+            alt="TidyHood"
+            width={420}
+            height={105}
             priority
-            className="h-16 md:h-18 lg:h-20 w-auto"
+            className="h-[58px] md:h-[67px] lg:h-[77px] w-auto"
           />
         </Link>
         <nav className="space-x-4">

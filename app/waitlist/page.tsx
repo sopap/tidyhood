@@ -65,11 +65,11 @@ export default function WaitlistPage() {
         <Link href="/" className="inline-block hover:opacity-80 transition-opacity">
           <Image 
             src="/logo.svg"
-            alt="Tidyhood"
-            width={300}
-            height={75}
+            alt="TidyHood"
+            width={420}
+            height={105}
             priority
-            className="h-16 md:h-18 lg:h-20 w-auto"
+            className="h-22 md:h-25 lg:h-28 w-auto"
           />
         </Link>
       </header>

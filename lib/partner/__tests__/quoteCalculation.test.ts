@@ -10,16 +10,17 @@ import {
 import { LAUNDRY_PRICING, CLEANING_PRICING, QUOTE_LIMITS } from '../constants';
 
 describe('calculateLaundryQuote', () => {
-  test('calculates base price correctly for minimum weight', () => {
+  test('calculates base price correctly for minimum valid quote', () => {
+    // Minimum: 4 lbs * $2.50 = $10 (meets MIN_TOTAL)
     const params: LaundryQuoteParams = {
-      weight_lbs: 1, // Use exactly 1 lb (minimum valid weight)
+      weight_lbs: 4,
       has_bedding: false,
       has_delicates: false,
       addons: {}
     };
     
     const result = calculateLaundryQuote(params);
-    const expectedTotal = 1 * LAUNDRY_PRICING.PER_LB;
+    const expectedTotal = 4 * LAUNDRY_PRICING.PER_LB;
     
     expect(result.breakdown.base).toBe(expectedTotal);
     expect(result.total_cents).toBe(Math.round(expectedTotal * 100));
@@ -191,6 +192,21 @@ describe('calculateLaundryQuote', () => {
   test('validates maximum weight constraint', () => {
     const params: LaundryQuoteParams = {
       weight_lbs: 150, // Above maximum
+      has_bedding: false,
+      has_delicates: false,
+      addons: {}
+    };
+    
+    const result = calculateLaundryQuote(params);
+    
+    expect(result.is_valid).toBe(false);
+    expect(result.validation_errors.length).toBeGreaterThan(0);
+  });
+
+  test('validates minimum total constraint', () => {
+    // 2 lbs * $2.50 = $5 (below $10 minimum)
+    const params: LaundryQuoteParams = {
+      weight_lbs: 2,
       has_bedding: false,
       has_delicates: false,
       addons: {}
