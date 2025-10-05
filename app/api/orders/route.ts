@@ -69,6 +69,8 @@ const createOrderSchema = z.object({
     notes: z.string().optional(),
   }),
   details: z.object({
+    serviceType: z.enum(['washFold', 'dryClean', 'mixed']).optional(), // For LAUNDRY orders
+    weightTier: z.enum(['small', 'medium', 'large']).optional(), // For washFold/mixed
     lbs: z.number().optional(),
     bedrooms: z.number().optional(),
     bathrooms: z.number().optional(),
@@ -116,12 +118,24 @@ export async function POST(request: NextRequest) {
     let units = 1 // For laundry, 1 order = 1 unit
     
     if (params.service_type === 'LAUNDRY') {
-      if (!params.details.lbs) {
-        throw new ValidationError('Weight (lbs) required for laundry orders')
+      const serviceType = params.details.serviceType || 'washFold'; // Default to washFold for backward compatibility
+      
+      // Validate based on service type
+      if (serviceType === 'washFold' || serviceType === 'mixed') {
+        if (!params.details.weightTier && !params.details.lbs) {
+          throw new ValidationError('Weight tier or lbs required for wash & fold orders');
+        }
+        // Convert weight tier to lbs if needed
+        if (params.details.weightTier && !params.details.lbs) {
+          const tierToLbs: Record<string, number> = { small: 15, medium: 25, large: 35 };
+          params.details.lbs = tierToLbs[params.details.weightTier];
+        }
       }
+      // For dryClean, no weight validation needed - will be quoted after inspection
+      
       pricing = await quoteLaundry({
         zip: params.address.zip,
-        lbs: params.details.lbs,
+        lbs: params.details.lbs || 0, // 0 for dry clean only orders
         addons: params.details.addons,
       })
     } else {
@@ -215,18 +229,33 @@ export async function POST(request: NextRequest) {
     
     // Create bags for laundry orders
     if (params.service_type === 'LAUNDRY') {
-      const numBags = Math.ceil((params.details.lbs || 0) / 20) // One bag per 20 lbs
+      const serviceType = params.details.serviceType || 'washFold';
       const bags = []
       
-      for (let i = 0; i < Math.max(1, numBags); i++) {
+      if (serviceType === 'washFold' || serviceType === 'mixed') {
+        // Create W&F bags based on weight
+        const numWFBags = Math.ceil((params.details.lbs || 0) / 20); // One bag per 20 lbs
+        for (let i = 0; i < Math.max(1, numWFBags); i++) {
+          bags.push({
+            order_id: order.id,
+            label_code: generateLabelCode(),
+            service_type: 'LAUNDRY',
+          });
+        }
+      }
+      
+      if (serviceType === 'dryClean' || serviceType === 'mixed') {
+        // Create at least one bag for dry clean items (will be itemized after inspection)
         bags.push({
           order_id: order.id,
           label_code: generateLabelCode(),
           service_type: 'LAUNDRY',
-        })
+        });
       }
       
-      await db.from('bags').insert(bags)
+      if (bags.length > 0) {
+        await db.from('bags').insert(bags);
+      }
     }
     
     // Create cleaning checklist
