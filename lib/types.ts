@@ -1,8 +1,25 @@
 // Core type definitions for booking flow
 
+// Laundry types
 export type ServiceType = 'washFold' | 'dryClean' | 'mixed';
 export type WeightTier = 'small' | 'medium' | 'large';
 export type AddonKey = 'LND_RUSH_24HR' | 'LND_DELICATE' | 'LND_EXTRA_SOFTENER' | 'LND_FOLDING';
+
+// Cleaning types
+export type CleaningType = 'standard' | 'deep' | 'moveOut';
+export type CleaningAddonKey =
+  | 'laundryPickup' | 'petHair' | 'insideCabinets' | 'windows'
+  | 'fridgeOvenBundle' | 'wallWipe' | 'ecoProducts' | 'sanitization'
+  | 'junkQuote';
+export type AddonCategory = 'core' | 'premium' | 'moveOut';
+
+export interface CleaningAddon {
+  key: CleaningAddonKey;
+  label: string;
+  price?: number; // price omitted => TBD/quote
+  category: AddonCategory;
+  showIf?: (ctx: { type: CleaningType }) => boolean;
+}
 
 export interface EstimateInput {
   serviceType: ServiceType;

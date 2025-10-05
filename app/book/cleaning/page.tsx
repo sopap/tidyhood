@@ -8,6 +8,10 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { PaymentModal } from '@/components/PaymentModal'
 import { Toast } from '@/components/Toast'
 import { Header } from '@/components/Header'
+import CleaningTypeSelector from '@/components/cleaning/CleaningTypeSelector'
+import CleaningAddons from '@/components/cleaning/CleaningAddons'
+import EstimateBadge from '@/components/cleaning/EstimateBadge'
+import { CleaningType, CleaningAddonKey } from '@/lib/types'
 
 interface Address {
   line1: string
@@ -43,8 +47,8 @@ function CleaningBookingForm() {
   // Service details
   const [bedrooms, setBedrooms] = useState(1)
   const [bathrooms, setBathrooms] = useState(1)
-  const [deep, setDeep] = useState(false)
-  const [addons, setAddons] = useState<string[]>([])
+  const [cleaningType, setCleaningType] = useState<CleaningType>('standard')
+  const [addons, setAddons] = useState<Record<CleaningAddonKey, boolean>>({} as Record<CleaningAddonKey, boolean>)
   
   // Schedule
   const [date, setDate] = useState('')
@@ -62,12 +66,6 @@ function CleaningBookingForm() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
 
-  const addonsList = [
-    { id: 'CLN_FRIDGE_INSIDE', name: 'Refrigerator Interior', price: 25 },
-    { id: 'CLN_OVEN_INSIDE', name: 'Oven Interior', price: 25 },
-    { id: 'CLN_WINDOWS_INSIDE', name: 'Interior Windows', price: 30 },
-    { id: 'CLN_EXTRA_BATHROOM', name: 'Additional Bathroom', price: 40 },
-  ]
 
   // Load last order for smart defaults
   useEffect(() => {
@@ -99,8 +97,9 @@ function CleaningBookingForm() {
             if (lastOrder.service_type === 'CLEANING' && lastOrder.order_details) {
               setBedrooms(lastOrder.order_details.bedrooms || 1)
               setBathrooms(lastOrder.order_details.bathrooms || 1)
-              setDeep(lastOrder.order_details.deep || false)
-              setAddons(lastOrder.order_details.addons || [])
+              if (lastOrder.order_details.cleaningType) {
+                setCleaningType(lastOrder.order_details.cleaningType)
+              }
             }
           }
         }
@@ -131,8 +130,8 @@ function CleaningBookingForm() {
             zip: address.zip,
             bedrooms,
             bathrooms,
-            deep,
-            addons
+            cleaningType,
+            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey])
           })
         })
 
@@ -150,7 +149,7 @@ function CleaningBookingForm() {
     }
 
     calculatePrice()
-  }, [address, bedrooms, bathrooms, deep, addons])
+  }, [address, bedrooms, bathrooms, cleaningType, addons])
 
   // Fetch slots when date changes
   useEffect(() => {
@@ -176,13 +175,6 @@ function CleaningBookingForm() {
     fetchSlots()
   }, [date, address])
 
-  const handleAddonToggle = (addonId: string) => {
-    setAddons(prev =>
-      prev.includes(addonId)
-        ? prev.filter(id => id !== addonId)
-        : [...prev, addonId]
-    )
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -224,8 +216,8 @@ function CleaningBookingForm() {
           details: {
             bedrooms,
             bathrooms,
-            deep,
-            addons
+            cleaningType,
+            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey])
           }
         })
       })
@@ -351,45 +343,23 @@ function CleaningBookingForm() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={deep}
-                      onChange={(e) => setDeep(e.target.checked)}
-                      className="mr-3"
-                    />
-                    <div className="flex-1">
-                      <span className="font-medium">Deep Clean</span>
-                      <p className="text-sm text-gray-600">More thorough, takes 50% longer</p>
-                    </div>
-                    <span className="font-medium text-primary-600">+50%</span>
-                  </label>
-                </div>
-
+                {/* Cleaning Type Selector */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Add-ons (Optional)
+                    Cleaning Type
                   </label>
-                  <div className="space-y-2">
-                    {addonsList.map(addon => (
-                      <label
-                        key={addon.id}
-                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                      >
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={addons.includes(addon.id)}
-                            onChange={() => handleAddonToggle(addon.id)}
-                            className="mr-3"
-                          />
-                          <span>{addon.name}</span>
-                        </div>
-                        <span className="font-medium text-primary-600">+${addon.price}</span>
-                      </label>
-                    ))}
+                  <CleaningTypeSelector value={cleaningType} onChange={setCleaningType} />
+                </div>
+
+                {/* Add-ons with compact styling */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Add-ons (Optional)
+                    </label>
+                    <EstimateBadge addons={addons} />
                   </div>
+                  <CleaningAddons type={cleaningType} value={addons} onChange={setAddons} />
                 </div>
 
                 {/* Live Pricing */}
