@@ -1,0 +1,14 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /orders/
+Disallow: /signup
+Disallow: /login
+Disallow: /book/
+
+# Host
+Host: https://tidyhood.nyc
+
+# Sitemaps
+Sitemap: https://tidyhood.nyc/sitemap.xml

@@ -340,6 +340,106 @@ export default function Home() {
               Proudly supporting Harlem workers & small businesses.
             </p>
           </motion.div>
+
+          {/* Service Areas Section */}
+          <div className="max-w-4xl mx-auto mb-16 md:mb-20">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-6">Laundry & Cleaning Service Areas in Harlem</h2>
+            <div className="card bg-gray-50 text-center">
+              <p className="text-text-secondary mb-4">
+                We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup and delivery service covers ZIP codes:
+              </p>
+              <div className="flex justify-center gap-8 mb-4">
+                <div className="flex items-center">
+                  <span className="text-primary-600 text-2xl mr-2">📍</span>
+                  <span className="font-bold">10026</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-primary-600 text-2xl mr-2">📍</span>
+                  <span className="font-bold">10027</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-primary-600 text-2xl mr-2">📍</span>
+                  <span className="font-bold">10030</span>
+                </div>
+              </div>
+              <p className="text-sm text-text-tertiary">
+                Near the border? Contact us — we may be able to accommodate your location.
+              </p>
+            </div>
+          </div>
+
+          {/* Why Choose Section */}
+          <div className="max-w-4xl mx-auto mb-16 md:mb-20">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">Why Harlem Chooses Tidyhood</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">👥</span>
+                <div>
+                  <h3 className="font-bold mb-1">Local Pros, Not Gig Workers</h3>
+                  <p className="text-sm text-text-secondary">
+                    We partner with established Harlem businesses who hire and train their teams properly.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">🌿</span>
+                <div>
+                  <h3 className="font-bold mb-1">Eco-Friendly Products</h3>
+                  <p className="text-sm text-text-secondary">
+                    Plant-based detergents and non-toxic cleaning supplies safe for your family and the planet.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">💰</span>
+                <div>
+                  <h3 className="font-bold mb-1">Transparent Pricing</h3>
+                  <p className="text-sm text-text-secondary">
+                    No hidden fees, no surprises. See exactly what you'll pay before you book.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">💬</span>
+                <div>
+                  <h3 className="font-bold mb-1">Real Harlem Support</h3>
+                  <p className="text-sm text-text-secondary">
+                    Get help from a local team that knows the neighborhood and cares about your experience.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FAQ Section */}
+          <div className="max-w-3xl mx-auto mb-16 md:mb-20" id="faq">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">FAQ — Laundry & Cleaning in Harlem</h2>
+            <div className="space-y-4">
+              <details className="card-compact cursor-pointer">
+                <summary className="font-semibold">Do you offer same-day laundry pickup in Harlem?</summary>
+                <p className="mt-3 text-sm text-text-secondary">
+                  Yes. Schedule before 11 AM for same-day pickup in most Harlem ZIP codes (10026, 10027, 10030). Next-day pickup is guaranteed for all bookings.
+                </p>
+              </details>
+              
+              <details className="card-compact cursor-pointer">
+                <summary className="font-semibold">Are Tidyhood cleaners background-checked?</summary>
+                <p className="mt-3 text-sm text-text-secondary">
+                  Yes. Every cleaner passes comprehensive background checks and quality assessments before joining our network.
+                </p>
+              </details>
+              
+              <details className="card-compact cursor-pointer">
+                <summary className="font-semibold">What areas in Harlem do you serve?</summary>
+                <p className="mt-3 text-sm text-text-secondary">
+                  We serve all of Harlem including Central Harlem, South Harlem, and Morningside Heights — ZIP codes 10026, 10027, and 10030.
+                </p>
+              </details>
+            </div>
+          </div>
         </main>
 
         {/* Mobile Sticky CTA Bar */}
