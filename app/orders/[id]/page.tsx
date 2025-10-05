@@ -1,196 +1,108 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useAuth } from '@/lib/auth-context'
-import { Header } from '@/components/Header'
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
+import { Header } from '@/components/Header';
+import SummaryBar from '@/components/order/SummaryBar';
+import ProgressTracker from '@/components/order/ProgressTracker';
+import ServiceAddressCard from '@/components/order/ServiceAddressCard';
+import PricingCard from '@/components/order/PricingCard';
+import OrderDetailsSkeleton from '@/components/order/OrderDetailsSkeleton';
+import { mapDatabaseStatus, getStatusLabel } from '@/lib/orderStatus';
 
 interface Order {
-  id: string
-  user_id: string
-  service_type: 'LAUNDRY' | 'CLEANING'
-  partner_id: string
-  slot_start: string
-  slot_end: string
-  status: string
-  subtotal_cents: number
-  tax_cents: number
-  delivery_cents: number
-  total_cents: number
-  actual_weight_lbs?: number
-  quote_cents?: number
-  quoted_at?: string
-  paid_at?: string
-  partner_notes?: string
-  intake_photos_json?: string[]
-  outtake_photos_json?: string[]
+  id: string;
+  user_id: string;
+  service_type: 'LAUNDRY' | 'CLEANING';
+  partner_id: string;
+  slot_start: string;
+  slot_end: string;
+  status: string;
+  subtotal_cents: number;
+  tax_cents: number;
+  delivery_cents: number;
+  total_cents: number;
+  actual_weight_lbs?: number;
+  quote_cents?: number;
+  quoted_at?: string;
+  paid_at?: string;
+  partner_notes?: string;
+  intake_photos_json?: string[];
+  outtake_photos_json?: string[];
   order_details: {
-    lbs?: number
-    bedrooms?: number
-    bathrooms?: number
-    deep?: boolean
-    addons?: string[]
-  }
+    lbs?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    deep?: boolean;
+    addons?: string[];
+  };
   address_snapshot: {
-    line1: string
-    line2?: string
-    city: string
-    zip: string
-    notes?: string
-  }
-  created_at: string
-  updated_at: string
+    line1: string;
+    line2?: string;
+    city: string;
+    zip: string;
+    notes?: string;
+  };
+  created_at: string;
+  updated_at: string;
 }
 
 export default function OrderDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
-  const [order, setOrder] = useState<Order | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const params = useParams();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login')
-      return
+      router.push('/login');
+      return;
     }
 
     if (user && params.id) {
-      fetchOrder()
+      fetchOrder();
     }
-  }, [user, authLoading, params.id])
+  }, [user, authLoading, params.id]);
 
   const fetchOrder = async () => {
     try {
-      setLoading(true)
-      const response = await fetch(`/api/orders/${params.id}`)
+      setLoading(true);
+      const response = await fetch(`/api/orders/${params.id}`);
       
       if (!response.ok) {
         if (response.status === 404) {
-          setError('Order not found')
+          setError('Order not found');
         } else if (response.status === 403) {
-          setError('You do not have permission to view this order')
+          setError('You do not have permission to view this order');
         } else {
-          setError('Failed to load order')
+          setError('Failed to load order');
         }
-        return
+        return;
       }
 
-      const data = await response.json()
-      setOrder(data)
+      const data = await response.json();
+      setOrder(data);
     } catch (err) {
-      console.error('Error fetching order:', err)
-      setError('Failed to load order')
+      console.error('Error fetching order:', err);
+      setError('Failed to load order');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  const formatMoney = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`
-  }
-
-  const formatDateTime = (isoString: string) => {
-    const date = new Date(isoString)
-    return date.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending_pickup':
-        return 'bg-blue-100 text-blue-800'
-      case 'at_facility':
-        return 'bg-indigo-100 text-indigo-800'
-      case 'awaiting_payment':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'paid_processing':
-        return 'bg-purple-100 text-purple-800'
-      case 'completed':
-        return 'bg-green-100 text-green-800'
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'paid':
-        return 'bg-purple-100 text-purple-800'
-      case 'canceled':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'pending_pickup': 'Pickup Scheduled',
-      'at_facility': 'At Facility',
-      'awaiting_payment': 'Awaiting Payment',
-      'paid_processing': 'Processing',
-      'completed': 'Completed',
-      'pending': 'Pending',
-      'paid': 'Paid',
-      'canceled': 'Canceled'
-    }
-    return statusMap[status.toLowerCase()] || status
-  }
-
-  const getStatusTimeline = () => {
-    const laundrySteps = [
-      { key: 'pending_pickup', label: 'Pickup Scheduled', icon: '📅' },
-      { key: 'at_facility', label: 'At Facility', icon: '🏢' },
-      { key: 'awaiting_payment', label: 'Quote Ready', icon: '💰' },
-      { key: 'paid_processing', label: 'Processing', icon: '🧺' },
-      { key: 'completed', label: 'Completed', icon: '✅' }
-    ]
-
-    const cleaningSteps = [
-      { key: 'paid_processing', label: 'Paid', icon: '✅' },
-      { key: 'completed', label: 'Completed', icon: '🎉' }
-    ]
-
-    const steps = order?.service_type === 'LAUNDRY' ? laundrySteps : cleaningSteps
-    const currentStatus = order?.status.toLowerCase()
-
-    const currentIndex = steps.findIndex(s => s.key === currentStatus)
-
-    return steps.map((step, index) => ({
-      ...step,
-      completed: index <= currentIndex,
-      current: step.key === currentStatus
-    }))
-  }
-
-  const formatAddonName = (key: string) => {
-    const names: Record<string, string> = {
-      'LND_RUSH_24HR': 'Rush Service (24hr)',
-      'LND_DELICATE': 'Delicate Care',
-      'LND_EXTRA_SOFTENER': 'Extra Softener',
-      'LND_FOLDING': 'Professional Folding',
-      'CLN_FRIDGE_INSIDE': 'Refrigerator Interior',
-      'CLN_OVEN_INSIDE': 'Oven Interior',
-      'CLN_WINDOWS_INSIDE': 'Interior Windows',
-      'CLN_EXTRA_BATHROOM': 'Additional Bathroom',
-    }
-    return names[key] || key
-  }
+  };
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading order details...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <OrderDetailsSkeleton />
+        </main>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -206,270 +118,183 @@ export default function OrderDetailPage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Link href="/orders" className="btn-primary">
+            <Link href="/orders" className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
               Back to Orders
             </Link>
           </div>
         </main>
       </div>
-    )
+    );
   }
 
   if (!order) {
-    return null
+    return null;
   }
+
+  // Helper functions
+  const formatTime = (isoString: string) => {
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const getWindowLabel = () => {
+    return `${formatTime(order.slot_start)} - ${formatTime(order.slot_end)}`;
+  };
+
+  const getServiceTypeLabel = () => {
+    if (order.service_type === 'LAUNDRY') {
+      if (order.order_details.lbs) {
+        return `Wash & Fold · ${order.order_details.lbs} lbs (estimated)`;
+      }
+      return 'Laundry Service';
+    }
+    if (order.service_type === 'CLEANING') {
+      const br = order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} BR`;
+      const ba = `${order.order_details.bathrooms} BA`;
+      const deep = order.order_details.deep ? ' · Deep Clean' : '';
+      return `${br}, ${ba}${deep}`;
+    }
+    return order.service_type;
+  };
+
+  const getAddressLines = () => {
+    const lines = [order.address_snapshot.line1];
+    if (order.address_snapshot.line2) lines.push(order.address_snapshot.line2);
+    lines.push(`${order.address_snapshot.city}, NY ${order.address_snapshot.zip}`);
+    if (order.address_snapshot.notes) lines.push(`Note: ${order.address_snapshot.notes}`);
+    return lines;
+  };
+
+  const getPricingRows = () => {
+    const rows = [
+      { label: 'Subtotal', amountCents: order.subtotal_cents },
+      { label: 'Tax (8.875%)', amountCents: order.tax_cents }
+    ];
+    if (order.delivery_cents > 0) {
+      rows.push({ label: 'Delivery Fee', amountCents: order.delivery_cents });
+    }
+    return rows;
+  };
+
+  const getPricingNote = () => {
+    if (order.status.toLowerCase() === 'pending_pickup') {
+      return "No payment required yet. We'll send your quote after weighing your items.";
+    }
+    return undefined;
+  };
+
+  const showPayButton = order.status.toLowerCase() === 'awaiting_payment';
+  const currentStep = mapDatabaseStatus(order.status);
+  const statusLabel = getStatusLabel(order.status);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      {/* Sticky back button (mobile only) */}
+      <div className="sticky top-0 z-30 border-b bg-white/90 px-4 py-2 backdrop-blur md:hidden">
+        <Link href="/orders" className="text-sm text-blue-700 inline-flex items-center hover:text-blue-800">
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Orders
+        </Link>
+      </div>
+
+      <main className="container mx-auto px-4 py-6 md:py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Back Button */}
-          <Link href="/orders" className="text-primary-600 hover:text-primary-700 mb-4 inline-flex items-center">
+          {/* Back button (desktop) */}
+          <Link 
+            href="/orders" 
+            className="hidden md:inline-flex items-center text-blue-600 hover:text-blue-700 mb-4 text-sm font-medium"
+          >
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to Orders
           </Link>
 
-          {/* Order Header */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Details</h1>
-                <p className="text-gray-600">Order ID: {order.id}</p>
-              </div>
-              <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                {order.status.replace('_', ' ')}
-              </span>
-            </div>
+          {/* Summary Bar */}
+          <SummaryBar
+            orderId={order.id}
+            service={order.service_type}
+            statusLabel={statusLabel}
+            statusKey={currentStep}
+            dateISO={order.slot_start}
+            windowLabel={getWindowLabel()}
+            totalCents={order.total_cents}
+            showPayButton={showPayButton}
+          />
 
-            <div className="border-t pt-4">
-              <p className="text-sm text-gray-600">
-                Placed on {formatDateTime(order.created_at)}
-              </p>
-            </div>
+          {/* Progress Tracker */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
+            <ProgressTracker current={currentStep} />
           </div>
 
-          {/* Status Timeline */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Order Status</h2>
-            <div className="relative">
-              {getStatusTimeline().map((step, index, arr) => (
-                <div key={step.key} className="flex items-start mb-8 last:mb-0">
-                  <div className="flex flex-col items-center mr-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
-                      step.completed ? 'bg-green-100' : 'bg-gray-100'
-                    } ${step.current ? 'ring-4 ring-primary-200' : ''}`}>
-                      {step.icon}
-                    </div>
-                    {index < arr.length - 1 && (
-                      <div className={`w-1 h-16 ${step.completed ? 'bg-green-300' : 'bg-gray-200'}`} />
-                    )}
-                  </div>
-                  <div className="flex-1 pt-2">
-                    <h3 className={`font-semibold ${step.current ? 'text-primary-600' : 'text-gray-900'}`}>
-                      {step.label}
-                    </h3>
-                    {step.current && (
-                      <p className="text-sm text-gray-600 mt-1">Current status</p>
-                    )}
-                    {step.completed && !step.current && (
-                      <p className="text-sm text-green-600 mt-1">✓ Completed</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Service + Address Card */}
+          <div className="mb-4">
+            <ServiceAddressCard
+              serviceType={getServiceTypeLabel()}
+              addressLines={getAddressLines()}
+            />
           </div>
 
-          {/* Quote Information (if applicable) */}
-          {order.service_type === 'LAUNDRY' && order.actual_weight_lbs && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-              <h2 className="text-lg font-bold text-blue-900 mb-4">📊 Actual Weight & Quote</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium text-blue-700">Estimated Weight:</span>
-                  <p className="text-lg text-blue-900">{order.order_details.lbs} lbs</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-blue-700">Actual Weight:</span>
-                  <p className="text-lg font-bold text-blue-900">{order.actual_weight_lbs} lbs</p>
-                </div>
-              </div>
-              {order.quote_cents && (
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-blue-700">Final Quote:</span>
-                    <span className="text-2xl font-bold text-blue-900">{formatMoney(order.quote_cents)}</span>
-                  </div>
-                </div>
-              )}
-              {order.partner_notes && (
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <span className="text-sm font-medium text-blue-700 block mb-1">Partner Notes:</span>
-                  <p className="text-blue-800">{order.partner_notes}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Service Details */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Service Details</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <span className="text-sm font-medium text-gray-600">Service Type</span>
-                <p className="text-lg text-gray-900">{order.service_type}</p>
-              </div>
-
-              {order.service_type === 'LAUNDRY' && order.order_details.lbs && (
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Weight</span>
-                  <p className="text-lg text-gray-900">{order.order_details.lbs} lbs</p>
-                </div>
-              )}
-
-              {order.service_type === 'CLEANING' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
+          {/* Actual Weight Info (if available) */}
+          {order.actual_weight_lbs && order.service_type === 'LAUNDRY' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">📊</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 mb-2">Weight Update</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-sm font-medium text-gray-600">Bedrooms</span>
-                      <p className="text-lg text-gray-900">
-                        {order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} BR`}
-                      </p>
+                      <div className="text-blue-700">Estimated</div>
+                      <div className="font-medium text-blue-900">{order.order_details.lbs} lbs</div>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-600">Bathrooms</span>
-                      <p className="text-lg text-gray-900">{order.order_details.bathrooms} BA</p>
+                      <div className="text-blue-700">Actual</div>
+                      <div className="font-bold text-blue-900">{order.actual_weight_lbs} lbs</div>
                     </div>
                   </div>
-                  {order.order_details.deep && (
-                    <div>
-                      <span className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm font-medium">
-                        Deep Cleaning
-                      </span>
+                  {order.partner_notes && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="text-xs text-blue-700 font-medium">Partner Notes:</div>
+                      <div className="text-sm text-blue-800 mt-1">{order.partner_notes}</div>
                     </div>
                   )}
-                </>
-              )}
-
-              {order.order_details.addons && order.order_details.addons.length > 0 && (
-                <div>
-                  <span className="text-sm font-medium text-gray-600 block mb-2">Add-ons</span>
-                  <div className="space-y-1">
-                    {order.order_details.addons.map((addon, idx) => (
-                      <div key={idx} className="text-gray-900">• {formatAddonName(addon)}</div>
-                    ))}
-                  </div>
                 </div>
-              )}
-
-              <div>
-                <span className="text-sm font-medium text-gray-600">Scheduled For</span>
-                <p className="text-lg text-gray-900">{formatDateTime(order.slot_start)}</p>
-                <p className="text-sm text-gray-600">
-                  Until {new Date(order.slot_end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Address */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Service Address</h2>
-            <div className="space-y-2">
-              <p className="text-gray-900">{order.address_snapshot.line1}</p>
-              {order.address_snapshot.line2 && (
-                <p className="text-gray-900">{order.address_snapshot.line2}</p>
-              )}
-              <p className="text-gray-900">
-                {order.address_snapshot.city}, NY {order.address_snapshot.zip}
-              </p>
-              {order.address_snapshot.notes && (
-                <div className="mt-4 pt-4 border-t">
-                  <span className="text-sm font-medium text-gray-600 block mb-1">Special Instructions</span>
-                  <p className="text-gray-700">{order.address_snapshot.notes}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="bg-white rounded-lg shadow-md p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Pricing</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="text-gray-900">{formatMoney(order.subtotal_cents)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Tax (8.875%)</span>
-                <span className="text-gray-900">{formatMoney(order.tax_cents)}</span>
-              </div>
-              {order.delivery_cents > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Delivery Fee</span>
-                  <span className="text-gray-900">{formatMoney(order.delivery_cents)}</span>
-                </div>
-              )}
-              <div className="border-t pt-3 flex justify-between text-xl font-bold">
-                <span className="text-gray-900">Total</span>
-                <span className="text-primary-600">{formatMoney(order.total_cents)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          {(order.status === 'PENDING' || order.status === 'awaiting_payment') && (
-            <div className="bg-white rounded-lg shadow-md p-8">
-              <div className="text-center">
-                {order.status === 'awaiting_payment' ? (
-                  <>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">💰 Your Quote is Ready!</h3>
-                    <p className="text-gray-600 mb-4">
-                      We've weighed your laundry: {order.actual_weight_lbs} lbs
-                    </p>
-                    <p className="text-2xl font-bold text-primary-600 mb-6">
-                      Total: {formatMoney(order.quote_cents || order.total_cents)}
-                    </p>
-                    <button
-                      onClick={() => router.push(`/orders/${order.id}/pay`)}
-                      className="btn-primary text-lg px-8 py-3"
-                    >
-                      Pay Now
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-gray-600 mb-4">Your order is pending payment</p>
-                    <button
-                      onClick={() => router.push(`/orders/${order.id}/pay`)}
-                      className="btn-primary"
-                    >
-                      Proceed to Payment
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           )}
 
-          {order.status === 'pending_pickup' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-blue-900 mb-2">📅 Pickup Scheduled</h3>
-                <p className="text-blue-700">
-                  No payment required yet. We'll send you a quote after weighing your items.
-                </p>
-              </div>
+          {/* Pricing Card */}
+          <div className="mb-4">
+            <PricingCard
+              rows={getPricingRows()}
+              totalCents={order.total_cents}
+              note={getPricingNote()}
+            />
+          </div>
+
+          {/* Add-ons (if any) */}
+          {order.order_details.addons && order.order_details.addons.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Add-ons</h3>
+              <ul className="space-y-1 text-sm text-gray-700">
+                {order.order_details.addons.map((addon, idx) => (
+                  <li key={idx} className="flex items-center">
+                    <span className="text-blue-600 mr-2">•</span>
+                    {addon.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim()}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
       </main>
     </div>
-  )
+  );
 }
