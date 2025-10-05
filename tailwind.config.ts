@@ -50,10 +50,13 @@ const config: Config = {
         background: '#F7F7F9',
         border: '#E5E7EB',
         focus: '#2563EB',
-        // Text colors (from PRD)
+        // Text colors (from PRD) - Updated for WCAG AA compliance
         text: {
-          DEFAULT: '#0F172A',
-          muted: '#475569',
+          DEFAULT: '#0F172A',      // Primary text (21:1 contrast)
+          secondary: '#334155',    // Secondary text (8.6:1 contrast) - WCAG AA compliant
+          tertiary: '#475569',     // Tertiary text (5.9:1 contrast) - Use sparingly
+          placeholder: '#64748B',  // For form placeholders only
+          muted: '#475569',        // Deprecated: use 'tertiary' instead
         },
         // Legacy primary alias (for compatibility)
         primary: {
@@ -72,6 +75,17 @@ const config: Config = {
       borderRadius: {
         'card': '16px',
         'input': '12px',
+      },
+      fontSize: {
+        // Mobile-optimized hero sizes
+        'hero-mobile': ['32px', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
+        'hero-tablet': ['40px', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
+        'hero-desktop': ['48px', { lineHeight: '1.1', letterSpacing: '-0.03em' }],
+        
+        // Smooth body text scaling
+        'body-mobile': ['15px', { lineHeight: '1.6' }],
+        'body-tablet': ['16px', { lineHeight: '1.6' }],
+        'body-desktop': ['18px', { lineHeight: '1.6' }],
       },
       spacing: {
         'card': '24px',

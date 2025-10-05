@@ -33,12 +33,12 @@ export function Header() {
           {user ? (
             // Logged in navigation
             <>
-              <Link href="/orders" className="text-gray-600 hover:text-primary-600">
+              <Link href="/orders" className="text-text-secondary hover:text-primary-600">
                 My Orders
               </Link>
               <button 
                 onClick={handleLogout}
-                className="text-gray-600 hover:text-primary-600"
+                className="text-text-secondary hover:text-primary-600"
               >
                 Logout
               </button>
@@ -46,7 +46,7 @@ export function Header() {
           ) : (
             // Logged out navigation
             <>
-              <Link href="/login" className="text-gray-600 hover:text-primary-600">
+              <Link href="/login" className="text-text-secondary hover:text-primary-600">
                 Login
               </Link>
               <Link href="/signup" className="btn-primary">

@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import { Header } from '@/components/Header'
+import { TrustBar } from '@/components/TrustBar'
+import { MobileCTABar } from '@/components/MobileCTABar'
 import { useAuth } from '@/lib/auth-context'
+import { 
+  fadeInUpVariants, 
+  staggerContainerVariants, 
+  staggerItemVariants,
+  cardHoverVariants 
+} from '@/lib/motionVariants'
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -75,84 +84,130 @@ export default function Home() {
         <Header />
 
         {/* Hero Section */}
-        <main className="container mx-auto px-4 py-12 md:py-16">
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Harlem&apos;s Premier Laundry & Cleaning
+        <main className="container mx-auto px-4 py-8 md:py-12 lg:py-16">
+          <motion.div 
+            className="max-w-4xl mx-auto text-center mb-8 md:mb-12"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUpVariants}
+          >
+            <h1 className="text-hero-mobile md:text-hero-tablet lg:text-hero-desktop font-bold text-gray-900 mb-4 md:mb-6">
+              Harlem&apos;s Freshest Laundry & Home Cleaning Service
             </h1>
-            <p className="text-xl text-gray-600 mb-4">
-              Professional service with same-day pickup available
+            <p className="text-lg md:text-xl text-text-secondary mb-3 md:mb-4">
+              Same-day pickup, spotless results — powered by local pros you can trust.
             </p>
-            <p className="text-sm text-gray-500">
-              Serving ZIP codes: 10026, 10027, 10030
+            <p className="text-sm md:text-base text-text-tertiary mb-4">
+              Serving Harlem ZIPs: 10026, 10027, 10030
             </p>
-          </div>
+            
+            {/* Primary CTAs - Hidden on mobile (shown in sticky bar) */}
+            <div className="hidden lg:flex gap-4 justify-center mt-8">
+              <Link
+                href="/book/laundry"
+                className="btn-primary text-base md:text-lg"
+                aria-label="Book laundry pickup service"
+              >
+                Book Laundry Pickup →
+              </Link>
+              <Link
+                href="/book/cleaning"
+                className="btn-secondary text-base md:text-lg"
+                aria-label="Book home cleaning service"
+              >
+                Book Home Cleaning →
+              </Link>
+            </div>
+            
+            {/* Trust microcopy */}
+            <p className="text-xs md:text-sm text-text-tertiary mt-4 italic">
+              No hidden fees. No surprises. Just clean.
+            </p>
+          </motion.div>
+
+          {/* Trust Bar */}
+          <TrustBar />
 
           {/* Returning User "Book Again" Prompt */}
           {user && lastOrder && !loading && (
-            <div className="max-w-2xl mx-auto mb-12 bg-primary-50 border-2 border-primary-200 rounded-xl p-6">
+            <motion.div 
+              className="max-w-2xl mx-auto my-8 md:my-12 bg-primary-50 border-2 border-primary-200 rounded-xl p-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
               <div className="flex items-start gap-4">
-                <div className="text-3xl">👋</div>
+                <div className="text-3xl" role="img" aria-label="Welcome back">👋</div>
                 <div className="flex-1">
                   <h3 className="font-bold text-lg mb-1">Welcome back!</h3>
-                  <p className="text-sm text-gray-700 mb-3">
-                    Last order: {lastOrder.address_snapshot?.line1}, {lastOrder.address_snapshot?.city} {lastOrder.address_snapshot?.zip}
+                  <p className="text-sm text-text-secondary mb-3">
+                    Your last order at {lastOrder.address_snapshot?.line1}, {lastOrder.address_snapshot?.city} {lastOrder.address_snapshot?.zip} was spotless.
                   </p>
                   <div className="flex gap-3">
                     <Link
                       href="/book/laundry"
                       className="btn-primary text-sm py-2 px-4"
+                      aria-label="Book laundry service again"
                     >
                       Book Laundry Again
                     </Link>
                     <Link
                       href="/book/cleaning"
                       className="btn-secondary text-sm py-2 px-4"
+                      aria-label="Book cleaning service"
                     >
                       Book Cleaning
                     </Link>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {/* Main Service CTAs */}
-          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 mb-20">
-            {/* Laundry Service */}
-            <Link href="/book/laundry" className="group">
-              <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent group-hover:border-primary-300">
-                <div className="text-6xl mb-6 text-center">🧺</div>
-                <h2 className="text-3xl font-bold mb-4 text-center">Laundry Service</h2>
-                <p className="text-gray-600 mb-6 text-center">
-                  Professional wash & fold with 48-hour turnaround
+          {/* Main Service Cards */}
+          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-6 md:gap-8 mb-16 md:mb-20 mt-8 md:mt-12">
+            {/* Laundry Service Card */}
+            <Link href="/book/laundry" className="group block">
+              <motion.div
+                className="card border-2 border-transparent group-hover:border-primary-300 h-full"
+                variants={cardHoverVariants}
+                initial="rest"
+                whileHover="hover"
+                aria-label="Wash and fold laundry service details"
+              >
+                <div className="text-5xl md:text-6xl mb-4 md:mb-6 text-center" role="img" aria-label="Laundry basket">🧺</div>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-center">Wash & Fold Laundry</h2>
+                <p className="text-text-secondary mb-4 md:mb-6 text-center text-sm md:text-base">
+                  Professional care with 48-hour turnaround and same-day pickup options.
                 </p>
                 
-                <div className="bg-primary-50 rounded-lg p-4 mb-6 text-center">
-                  <div className="text-3xl font-bold text-primary-600">$1.75<span className="text-lg">/lb</span></div>
-                  <div className="text-sm text-gray-600">15 lb minimum ($26.25)</div>
+                <div className="bg-primary-50 rounded-lg p-4 mb-4 md:mb-6 text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-primary-600">
+                    $1.75<span className="text-base md:text-lg">/lb</span>
+                  </div>
+                  <div className="text-xs md:text-sm text-text-secondary">15 lb minimum — $26.25</div>
                 </div>
 
-                <ul className="space-y-3 mb-6">
+                <ul className="space-y-2 md:space-y-3 mb-6">
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
                     <span>Free pickup & delivery</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
                     <span>Eco-friendly detergents</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
                     <span>QR-coded bags for tracking</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
-                    <span>Rush 24hr service available</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
+                    <span>Rush 24-hr service available</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
-                    <span>Tax-exempt service</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
+                    <span>Tax-exempt for residential buildings</span>
                   </li>
                 </ul>
 
@@ -161,42 +216,50 @@ export default function Home() {
                     Book Laundry →
                   </span>
                 </div>
-              </div>
+              </motion.div>
             </Link>
 
-            {/* Cleaning Service */}
-            <Link href="/book/cleaning" className="group">
-              <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent group-hover:border-primary-300">
-                <div className="text-6xl mb-6 text-center">✨</div>
-                <h2 className="text-3xl font-bold mb-4 text-center">Home Cleaning</h2>
-                <p className="text-gray-600 mb-6 text-center">
-                  Deep or standard cleaning by background-checked pros
+            {/* Home Cleaning Service Card */}
+            <Link href="/book/cleaning" className="group block">
+              <motion.div
+                className="card border-2 border-transparent group-hover:border-primary-300 h-full"
+                variants={cardHoverVariants}
+                initial="rest"
+                whileHover="hover"
+                aria-label="Deep or standard home cleaning service details"
+              >
+                <div className="text-5xl md:text-6xl mb-4 md:mb-6 text-center" role="img" aria-label="Sparkles">✨</div>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-center">Deep or Standard Home Cleaning</h2>
+                <p className="text-text-secondary mb-4 md:mb-6 text-center text-sm md:text-base">
+                  Trusted Harlem pros for spotless apartments, condos, and brownstones.
                 </p>
                 
-                <div className="bg-primary-50 rounded-lg p-4 mb-6 text-center">
-                  <div className="text-3xl font-bold text-primary-600">$89<span className="text-lg">+</span></div>
-                  <div className="text-sm text-gray-600">Studio from $89, 1BR $119, 2BR $149</div>
+                <div className="bg-primary-50 rounded-lg p-4 mb-4 md:mb-6 text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-primary-600">
+                    $89<span className="text-base md:text-lg">+</span>
+                  </div>
+                  <div className="text-xs md:text-sm text-text-secondary">Studio $89 | 1BR $119 | 2BR $149</div>
                 </div>
 
-                <ul className="space-y-3 mb-6">
+                <ul className="space-y-2 md:space-y-3 mb-6">
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
                     <span>Background-checked professionals</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
                     <span>Eco-friendly cleaning products</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
-                    <span>Photo documentation</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
+                    <span>Photo documentation of each visit</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
-                    <span>Flexible scheduling</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
+                    <span>Flexible scheduling & secure entry options</span>
                   </li>
                   <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5">✓</span>
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
                     <span>100% satisfaction guarantee</span>
                   </li>
                 </ul>
@@ -206,59 +269,96 @@ export default function Home() {
                     Book Cleaning →
                   </span>
                 </div>
-              </div>
+              </motion.div>
             </Link>
           </div>
 
-          {/* How It Works */}
-          <div className="max-w-5xl mx-auto mt-24">
-            <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
+          {/* How It Works Section */}
+          <motion.div 
+            className="max-w-5xl mx-auto mt-16 md:mt-24 mb-12 md:mb-16"
+            variants={staggerContainerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+          >
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12">How It Works</h2>
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+              <motion.div 
+                className="text-center"
+                variants={staggerItemVariants}
+              >
+                <div 
+                  className="w-14 h-14 md:w-16 md:h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-xl md:text-2xl font-bold text-primary-600"
+                  role="img"
+                  aria-label="Step 1"
+                >
                   1
                 </div>
-                <h3 className="font-bold mb-2">Book Online</h3>
-                <p className="text-gray-600 text-sm">
-                  Choose your service, pick a time slot, and get instant pricing
+                <h3 className="font-bold mb-2 text-lg">Book Online</h3>
+                <p className="text-text-secondary text-sm md:text-base">
+                  Choose your service, pick a time slot, and pay securely.
                 </p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
+              </motion.div>
+              
+              <motion.div 
+                className="text-center"
+                variants={staggerItemVariants}
+              >
+                <div 
+                  className="w-14 h-14 md:w-16 md:h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-xl md:text-2xl font-bold text-primary-600"
+                  role="img"
+                  aria-label="Step 2"
+                >
                   2
                 </div>
-                <h3 className="font-bold mb-2">We Come to You</h3>
-                <p className="text-gray-600 text-sm">
-                  Our partners arrive at your scheduled time
+                <h3 className="font-bold mb-2 text-lg">We Come to You</h3>
+                <p className="text-text-secondary text-sm md:text-base">
+                  Our Harlem-based partners arrive at your scheduled time.
                 </p>
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
+              </motion.div>
+              
+              <motion.div 
+                className="text-center"
+                variants={staggerItemVariants}
+              >
+                <div 
+                  className="w-14 h-14 md:w-16 md:h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-xl md:text-2xl font-bold text-primary-600"
+                  role="img"
+                  aria-label="Step 3"
+                >
                   3
                 </div>
-                <h3 className="font-bold mb-2">Delivered Fresh</h3>
-                <p className="text-gray-600 text-sm">
-                  Get your items delivered or come home to a spotless space
+                <h3 className="font-bold mb-2 text-lg">Delivered Fresh</h3>
+                <p className="text-text-secondary text-sm md:text-base">
+                  Clothes folded, homes shining, and your day uninterrupted.
                 </p>
-              </div>
+              </motion.div>
             </div>
-          </div>
+            
+            {/* Supporting local note */}
+            <p className="text-center text-sm text-text-tertiary mt-8 italic">
+              Proudly supporting Harlem workers & small businesses.
+            </p>
+          </motion.div>
         </main>
 
+        {/* Mobile Sticky CTA Bar */}
+        <MobileCTABar />
+
         {/* Footer */}
-        <footer className="bg-gray-900 text-white mt-24 py-12">
+        <footer className="bg-gray-900 text-white mt-16 md:mt-24 py-12 pb-24 lg:pb-12">
           <div className="container mx-auto px-4 text-center">
-            <p className="text-gray-400">
+            <p className="text-gray-400 text-sm md:text-base">
               © 2025 Tidyhood. Supporting Harlem businesses.
             </p>
-            <div className="mt-4 space-x-4">
-              <Link href="/terms" className="text-gray-400 hover:text-white">
+            <div className="mt-4 space-x-4 md:space-x-6">
+              <Link href="/terms" className="text-gray-400 hover:text-white text-sm md:text-base transition-colors">
                 Terms
               </Link>
-              <Link href="/privacy" className="text-gray-400 hover:text-white">
+              <Link href="/privacy" className="text-gray-400 hover:text-white text-sm md:text-base transition-colors">
                 Privacy
               </Link>
-              <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white">
+              <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white text-sm md:text-base transition-colors">
                 Contact
               </a>
             </div>
