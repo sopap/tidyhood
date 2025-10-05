@@ -16,13 +16,24 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
   const [selectedDate, setSelectedDate] = useState(value?.date || '');
+  const [timePeriod, setTimePeriod] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
 
   const { data, error, isLoading } = useSWR(
     selectedDate && zip ? `/api/slots?service=LAUNDRY&zip=${zip}&date=${selectedDate}` : null,
     fetcher
   );
 
-  const slots: BookingSlot[] = data?.slots || [];
+  const allSlots: BookingSlot[] = data?.slots || [];
+  
+  // Filter slots by time period
+  const slots = allSlots.filter((slot) => {
+    if (timePeriod === 'all') return true;
+    const hour = new Date(slot.slot_start).getHours();
+    if (timePeriod === 'morning') return hour >= 5 && hour < 12;
+    if (timePeriod === 'afternoon') return hour >= 12 && hour < 17;
+    if (timePeriod === 'evening') return hour >= 17;
+    return true;
+  });
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -65,6 +76,27 @@ export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
           <legend className="block text-sm font-medium text-gray-700 mb-2">
             Available Time Slots
           </legend>
+          
+          {/* Time period filters */}
+          {allSlots.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(['all', 'morning', 'afternoon', 'evening'] as const).map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  onClick={() => setTimePeriod(period)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                    timePeriod === period
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {period === 'all' ? 'All' : period.charAt(0).toUpperCase() + period.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          
           <p className="text-xs text-gray-500 mb-3">
             We'll text you 15 min before arrival.
           </p>
@@ -88,7 +120,7 @@ export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
           )}
 
           {!isLoading && !error && slots.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Time slots">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Time slots">
               {slots.map((slot) => {
                 const slotId = `slot-${slot.slot_start}`;
                 const isSelected = value?.slot?.slot_start === slot.slot_start;
@@ -117,7 +149,7 @@ export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
                     role="radio"
                     aria-checked={isSelected}
                     aria-label={ariaLabel}
-                    className={`flex items-center justify-between p-3 rounded-lg border-2 text-left transition-colors ${
+                    className={`flex flex-col items-start p-2 rounded-lg border-2 text-left transition-colors ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100'
                         : isFull
@@ -125,14 +157,16 @@ export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
                         : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
                     } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
                   >
-                    <span className={`font-medium ${isFull ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-medium ${isFull ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                       {timeLabel}
                     </span>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${badgeClasses[badge.variant]}`}
-                    >
-                      {badge.text}
-                    </span>
+                    {badge.variant !== 'success' && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-1 ${badgeClasses[badge.variant]}`}
+                      >
+                        {badge.text}
+                      </span>
+                    )}
                   </button>
                 );
               })}
