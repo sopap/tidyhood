@@ -3,6 +3,9 @@ import { requireAuth } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { handleApiError } from '@/lib/errors'
 
+// Force dynamic rendering (uses cookies for auth)
+export const dynamic = 'force-dynamic'
+
 // GET /api/partner/orders - List partner's orders
 export async function GET(request: NextRequest) {
   try {

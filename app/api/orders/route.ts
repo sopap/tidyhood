@@ -8,6 +8,9 @@ import { generateLabelCode } from '@/lib/ids'
 import { sendOrderCreatedSMS } from '@/lib/sms'
 import { ValidationError, ConflictError, handleApiError } from '@/lib/errors'
 
+// Force dynamic rendering (uses cookies for auth)
+export const dynamic = 'force-dynamic'
+
 // GET /api/orders - Fetch user's orders
 export async function GET(request: NextRequest) {
   try {

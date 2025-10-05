@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 
+// Force dynamic rendering (uses cookies for auth)
+export const dynamic = 'force-dynamic'
+
 // GET /api/preferences - Fetch user preferences
 export async function GET(request: NextRequest) {
   try {
