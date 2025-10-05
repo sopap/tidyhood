@@ -168,4 +168,32 @@
   .label {
     @apply text-xs font-semibold text-text uppercase tracking-wide;
   }
+
+  /* Dense form cards for mobile - local scope */
+  .ui-dense {
+    font-size: 0.9375rem;   /* ~15px */
+    line-height: 1.25rem;
+  }
+
+  .ui-dense .input-field,
+  .ui-dense input[type="text"],
+  .ui-dense input[type="tel"],
+  .ui-dense input[type="date"],
+  .ui-dense select {
+    padding-top: 0.5rem;    /* py-2 */
+    padding-bottom: 0.5rem;
+  }
+
+  .ui-dense textarea {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .ui-dense h2 {
+    font-size: 1rem;         /* text-base */
+    margin-bottom: 0.75rem;  /* mb-3 */
+  }
+
+  .ui-dense .space-y-4 > * + * {
+    margin-top: 0.75rem;     /* space-y-3 */
+  }
 }

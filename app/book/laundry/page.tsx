@@ -9,6 +9,7 @@ import { Toast } from '@/components/Toast';
 import { Header } from '@/components/Header';
 import ServiceDetails from '@/components/booking/ServiceDetails';
 import EstimatePanel from '@/components/booking/EstimatePanel';
+import StickyCTA from '@/components/booking/StickyCTA';
 import { ServiceType, WeightTier, AddonKey, EstimateResult } from '@/lib/types';
 import { estimateLaundry } from '@/lib/estimate';
 
@@ -63,6 +64,10 @@ function LaundryBookingForm() {
   const [estimate, setEstimate] = useState<EstimateResult | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Time slot expansion
+  const [slotsExpanded, setSlotsExpanded] = useState(false);
 
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
@@ -235,6 +240,7 @@ function LaundryBookingForm() {
 
     try {
       setLoading(true);
+      setSubmitting(true);
       const idempotencyKey = `laundry-${Date.now()}-${Math.random()}`;
 
       const response = await fetch('/api/orders', {
@@ -288,6 +294,7 @@ function LaundryBookingForm() {
       });
     } finally {
       setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -304,7 +311,7 @@ function LaundryBookingForm() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">📍 Service Address</h2>
                 {isAddressCollapsed && (
@@ -346,7 +353,7 @@ function LaundryBookingForm() {
             </div>
 
             {/* Service Details */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">🧺 Service Details</h2>
               <ServiceDetails
                 serviceType={serviceType}
@@ -364,7 +371,7 @@ function LaundryBookingForm() {
             {address && <EstimatePanel estimate={estimate} isLoading={isEstimating} serviceType={serviceType} />}
 
             {/* Schedule */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">📅 Schedule Pickup</h2>
 
               <div className="space-y-4">
@@ -393,7 +400,7 @@ function LaundryBookingForm() {
                       <p className="text-red-600">No slots available. Please select a different date.</p>
                     ) : (
                       <div className="space-y-2">
-                        {availableSlots.map((slot) => {
+                        {(slotsExpanded ? availableSlots : availableSlots.slice(0, 6)).map((slot) => {
                           const isSelected = selectedSlot?.slot_start === slot.slot_start;
                           const isFull = slot.available_units === 0;
 
@@ -445,6 +452,15 @@ function LaundryBookingForm() {
                             </label>
                           );
                         })}
+                        {availableSlots.length > 6 && !slotsExpanded && (
+                          <button
+                            type="button"
+                            onClick={() => setSlotsExpanded(true)}
+                            className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Show all {availableSlots.length} slots
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -454,34 +470,39 @@ function LaundryBookingForm() {
 
             {/* Delivery Window */}
             {selectedSlot && (
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="ui-dense bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">🚚 Delivery Window</h2>
 
                 <div className="space-y-4">
                   {useDefaultDelivery && selectedDeliverySlot && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <p className="font-semibold text-green-900 mb-1">
-                        Delivery scheduled for{' '}
-                        {new Date(selectedDeliverySlot.slot_start).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </p>
-                      <p className="text-sm text-green-700">
-                        {new Date(selectedDeliverySlot.slot_start).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true,
-                        })}{' '}
-                        -{' '}
-                        {new Date(selectedDeliverySlot.slot_end).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit',
-                          hour12: true,
-                        })}{' '}
-                        (48 hours after pickup)
-                      </p>
+                    <div className="relative bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="absolute left-0 top-0 h-full w-1 rounded-l-lg bg-green-500" aria-hidden="true" />
+                      <div className="flex items-start gap-3 pl-2">
+                        <span className="text-2xl" aria-hidden="true">🚚</span>
+                        <div>
+                          <p className="font-semibold text-green-900">
+                            Delivery: {new Date(selectedDeliverySlot.slot_start).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-sm text-green-700">
+                            {new Date(selectedDeliverySlot.slot_start).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}{' '}
+                            -{' '}
+                            {new Date(selectedDeliverySlot.slot_end).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}{' '}
+                            (48 hours after pickup)
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -561,7 +582,7 @@ function LaundryBookingForm() {
             )}
 
             {/* Contact */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact Information</h2>
 
               <div className="space-y-4">
@@ -598,9 +619,13 @@ function LaundryBookingForm() {
                 type="submit"
                 disabled={loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
                 className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-disabled={loading}
               >
-                {loading ? 'Processing...' : 'Schedule Pickup'}
+                {submitting ? 'Scheduling…' : 'Schedule Pickup'}
               </button>
+              <div aria-live="polite" aria-atomic="true" className="sr-only">
+                {submitting && 'Processing your booking request'}
+              </div>
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-900 font-medium">💰 Pay After Pickup</p>
                 <p className="text-xs text-blue-700 mt-1">
@@ -617,6 +642,18 @@ function LaundryBookingForm() {
       </main>
 
       {toast && <Toast message={toast.message} type={toast.type} isVisible={!!toast} onClose={() => setToast(null)} />}
+      
+      <StickyCTA
+        label={submitting ? 'Scheduling…' : 'Schedule Pickup'}
+        onClick={() => {
+          const form = document.querySelector('form');
+          if (form) {
+            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          }
+        }}
+        disabled={loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
+        sublabel="Pay After Pickup"
+      />
     </div>
   );
 }
