@@ -57,8 +57,6 @@ function LaundryBookingForm() {
   const [isAddressValid, setIsAddressValid] = useState(false);
   const [addressLine2, setAddressLine2] = useState('');
   const [phone, setPhone] = useState('');
-  const [bedrooms, setBedrooms] = useState<number>(1);
-  const [bathrooms, setBathrooms] = useState<number>(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [isAddressCollapsed, setIsAddressCollapsed] = useState(false);
 
@@ -104,15 +102,7 @@ function LaundryBookingForm() {
       setAddressLine2(persistedAddress.line2 || '');
       // Note: Full address will need to be re-geocoded or set via AddressAutocomplete
     }
-
-    // Set home size
-    if (persistedHomeSize?.bedrooms !== undefined) {
-      setBedrooms(persistedHomeSize.bedrooms);
-    }
-    if (persistedHomeSize?.bathrooms !== undefined) {
-      setBathrooms(persistedHomeSize.bathrooms);
-    }
-  }, [persistedLoaded, persistedPhone, persistedAddress, persistedHomeSize]);
+  }, [persistedLoaded, persistedPhone, persistedAddress]);
 
   // Load last order for smart defaults
   useEffect(() => {
@@ -316,8 +306,6 @@ function LaundryBookingForm() {
             serviceType,
             weightTier: weightTier || undefined,
             addons: Object.keys(addons).filter((key) => addons[key as AddonKey]),
-            bedrooms,
-            bathrooms,
           },
         }),
       });
@@ -686,60 +674,11 @@ function LaundryBookingForm() {
                         clearAll();
                         setPhone('');
                         setAddressLine2('');
-                        setBedrooms(1);
-                        setBathrooms(1);
                       }}
                       className="text-xs text-blue-600 hover:text-blue-700 underline"
                     >
                       Not you? Clear saved details
                     </button>
-                  </div>
-                </div>
-
-                {/* Home Size - New Fields */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedrooms
-                    </label>
-                    <select
-                      value={bedrooms}
-                      onChange={(e) => {
-                        const value = parseInt(e.target.value);
-                        setBedrooms(value);
-                        updatePersistedHomeSize({ bedrooms: value, bathrooms });
-                      }}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                    >
-                      <option value="0">Studio</option>
-                      <option value="1">1 BR</option>
-                      <option value="2">2 BR</option>
-                      <option value="3">3 BR</option>
-                      <option value="4">4 BR</option>
-                      <option value="5">5+ BR</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bathrooms
-                    </label>
-                    <select
-                      value={bathrooms}
-                      onChange={(e) => {
-                        const value = parseFloat(e.target.value);
-                        setBathrooms(value);
-                        updatePersistedHomeSize({ bedrooms, bathrooms: value });
-                      }}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                    >
-                      <option value="1">1 BA</option>
-                      <option value="1.5">1.5 BA</option>
-                      <option value="2">2 BA</option>
-                      <option value="2.5">2.5 BA</option>
-                      <option value="3">3 BA</option>
-                      <option value="3.5">3.5 BA</option>
-                      <option value="4">4+ BA</option>
-                    </select>
                   </div>
                 </div>
 
