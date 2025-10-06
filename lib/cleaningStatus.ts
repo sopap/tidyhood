@@ -12,7 +12,6 @@
  */
 
 import { getServiceClient } from './db'
-import { logger } from './logger'
 import Stripe from 'stripe'
 
 // ============================================
@@ -209,9 +208,9 @@ export async function transitionToInService(orderId: string): Promise<void> {
     
     if (error) throw error
     
-    logger.info(`Order ${orderId} transitioned to in_service`)
+    console.log(`Order ${orderId} transitioned to in_service`)
   } catch (error) {
-    logger.error(`Failed to transition order ${orderId} to in_service:`, error)
+    console.error(`Failed to transition order ${orderId} to in_service:`, error)
     throw error
   }
 }
@@ -240,9 +239,9 @@ export async function transitionToCompleted(
     
     if (error) throw error
     
-    logger.info(`Order ${orderId} completed${partnerId ? ` by partner ${partnerId}` : ' automatically'}`)
+    console.log(`Order ${orderId} completed${partnerId ? ` by partner ${partnerId}` : ' automatically'}`)
   } catch (error) {
-    logger.error(`Failed to complete order ${orderId}:`, error)
+    console.error(`Failed to complete order ${orderId}:`, error)
     throw error
   }
 }
@@ -342,7 +341,7 @@ export async function cancelCleaning(
         }
       })
       
-      logger.info(`Refund of $${(refundCents / 100).toFixed(2)} processed for order ${orderId}`)
+      console.log(`Refund of $${(refundCents / 100).toFixed(2)} processed for order ${orderId}`)
     }
     
     // Release time slot
@@ -355,10 +354,10 @@ export async function cancelCleaning(
         })
         .eq('id', order.slot_id)
       
-      if (slotError) logger.error(`Failed to release slot: ${slotError.message}`)
+      if (slotError) console.error(`Failed to release slot: ${slotError.message}`)
     }
     
-    logger.info(`Order ${orderId} canceled by ${canceledBy}, refund: $${(refundCents / 100).toFixed(2)}`)
+    console.log(`Order ${orderId} canceled by ${canceledBy}, refund: $${(refundCents / 100).toFixed(2)}`)
     
     return {
       feeCents,
@@ -367,7 +366,7 @@ export async function cancelCleaning(
       canceledBy
     }
   } catch (error) {
-    logger.error(`Failed to cancel order ${orderId}:`, error)
+    console.error(`Failed to cancel order ${orderId}:`, error)
     throw error
   }
 }
@@ -447,21 +446,23 @@ export async function rescheduleCleaning(
       .update({ rescheduled_to: newOrderId })
       .eq('id', oldOrderId)
     
-    if (linkError) logger.error(`Failed to link orders: ${linkError.message}`)
+    if (linkError) console.error(`Failed to link orders: ${linkError.message}`)
     
     // Release old slot
     if (oldOrder.slot_id) {
-      await supabase.rpc('increment_slot_units', { 
+      const { error: releaseError } = await supabase.rpc('increment_slot_units', { 
         slot_id: oldOrder.slot_id 
-      }).catch(err => logger.error(`Failed to release old slot: ${err.message}`))
+      })
+      if (releaseError) console.error(`Failed to release old slot: ${releaseError.message}`)
     }
     
-    // Reserve new slot  
-    await supabase.rpc('decrement_slot_units', { 
+    // Reserve new slot
+    const { error: reserveError } = await supabase.rpc('decrement_slot_units', { 
       slot_id: newSlotId 
-    }).catch(err => logger.error(`Failed to reserve new slot: ${err.message}`))
+    })
+    if (reserveError) console.error(`Failed to reserve new slot: ${reserveError.message}`)
     
-    logger.info(`Order ${oldOrderId} rescheduled to ${newDateTime}, new order: ${newOrderId}`)
+    console.log(`Order ${oldOrderId} rescheduled to ${newDateTime}, new order: ${newOrderId}`)
     
     return {
       oldOrderId,
@@ -469,7 +470,7 @@ export async function rescheduleCleaning(
       newScheduledTime: newDateTime
     }
   } catch (error) {
-    logger.error(`Failed to reschedule order ${oldOrderId}:`, error)
+    console.error(`Failed to reschedule order ${oldOrderId}:`, error)
     throw error
   }
 }
@@ -499,7 +500,7 @@ export async function autoTransitionToInService(): Promise<number> {
     if (fetchError) throw fetchError
     
     if (!orders || orders.length === 0) {
-      logger.info('No orders to auto-transition')
+      console.log('No orders to auto-transition')
       return 0
     }
     
@@ -516,11 +517,11 @@ export async function autoTransitionToInService(): Promise<number> {
     if (updateError) throw updateError
     
     const count = orders.length
-    logger.info(`Auto-transitioned ${count} orders to in_service`)
+    console.log(`Auto-transitioned ${count} orders to in_service`)
     
     return count
   } catch (error) {
-    logger.error('Failed to auto-transition orders:', error)
+    console.error('Failed to auto-transition orders:', error)
     throw error
   }
 }
@@ -563,12 +564,12 @@ export async function autoCompleteCleanings(): Promise<number> {
     
     const count = orders.length
     if (count > 0) {
-      logger.warn(`Auto-completed ${count} orders that partners didn't mark`)
+      console.warn(`Auto-completed ${count} orders that partners didn't mark`)
     }
     
     return count
   } catch (error) {
-    logger.error('Failed to auto-complete orders:', error)
+    console.error('Failed to auto-complete orders:', error)
     throw error
   }
 }
@@ -603,7 +604,7 @@ export async function getOrdersNeedingReminders(): Promise<any[]> {
     
     return orders || []
   } catch (error) {
-    logger.error('Failed to get orders needing reminders:', error)
+    console.error('Failed to get orders needing reminders:', error)
     throw error
   }
 }
