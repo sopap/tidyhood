@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`
     
     if (!process.env.CRON_SECRET) {
-      logger.error('CRON_SECRET not configured')
+      console.error('CRON_SECRET not configured')
       return NextResponse.json(
         { error: 'Cron not configured' },
         { status: 500 }
@@ -43,9 +43,7 @@ export async function GET(request: NextRequest) {
     }
     
     if (authHeader !== expectedAuth) {
-      logger.warn('Unauthorized cron attempt', {
-        ip: request.headers.get('x-forwarded-for') || 'unknown'
-      })
+      console.warn('Unauthorized cron attempt from:', request.headers.get('x-forwarded-for') || 'unknown')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -63,29 +61,29 @@ export async function GET(request: NextRequest) {
     
     // Run appropriate job(s)
     if (action === 'transition' || action === 'all') {
-      logger.info('Running auto-transition to in_service cron')
+      console.log('Running auto-transition to in_service cron')
       try {
         const count = await autoTransitionToInService()
         results.transitioned = count
-        logger.info(`Auto-transitioned ${count} orders to in_service`)
+        console.log(`Auto-transitioned ${count} orders to in_service`)
       } catch (error) {
-        logger.error('Auto-transition cron failed:', error)
+        console.error('Auto-transition cron failed:', error)
         results.transitionError = (error as Error).message
       }
     }
     
     if (action === 'complete' || action === 'all') {
-      logger.info('Running auto-complete cron')
+      console.log('Running auto-complete cron')
       try {
         const count = await autoCompleteCleanings()
         results.completed = count
         if (count > 0) {
-          logger.warn(`Auto-completed ${count} orders (safety net triggered)`)
+          console.warn(`Auto-completed ${count} orders (safety net triggered)`)
         } else {
-          logger.info('Auto-complete check: no orders needed completion')
+          console.log('Auto-complete check: no orders needed completion')
         }
       } catch (error) {
-        logger.error('Auto-complete cron failed:', error)
+        console.error('Auto-complete cron failed:', error)
         results.completeError = (error as Error).message
       }
     }
@@ -101,7 +99,7 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    logger.error('Cron endpoint error:', error)
+    console.error('Cron endpoint error:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
