@@ -11,7 +11,6 @@ import ServiceDetails from '@/components/booking/ServiceDetails';
 import EstimatePanel from '@/components/booking/EstimatePanel';
 import StickyCTA from '@/components/booking/StickyCTA';
 import { ServiceType, WeightTier, AddonKey, EstimateResult } from '@/lib/types';
-import { estimateLaundry } from '@/lib/estimate';
 import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking';
 
 interface Address {
@@ -204,11 +203,21 @@ function LaundryBookingForm() {
       if (serviceType === 'dryClean') {
         setIsEstimating(true);
         try {
-          const result = await estimateLaundry({
-            serviceType,
-            addons,
-            zip: address.zip,
+          const response = await fetch('/api/estimate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              serviceType,
+              addons,
+              zip: address.zip,
+            }),
           });
+          
+          if (!response.ok) {
+            throw new Error('Failed to calculate estimate');
+          }
+          
+          const result = await response.json();
           setEstimate(result);
         } catch (err) {
           console.error('Estimate calculation error:', err);
@@ -223,12 +232,22 @@ function LaundryBookingForm() {
 
       setIsEstimating(true);
       try {
-        const result = await estimateLaundry({
-          serviceType,
-          weightTier,
-          addons,
-          zip: address.zip,
+        const response = await fetch('/api/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serviceType,
+            weightTier,
+            addons,
+            zip: address.zip,
+          }),
         });
+        
+        if (!response.ok) {
+          throw new Error('Failed to calculate estimate');
+        }
+        
+        const result = await response.json();
         setEstimate(result);
       } catch (err) {
         console.error('Estimate calculation error:', err);
@@ -390,6 +409,21 @@ function LaundryBookingForm() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Book Laundry Service</h1>
             <p className="text-gray-600">Fill out the form below to schedule your pickup</p>
+          </div>
+
+          {/* Cancellation Policy Banner */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0" aria-hidden="true">✓</span>
+              <div>
+                <h3 className="font-semibold text-green-900 mb-1">
+                  Flexible Cancellation
+                </h3>
+                <p className="text-sm text-green-700">
+                  Free to cancel or reschedule anytime before pickup. No fees, no hassle.
+                </p>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

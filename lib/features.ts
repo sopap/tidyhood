@@ -27,6 +27,12 @@ export const FEATURES = {
    * Enables: Cron jobs for reminders, quote expiration, SLA alerts
    */
   AUTOMATED_NOTIFICATIONS: process.env.NEXT_PUBLIC_ENABLE_AUTO_NOTIFICATIONS === 'true',
+  
+  /**
+   * Cleaning V2 - Enhanced cleaning order workflow
+   * Enables: Granular status tracking, disputes, partner location tracking, no-shows
+   */
+  CLEANING_V2: process.env.NEXT_PUBLIC_FLAG_CLEANING_V2 === '1',
 } as const;
 
 /**

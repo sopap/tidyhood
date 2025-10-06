@@ -343,6 +343,21 @@ function CleaningBookingForm() {
             <p className="text-gray-600">Fill out the form below to schedule your cleaning</p>
           </div>
 
+          {/* Cancellation Policy Banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0" aria-hidden="true">📋</span>
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">
+                  Flexible Cancellation Policy
+                </h3>
+                <p className="text-sm text-blue-700">
+                  Free cancellation or rescheduling with 24+ hours notice. Changes made within 24 hours incur a 15% service fee.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
             <div className="bg-white rounded-lg shadow-md p-6">

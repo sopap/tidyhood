@@ -1,23 +1,24 @@
 /**
- * Order State Machine - Legacy System
+ * Order State Machine - Unified System
  * 
- * Updated to work with migration 009 statuses.
- * Implements order lifecycle for laundry (quote-first) and 
- * cleaning (pay-to-book) services with improved status tracking.
+ * Supports both LAUNDRY (quote-first) and CLEANING (pay-to-book) workflows.
+ * Extended with cleaning v2 statuses for granular tracking.
+ * 
+ * @see types/cleaningOrders.ts for detailed type definitions
+ * @see supabase/migrations/020_cleaning_status_system.sql for database schema
  */
 
-// Legacy status names matching migration 009
-export type OrderStatus =
-  | 'pending'             // Initial state
-  | 'pending_pickup'      // Scheduled for pickup
-  | 'at_facility'         // Laundry: items at facility
-  | 'awaiting_payment'    // Laundry: quote sent, waiting for payment
-  | 'paid_processing'     // Laundry: paid, being processed
-  | 'in_progress'         // NEW: Active work (laundry processing or cleaning in progress)
-  | 'out_for_delivery'    // NEW: Laundry returning to customer
-  | 'delivered'           // NEW: Laundry items returned (terminal for laundry)
-  | 'completed'           // Cleaning finished (terminal for cleaning)
-  | 'canceled';           // Canceled (terminal)
+import type { 
+  OrderStatus, 
+  LaundryStatus, 
+  CleaningStatus,
+  OrderAction,
+  CleaningAction,
+  LaundryAction 
+} from '@/types/cleaningOrders';
+
+// Re-export OrderStatus type from cleaningOrders
+export type { OrderStatus, LaundryStatus, CleaningStatus };
 
 export type ServiceType = 'LAUNDRY' | 'CLEANING';
 
@@ -53,6 +54,7 @@ export const CANCELLABLE_STATUSES: OrderStatus[] = [
  * Status display labels for UI
  */
 export const STATUS_LABELS: Record<OrderStatus, string> = {
+  // Laundry statuses
   pending: 'Pending',
   pending_pickup: 'Pending Pickup',
   at_facility: 'At Facility',
@@ -62,13 +64,22 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   completed: 'Completed',
-  canceled: 'Canceled'
+  canceled: 'Canceled',
+  // Cleaning v2 statuses
+  assigned: 'Assigned',
+  en_route: 'En Route',
+  on_site: 'On Site',
+  disputed: 'Disputed',
+  refunded: 'Refunded',
+  cleaner_no_show: 'Cleaner No-Show',
+  customer_no_show: 'Customer No-Show',
 };
 
 /**
  * Status colors for UI badges
  */
 export const STATUS_COLORS: Record<OrderStatus, string> = {
+  // Laundry statuses
   pending: 'blue',
   pending_pickup: 'blue',
   at_facility: 'yellow',
@@ -78,7 +89,15 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
   out_for_delivery: 'blue',
   delivered: 'green',
   completed: 'green',
-  canceled: 'red'
+  canceled: 'red',
+  // Cleaning v2 statuses
+  assigned: 'blue',
+  en_route: 'yellow',
+  on_site: 'yellow',
+  disputed: 'orange',
+  refunded: 'green',
+  cleaner_no_show: 'red',
+  customer_no_show: 'orange',
 };
 
 interface TransitionRule {

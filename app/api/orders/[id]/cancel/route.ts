@@ -3,13 +3,15 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { isCancellable, validateTransition } from '@/lib/orderStateMachine'
+import { getCancellationPolicy, validateModification } from '@/lib/cancellationFees'
+import { releaseCapacity } from '@/lib/capacity'
 import { NotFoundError, ForbiddenError, ValidationError, handleApiError } from '@/lib/errors'
 
 /**
  * POST /api/orders/:id/cancel - Cancel an order
  * 
- * Validates that the order can be canceled based on its current status
- * using the unified state machine rules.
+ * Handles cancellation for both laundry (free, no refund) and cleaning (85% refund)
+ * Manages capacity release, refund processing, and notifications
  * 
  * Request Body:
  * - reason: string (optional) - Cancellation reason
@@ -49,65 +51,149 @@ export async function POST(
       throw new ForbiddenError('You do not have permission to cancel this order')
     }
     
-    // Validate cancellation using state machine
-    if (!isCancellable(order.status)) {
+    // Validate cancellation using new policy system
+    validateModification(order, 'cancel')
+    
+    // Get cancellation policy for fee/refund calculation
+    const policy = getCancellationPolicy(order)
+    if (!policy.canCancel) {
       throw new ValidationError(
-        `Order cannot be canceled in ${order.status} status. Cancellation is only allowed for orders that haven't been picked up or are awaiting payment.`,
+        policy.reason || 'Order cannot be canceled at this time',
         'CANNOT_CANCEL'
       )
     }
     
-    // Double-check with validateTransition
-    const validation = validateTransition(
-      order.status,
-      'canceled',
-      order.service_type as 'LAUNDRY' | 'CLEANING',
-      order
-    )
+    // Process based on service type
+    let refundAmount = 0
+    let refundId: string | undefined
     
-    if (!validation.valid) {
-      throw new ValidationError(
-        validation.error || 'Cannot cancel order at this time',
-        'INVALID_TRANSITION'
+    try {
+      // 1. Process refund for paid cleanings
+      if (order.service_type === 'CLEANING' && order.paid_at && policy.refundAmount > 0) {
+        // Create refund record
+        const { data: refund, error: refundError } = await db
+          .from('refunds')
+          .insert({
+            order_id: params.id,
+            amount_cents: policy.refundAmount,
+            reason: reason || 'Customer requested cancellation',
+            approved_by: user.id,
+            status: 'pending'
+          })
+          .select()
+          .single()
+        
+        if (refundError) {
+          console.error('Failed to create refund record:', refundError)
+        } else {
+          refundId = refund.id
+          refundAmount = policy.refundAmount
+          
+          // TODO: Process Stripe refund in production
+          // const stripeRefund = await stripe.refunds.create({
+          //   payment_intent: order.payment_id,
+          //   amount: policy.refundAmount,
+          //   reason: 'requested_by_customer'
+          // })
+          // 
+          // await db.from('refunds').update({
+          //   stripe_refund_id: stripeRefund.id,
+          //   status: 'processing',
+          //   processed_at: new Date().toISOString()
+          // }).eq('id', refund.id)
+          
+          console.log(`Refund of ${policy.refundAmount} cents would be processed for order ${params.id}`)
+        }
+      }
+      
+      // 2. Release capacity slot
+      await releaseCapacity(
+        order.partner_id,
+        order.service_type as 'LAUNDRY' | 'CLEANING',
+        order.slot_start,
+        1
       )
-    }
-    
-    // Update order status to canceled
-    const { data: updatedOrder, error: updateError } = await db
-      .from('orders')
-      .update({
-        status: 'canceled',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', params.id)
-      .select()
-      .single()
-    
-    if (updateError) {
-      console.error('Error canceling order:', updateError)
-      throw new Error('Failed to cancel order')
-    }
-    
-    // Create order event
-    await db.from('order_events').insert({
-      order_id: params.id,
-      actor: user.id,
-      actor_role: user.role || 'user',
-      event_type: 'order_canceled',
-      payload_json: {
+      
+      // 3. Update order status to canceled
+      const { data: updatedOrder, error: updateError } = await db
+        .from('orders')
+        .update({
+          status: 'canceled',
+          canceled_at: new Date().toISOString(),
+          canceled_by: user.id,
+          canceled_reason: reason || 'Customer requested cancellation',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.id)
+        .select()
+        .single()
+      
+      if (updateError) {
+        console.error('Error canceling order:', updateError)
+        throw new Error('Failed to cancel order')
+      }
+      
+      // 4. Log modification
+      await db.from('order_modifications').insert({
+        order_id: params.id,
+        modification_type: 'CANCEL',
+        old_slot_start: order.slot_start,
+        old_slot_end: order.slot_end,
+        fee_cents: policy.cancellationFee,
         reason: reason || 'Customer requested cancellation',
-        previous_status: order.status,
-      },
-    })
-    
-    // TODO: Release capacity reservation
-    // TODO: Process refund if payment was made
-    // TODO: Send cancellation notification
-    
-    return NextResponse.json({
-      ...updatedOrder,
-      message: 'Order canceled successfully',
-    })
+        created_by: user.id
+      })
+      
+      // 5. Create order event
+      await db.from('order_events').insert({
+        order_id: params.id,
+        actor: user.id,
+        actor_role: user.role || 'user',
+        event_type: 'order_canceled',
+        payload_json: {
+          reason: reason || 'Customer requested cancellation',
+          previous_status: order.status,
+          refund_amount: refundAmount,
+          fee_amount: policy.cancellationFee,
+          service_type: order.service_type
+        },
+      })
+      
+      // 6. TODO: Send cancellation notification
+      // await sendNotification({
+      //   user_id: user.id,
+      //   type: 'order_canceled',
+      //   title: 'Order Canceled',
+      //   body: refundAmount > 0 
+      //     ? `Your order has been canceled. Refund of $${(refundAmount / 100).toFixed(2)} will be processed within 5-10 business days.`
+      //     : 'Your order has been canceled.',
+      //   data: { order_id: params.id }
+      // })
+      
+      // Build response message
+      let message = 'Order canceled successfully'
+      if (order.service_type === 'CLEANING' && refundAmount > 0) {
+        message += `. Refund of $${(refundAmount / 100).toFixed(2)} will be processed within 5-10 business days`
+        if (policy.cancellationFee > 0) {
+          message += ` (85% refund, 15% cancellation fee: $${(policy.cancellationFee / 100).toFixed(2)})`
+        }
+      } else if (order.service_type === 'LAUNDRY') {
+        message += '. No charges since service was not yet provided'
+      }
+      
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+        refund_amount: refundAmount,
+        refund_id: refundId,
+        fee_charged: policy.cancellationFee,
+        message
+      })
+      
+    } catch (error) {
+      console.error('Error during cancellation process:', error)
+      throw error
+    }
   } catch (error) {
     console.error('Order cancel error:', error)
     

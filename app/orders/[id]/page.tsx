@@ -10,7 +10,10 @@ import ProgressTracker from '@/components/order/ProgressTracker';
 import ServiceAddressCard from '@/components/order/ServiceAddressCard';
 import PricingCard from '@/components/order/PricingCard';
 import OrderDetailsSkeleton from '@/components/order/OrderDetailsSkeleton';
+import CancelModal from '@/components/order/CancelModal';
+import RescheduleModal from '@/components/order/RescheduleModal';
 import { mapDatabaseStatus, getStatusLabel } from '@/lib/orderStatus';
+import { getCancellationPolicy, getHoursUntilSlot, formatMoney } from '@/lib/cancellationFees';
 
 interface Order {
   id: string;
@@ -56,6 +59,9 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -195,6 +201,11 @@ export default function OrderDetailPage() {
   const showPayButton = order.status.toLowerCase() === 'awaiting_payment';
   const currentStep = mapDatabaseStatus(order.status);
   const statusLabel = getStatusLabel(order.status);
+  
+  // Calculate cancellation policy
+  const policy = getCancellationPolicy(order as any);
+  const hoursUntil = getHoursUntilSlot(order.slot_start);
+  const showActions = policy.canCancel || policy.canReschedule;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -299,8 +310,101 @@ export default function OrderDetailPage() {
               </ul>
             </div>
           )}
+
+          {/* Action Buttons */}
+          {showActions && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 md:mb-20">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Need to make changes?</h3>
+              
+              {/* Policy Warning */}
+              {policy.requiresNotice && hoursUntil < 24 && (
+                <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="text-sm">
+                      <p className="font-medium text-orange-900 mb-1">Less than 24 hours notice</p>
+                      <p className="text-orange-800">
+                        A {formatMoney(policy.cancellationFee || policy.rescheduleFee)} fee will apply for changes at this time.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {policy.canReschedule && (
+                  <button
+                    onClick={() => setShowRescheduleModal(true)}
+                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Reschedule Pickup
+                  </button>
+                )}
+                {policy.canCancel && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel Order
+                  </button>
+                )}
+              </div>
+
+              {/* Help text */}
+              {!policy.requiresNotice || hoursUntil >= 24 && (
+                <p className="mt-3 text-xs text-gray-500 text-center">
+                  {order.service_type === 'LAUNDRY' 
+                    ? 'Free to reschedule or cancel anytime before pickup'
+                    : 'Free changes with 24+ hours notice'
+                  }
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      <CancelModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        order={order as any}
+        onSuccess={() => {
+          setToastMessage('Order canceled successfully');
+          setTimeout(() => setToastMessage(''), 3000);
+        }}
+      />
+      
+      <RescheduleModal
+        isOpen={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        order={order as any}
+        onSuccess={() => {
+          setToastMessage('Order rescheduled successfully');
+          setTimeout(() => setToastMessage(''), 3000);
+          fetchOrder(); // Refresh order data
+        }}
+      />
     </div>
   );
 }

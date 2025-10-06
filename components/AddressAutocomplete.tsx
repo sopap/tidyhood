@@ -1,27 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { loadGoogleMaps } from '@/lib/googleMaps'
 
 // Get allowed ZIP codes from environment variable
 const ALLOWED_ZIPS = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
-
-// Load Google Maps script
-function loadGoogleMapsScript(apiKey: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window !== 'undefined' && window.google?.maps?.places) {
-      resolve()
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true
-    script.defer = true
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to load Google Maps'))
-    document.head.appendChild(script)
-  })
-}
 
 interface Address {
   line1: string
@@ -78,7 +61,7 @@ export function AddressAutocomplete({
       }
 
       try {
-        await loadGoogleMapsScript(apiKey)
+        await loadGoogleMaps()
 
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           componentRestrictions: { country: 'us' },
