@@ -12,7 +12,24 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth()
+    // Add timeout wrapper for auth check
+    const user = await Promise.race([
+      requireAuth(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth timeout')), 5000)
+      )
+    ]) as Awaited<ReturnType<typeof requireAuth>>
+    
+    if (!user) {
+      return NextResponse.json(
+        { 
+          error: 'Authentication required',
+          code: 'UNAUTHENTICATED',
+          message: 'Please log in to view recurring plans'
+        },
+        { status: 401 }
+      )
+    }
     const db = getServiceClient()
 
     const { data: plans, error } = await db
@@ -30,9 +47,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ plans })
   } catch (error) {
     console.error('[GET /api/recurring/plan] Error:', error)
+    
+    // Handle specific auth/timeout errors
+    if (error instanceof Error) {
+      if (error.message.includes('Unauthorized') || 
+          error.message.includes('JWT') ||
+          error.message.includes('Auth timeout')) {
+        return NextResponse.json(
+          { 
+            error: 'Session expired or invalid',
+            code: 'UNAUTHENTICATED',
+            message: 'Please log in again to continue'
+          },
+          { status: 401 }
+        )
+      }
+      
+      if (error.message.includes('timeout') || 
+          error.message.includes('Timeout')) {
+        return NextResponse.json(
+          { 
+            error: 'Request timeout',
+            code: 'TIMEOUT',
+            message: 'The request took too long. Please try again.'
+          },
+          { status: 408 }
+        )
+      }
+    }
+    
     const apiError = handleApiError(error)
     return NextResponse.json(
-      { error: apiError.error },
+      { error: apiError.error, code: apiError.code },
       { status: apiError.statusCode }
     )
   }
