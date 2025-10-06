@@ -410,6 +410,60 @@ export function canOpenDispute(order: CleaningOrder): boolean {
 }
 
 // ============================================================================
+// Legacy Status Mapping
+// ============================================================================
+
+/**
+ * Map legacy/laundry statuses to cleaning statuses for backward compatibility
+ * 
+ * This allows existing orders with old statuses to work with the new Cleaning V2 UI
+ * without requiring a data migration.
+ */
+export function mapToCleaningStatus(dbStatus: string): CleaningStatus {
+  const statusLower = dbStatus.toLowerCase();
+  
+  // Direct matches (already cleaning statuses)
+  const cleaningStatuses: CleaningStatus[] = [
+    'pending', 'assigned', 'en_route', 'on_site', 'in_progress',
+    'completed', 'canceled', 'cleaner_no_show', 'customer_no_show',
+    'disputed', 'refunded'
+  ];
+  
+  if (cleaningStatuses.includes(statusLower as CleaningStatus)) {
+    return statusLower as CleaningStatus;
+  }
+  
+  // Map legacy/laundry statuses to cleaning equivalents
+  const legacyMapping: Record<string, CleaningStatus> = {
+    // Laundry statuses
+    'pending_pickup': 'pending',
+    'at_facility': 'in_progress',
+    'awaiting_payment': 'pending',
+    'paid_processing': 'in_progress',
+    'processing': 'in_progress',
+    'out_for_delivery': 'in_progress',
+    'delivered': 'completed',
+    
+    // Other possible legacy statuses
+    'scheduled': 'pending',
+    'confirmed': 'assigned',
+    'active': 'in_progress',
+    'done': 'completed',
+    'cancelled': 'canceled', // British spelling
+  };
+  
+  return legacyMapping[statusLower] || 'pending'; // Safe fallback
+}
+
+/**
+ * Get status config with fallback for unknown statuses
+ */
+export function getCleaningStatusConfig(status: string): StatusConfig {
+  const mappedStatus = mapToCleaningStatus(status);
+  return CLEANING_STATUS_CONFIG[mappedStatus] || CLEANING_STATUS_CONFIG.pending;
+}
+
+// ============================================================================
 // SLA/Metric Types
 // ============================================================================
 

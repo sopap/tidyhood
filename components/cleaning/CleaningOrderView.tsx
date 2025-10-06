@@ -7,7 +7,7 @@ import { FEATURES } from '@/lib/features';
 import { CleaningTimeline } from './CleaningTimeline';
 import { CleaningActions } from './CleaningActions';
 import { DisputeModal } from './DisputeModal';
-import { CLEANING_STATUS_CONFIG } from '@/types/cleaningOrders';
+import { getCleaningStatusConfig } from '@/types/cleaningOrders';
 
 interface CleaningOrderViewProps {
   order: CleaningOrder;
@@ -41,7 +41,8 @@ export function CleaningOrderView({
     return null;
   }
   
-  const statusConfig = CLEANING_STATUS_CONFIG[order.status];
+  // Use safe status config getter that handles legacy statuses
+  const statusConfig = getCleaningStatusConfig(order.status);
   
   /**
    * Handle dispute submission
@@ -327,7 +328,7 @@ function getStatusDescription(order: CleaningOrder): string {
     disputed: "We're reviewing your case and will respond within 24 hours. Check your email for updates.",
     refunded: "Your payment has been refunded. Thank you for your patience.",
   };
-  return descriptions[order.status] || CLEANING_STATUS_CONFIG[order.status].description;
+  return descriptions[order.status] || getCleaningStatusConfig(order.status).description;
 }
 
 /**
