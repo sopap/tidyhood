@@ -126,13 +126,8 @@ const TRANSITIONS: TransitionRule[] = [
   { from: 'out_for_delivery', to: 'delivered', service: 'LAUNDRY' },
   
   // Cleaning transitions  
-  { 
-    from: 'pending', 
-    to: 'paid_processing', 
-    service: 'CLEANING'
-    // No condition needed - payment will set paid_at
-  },
-  { from: 'paid_processing', to: 'in_progress', service: 'CLEANING' },
+  { from: 'pending', to: 'pending_pickup', service: 'CLEANING' },
+  { from: 'pending_pickup', to: 'in_progress', service: 'CLEANING' },
   { from: 'in_progress', to: 'completed', service: 'CLEANING' },
   
   // Cancellation (any service, pre-terminal)
