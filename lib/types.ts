@@ -219,6 +219,14 @@ export interface CleaningDetails {
   visitsCompleted?: number;
 }
 
+// Cleaning status type
+export type CleaningStatus = 
+  | 'scheduled'
+  | 'in_service'
+  | 'completed'
+  | 'canceled'
+  | 'rescheduled';
+
 // Order interface - unified with state machine
 export interface Order {
   id: string;
@@ -233,6 +241,7 @@ export interface Order {
   slot_end: string;
   delivery_slot_start?: string;
   delivery_slot_end?: string;
+  scheduled_time?: string; // For cleaning orders
   
   // Money (all in cents)
   subtotal_cents: number;
@@ -248,6 +257,16 @@ export interface Order {
   
   // Cleaning specifics
   cleaning?: CleaningDetails;
+  cleaning_status?: CleaningStatus;
+  rescheduled_from?: string; // UUID of original order
+  rescheduled_to?: string; // UUID of new order
+  cancellation_reason?: string;
+  cancellation_fee_cents?: number;
+  refund_amount_cents?: number;
+  canceled_at?: string;
+  canceled_by?: 'customer' | 'partner' | 'system';
+  completed_at?: string;
+  payment_intent_id?: string; // Stripe payment intent ID
   
   // Additional details
   actual_weight_lbs?: number;
