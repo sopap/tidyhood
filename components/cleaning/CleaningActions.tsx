@@ -272,6 +272,13 @@ function getAvailableActions(
           { type: 'rebook', label: 'Book Again', icon: '🔄' }
         );
         break;
+      
+      default:
+        // Fallback for any unhandled statuses
+        actions.push(
+          { type: 'contact', label: 'Contact Support', icon: '💬' }
+        );
+        break;
     }
   }
   

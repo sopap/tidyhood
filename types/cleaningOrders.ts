@@ -453,6 +453,9 @@ export function mapToCleaningStatus(dbStatus: string): CleaningStatus {
     'processing': 'in_progress',
     'out_for_delivery': 'in_progress',
     'delivered': 'completed',
+    'received': 'in_progress',
+    'ready': 'in_progress',
+    'paid': 'pending', // Order paid but not started yet
     
     // Other possible legacy statuses
     'scheduled': 'pending',

@@ -16,6 +16,7 @@ import { CleaningOrderView } from '@/components/cleaning/CleaningOrderView';
 import { mapDatabaseStatus, getStatusLabel } from '@/lib/orderStatus';
 import { getCancellationPolicy, getHoursUntilSlot, formatMoney } from '@/lib/cancellationFees';
 import { isFeatureEnabled } from '@/lib/features';
+import { mapToCleaningStatus } from '@/types/cleaningOrders';
 
 interface Order {
   id: string;
@@ -142,7 +143,21 @@ export default function OrderDetailPage() {
   // Check if we should use the new Cleaning V2 UI
   const cleaningV2Enabled = isFeatureEnabled('CLEANING_V2');
   if (order.service_type === 'CLEANING' && cleaningV2Enabled) {
-    return <CleaningOrderView order={order as any} userRole="customer" />;
+    // Normalize the order to ensure type safety
+    const cleaningOrder = {
+      ...order,
+      service_type: 'CLEANING' as const,
+      status: mapToCleaningStatus(order.status),
+      order_details: order.order_details,
+      address_snapshot: order.address_snapshot,
+    };
+    
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <CleaningOrderView order={cleaningOrder as any} userRole="customer" />
+      </div>
+    );
   }
 
   // Helper functions

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { CleaningOrder } from '@/types/cleaningOrders';
 import { FEATURES } from '@/lib/features';
 import { CleaningTimeline } from './CleaningTimeline';
@@ -131,21 +132,29 @@ export function CleaningOrderView({
       {/* Header Section */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
+          {/* Back Button */}
+          <Link href="/orders" className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-3 text-sm font-medium">
+            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Orders
+          </Link>
+          
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-2xl font-bold text-gray-900">
                   Cleaning Service
                 </h1>
-                {/* Status Badge */}
+                {/* Status Badge - Fixed overlap with gap-2 instead of gap-1 */}
                 <span
                   className={`
-                    inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium
+                    inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium
                     ${getStatusBadgeClass(statusConfig.color)}
                   `}
                 >
-                  <span>{statusConfig.icon}</span>
-                  <span>{statusConfig.label}</span>
+                  <span className="text-base leading-none">{statusConfig.icon}</span>
+                  <span className="whitespace-nowrap">{statusConfig.label}</span>
                 </span>
               </div>
               
