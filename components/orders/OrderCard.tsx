@@ -85,7 +85,7 @@ export default function OrderCard({ order, onOpen, onOrderUpdate }: OrderCardPro
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="font-medium text-gray-900">{serviceName} service</span>
-          {isCleaningOrder ? (
+          {isCleaningOrder && order.cleaning_status ? (
             <CleaningStatusBadge status={order.cleaning_status} size="sm" />
           ) : (
             <StatusBadge tone={ui.tone}>{ui.label}</StatusBadge>
