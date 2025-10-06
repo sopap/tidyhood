@@ -12,8 +12,10 @@ import PricingCard from '@/components/order/PricingCard';
 import OrderDetailsSkeleton from '@/components/order/OrderDetailsSkeleton';
 import CancelModal from '@/components/order/CancelModal';
 import RescheduleModal from '@/components/order/RescheduleModal';
+import { CleaningOrderView } from '@/components/cleaning/CleaningOrderView';
 import { mapDatabaseStatus, getStatusLabel } from '@/lib/orderStatus';
 import { getCancellationPolicy, getHoursUntilSlot, formatMoney } from '@/lib/cancellationFees';
+import { isFeatureEnabled } from '@/lib/features';
 
 interface Order {
   id: string;
@@ -135,6 +137,12 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return null;
+  }
+
+  // Check if we should use the new Cleaning V2 UI
+  const cleaningV2Enabled = isFeatureEnabled('CLEANING_V2');
+  if (order.service_type === 'CLEANING' && cleaningV2Enabled) {
+    return <CleaningOrderView order={order as any} userRole="customer" />;
   }
 
   // Helper functions
