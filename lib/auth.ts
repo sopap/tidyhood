@@ -1,46 +1,63 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { supabase } from './db'
+import { env } from './env'
 
 export async function getCurrentUser() {
-  const cookieStore = await cookies()
-  
-  const supabaseServer = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+  try {
+    const cookieStore = await cookies()
+    
+    const supabaseServer = createServerClient(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
         },
-      },
+      }
+    )
+
+    const { data: { user }, error: authError } = await supabaseServer.auth.getUser()
+    
+    if (authError) {
+      console.error('[getCurrentUser] Auth error:', authError)
+      return null
     }
-  )
+    
+    if (!user) {
+      return null
+    }
 
-  const { data: { user } } = await supabaseServer.auth.getUser()
-  
-  if (!user) {
+    // Fetch profile with role
+    const { data: profile, error: profileError } = await supabaseServer
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.error('[getCurrentUser] Profile fetch error:', profileError)
+      // Continue with user data even if profile fetch fails
+    }
+
+    return {
+      ...user,
+      role: profile?.role || 'user',
+      full_name: profile?.full_name,
+      phone: profile?.phone,
+    }
+  } catch (error) {
+    console.error('[getCurrentUser] Unexpected error:', error)
     return null
-  }
-
-  // Fetch profile with role
-  const { data: profile } = await supabaseServer
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  return {
-    ...user,
-    role: profile?.role || 'user',
-    full_name: profile?.full_name,
-    phone: profile?.phone,
   }
 }
 
 export async function requireAuth() {
   const user = await getCurrentUser()
   if (!user) {
+    console.error('[requireAuth] No authenticated user found')
     throw new Error('Unauthorized')
   }
   return user

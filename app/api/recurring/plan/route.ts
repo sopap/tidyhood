@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { handleApiError } from '@/lib/errors'
+
+// Force dynamic rendering (uses cookies for auth)
+export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/recurring/plan
@@ -8,28 +12,24 @@ import { handleApiError } from '@/lib/errors'
  */
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAuth()
     const db = getServiceClient()
-    
-    // Extract user ID from query params (for testing)
-    // TODO: In production, get userId from authenticated session
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
-    }
 
     const { data: plans, error } = await db
       .from('subscriptions')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .eq('active', true)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('[GET /api/recurring/plan] Database error:', error)
+      throw error
+    }
 
     return NextResponse.json({ plans })
   } catch (error) {
+    console.error('[GET /api/recurring/plan] Error:', error)
     const apiError = handleApiError(error)
     return NextResponse.json(
       { error: apiError.error },
@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuth()
     const db = getServiceClient()
     const body = await request.json()
 
     const {
-      user_id,
       service_type,
       frequency,
       day_of_week,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!user_id || !service_type || !frequency) {
+    if (!service_type || !frequency) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { data: plan, error } = await db
       .from('subscriptions')
       .insert({
-        user_id,
+        user_id: user.id,
         service_type,
         frequency: dbFrequency,
         visits_completed: 0,
@@ -95,10 +95,14 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[POST /api/recurring/plan] Database error:', error)
+      throw error
+    }
 
     return NextResponse.json({ plan }, { status: 201 })
   } catch (error) {
+    console.error('[POST /api/recurring/plan] Error:', error)
     const apiError = handleApiError(error)
     return NextResponse.json(
       { error: apiError.error },
@@ -113,14 +117,15 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await requireAuth()
     const db = getServiceClient()
     const body = await request.json()
 
-    const { user_id, action } = body
+    const { action } = body
 
-    if (!user_id || !action) {
+    if (!action) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required action' },
         { status: 400 }
       )
     }
@@ -129,16 +134,20 @@ export async function PATCH(request: NextRequest) {
       const { error } = await db
         .from('subscriptions')
         .update({ active: false })
-        .eq('user_id', user_id)
+        .eq('user_id', user.id)
         .eq('active', true)
 
-      if (error) throw error
+      if (error) {
+        console.error('[PATCH /api/recurring/plan] Database error:', error)
+        throw error
+      }
 
       return NextResponse.json({ message: 'All plans paused' })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
+    console.error('[PATCH /api/recurring/plan] Error:', error)
     const apiError = handleApiError(error)
     return NextResponse.json(
       { error: apiError.error },
