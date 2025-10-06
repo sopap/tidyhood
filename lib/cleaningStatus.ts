@@ -112,9 +112,9 @@ export const CLEANING_STATUS_CONFIG: Record<CleaningStatus, CleaningStatusConfig
 /**
  * Get hours until appointment
  */
-function getHoursUntilAppointment(scheduledTime: Date): number {
+function getHoursUntilAppointment(slotStart: Date): number {
   const now = new Date()
-  const scheduled = new Date(scheduledTime)
+  const scheduled = new Date(slotStart)
   return (scheduled.getTime() - now.getTime()) / (1000 * 60 * 60)
 }
 
@@ -128,7 +128,7 @@ export function calculateCancellationFee(
   order: any
 ): { feeCents: number; refundCents: number } {
   const totalCents = order.total_cents || 0
-  const hoursUntil = getHoursUntilAppointment(order.scheduled_time)
+  const hoursUntil = getHoursUntilAppointment(order.slot_start)
   
   // During service - no refund
   if (order.cleaning_status === 'in_service') {
@@ -171,7 +171,7 @@ export function canRescheduleCleaning(order: any): boolean {
   if (!order || order.service_type !== 'CLEANING') return false
   
   const status = order.cleaning_status
-  const hoursUntil = getHoursUntilAppointment(order.scheduled_time)
+  const hoursUntil = getHoursUntilAppointment(order.slot_start)
   
   // Can only reschedule if scheduled and >24h away
   return status === 'scheduled' && hoursUntil >= 24
@@ -397,7 +397,7 @@ export async function rescheduleCleaning(
     
     // Check if can reschedule
     if (!canRescheduleCleaning(oldOrder)) {
-      const hoursUntil = getHoursUntilAppointment(oldOrder.scheduled_time)
+      const hoursUntil = getHoursUntilAppointment(oldOrder.slot_start)
       throw new Error(
         hoursUntil < 24 
           ? 'Cannot reschedule less than 24 hours before appointment. Please cancel and rebook.'
@@ -417,13 +417,14 @@ export async function rescheduleCleaning(
     if (updateError) throw updateError
     
     // Create new order
+    // Create new order
     const { data: newOrder, error: insertError } = await supabase
       .from('orders')
       .insert({
         user_id: oldOrder.user_id,
         service_type: oldOrder.service_type,
-        scheduled_time: newDateTime.toISOString(),
-        slot_id: newSlotId,
+        slot_start: newDateTime.toISOString(),
+        slot_end: oldOrder.slot_end, // Keep same duration
         address_snapshot: oldOrder.address_snapshot,
         order_details: oldOrder.order_details,
         total_cents: oldOrder.total_cents,
@@ -494,8 +495,8 @@ export async function autoTransitionToInService(): Promise<number> {
       .select('id')
       .eq('service_type', 'CLEANING')
       .eq('cleaning_status', 'scheduled')
-      .gte('scheduled_time', `${today}T00:00:00`)
-      .lt('scheduled_time', `${today}T23:59:59`)
+      .gte('slot_start', `${today}T00:00:00`)
+      .lt('slot_start', `${today}T23:59:59`)
     
     if (fetchError) throw fetchError
     
@@ -541,7 +542,7 @@ export async function autoCompleteCleanings(): Promise<number> {
       .select('id')
       .eq('service_type', 'CLEANING')
       .eq('cleaning_status', 'in_service')
-      .lt('scheduled_time', fourHoursAgo.toISOString())
+      .lt('slot_start', fourHoursAgo.toISOString())
     
     if (fetchError) throw fetchError
     
@@ -596,8 +597,8 @@ export async function getOrdersNeedingReminders(): Promise<any[]> {
       `)
       .eq('service_type', 'CLEANING')
       .eq('cleaning_status', 'scheduled')
-      .gte('scheduled_time', tomorrowStart.toISOString())
-      .lte('scheduled_time', tomorrowEnd.toISOString())
+      .gte('slot_start', tomorrowStart.toISOString())
+      .lte('slot_start', tomorrowEnd.toISOString())
       .eq('reminder_sent', false)
     
     if (error) throw error

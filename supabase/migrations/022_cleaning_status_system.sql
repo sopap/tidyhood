@@ -55,7 +55,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_rescheduled_from
   WHERE rescheduled_from IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_orders_scheduled_time_cleaning 
-  ON orders(scheduled_time) 
+  ON orders(slot_start) 
   WHERE service_type = 'CLEANING' AND cleaning_status = 'scheduled';
 
 -- Migrate existing cleaning orders to new status system
@@ -65,12 +65,12 @@ SET cleaning_status = CASE
   WHEN status = 'completed' THEN 'completed'
   
   -- If appointment is today
-  WHEN DATE(scheduled_time) = CURRENT_DATE 
-    AND status IN ('paid', 'confirmed') THEN 'in_service'
+  WHEN DATE(slot_start) = CURRENT_DATE 
+    AND status IN ('PAID', 'RECEIVED', 'IN_PROGRESS') THEN 'in_service'
   
   -- If appointment is in future
-  WHEN scheduled_time > NOW() 
-    AND status IN ('paid', 'confirmed') THEN 'scheduled'
+  WHEN slot_start > NOW() 
+    AND status IN ('PAID', 'RECEIVED') THEN 'scheduled'
   
   -- If explicitly canceled
   WHEN status = 'canceled' THEN 'canceled'
