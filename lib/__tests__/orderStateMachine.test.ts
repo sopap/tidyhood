@@ -60,8 +60,12 @@ describe('orderStateMachine', () => {
     });
 
     describe('Cleaning transitions', () => {
-      it('allows pending → pending_pickup', () => {
-        expect(canTransition('pending', 'pending_pickup', 'CLEANING')).toBe(true);
+      it('allows pending → paid_processing (upfront payment)', () => {
+        expect(canTransition('pending', 'paid_processing', 'CLEANING')).toBe(true);
+      });
+
+      it('allows paid_processing → pending_pickup', () => {
+        expect(canTransition('paid_processing', 'pending_pickup', 'CLEANING')).toBe(true);
       });
 
       it('allows pending_pickup → in_progress', () => {
@@ -74,6 +78,7 @@ describe('orderStateMachine', () => {
 
       it('blocks invalid cleaning transitions', () => {
         expect(canTransition('pending', 'completed', 'CLEANING')).toBe(false);
+        expect(canTransition('pending', 'pending_pickup', 'CLEANING')).toBe(false); // Must pay first
         expect(canTransition('in_progress', 'delivered', 'CLEANING')).toBe(false);
       });
     });

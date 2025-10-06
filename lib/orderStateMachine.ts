@@ -125,8 +125,11 @@ const TRANSITIONS: TransitionRule[] = [
   { from: 'in_progress', to: 'out_for_delivery', service: 'LAUNDRY' },
   { from: 'out_for_delivery', to: 'delivered', service: 'LAUNDRY' },
   
-  // Cleaning transitions  
-  { from: 'pending', to: 'pending_pickup', service: 'CLEANING' },
+  // Cleaning transitions
+  // Customer pays upfront: pending → paid_processing
+  { from: 'pending', to: 'paid_processing', service: 'CLEANING' },
+  // After payment, partner workflow
+  { from: 'paid_processing', to: 'pending_pickup', service: 'CLEANING' },
   { from: 'pending_pickup', to: 'in_progress', service: 'CLEANING' },
   { from: 'in_progress', to: 'completed', service: 'CLEANING' },
   
