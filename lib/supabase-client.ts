@@ -2,17 +2,22 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 
-// Get environment variables with fallback to process.env for build-time embedding
+// Direct access to env vars - Next.js will inline these at build time
+// The || '' provides fallback but build should fail if vars are missing
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Validate that we have the required variables
+// Early validation with helpful error message
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables:', {
-    hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey,
-    allEnvVars: Object.keys(process.env).filter(k => k.startsWith('NEXT_PUBLIC'))
+  console.error('❌ Supabase client initialization failed')
+  console.error('Missing env vars:', {
+    NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? '✓ Set' : '✗ Missing',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey ? '✓ Set' : '✗ Missing'
   })
+  throw new Error(
+    'Supabase environment variables are required. ' +
+    'Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in Vercel dashboard.'
+  )
 }
 
 export const supabaseClient = createBrowserClient(
