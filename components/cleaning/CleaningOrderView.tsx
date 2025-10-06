@@ -219,37 +219,61 @@ export function CleaningOrderView({
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Service Details
           </h2>
-          <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Primary Info Grid */}
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
             <div>
-              <dt className="text-sm font-medium text-gray-500">Bedrooms</dt>
-              <dd className="mt-1 text-lg text-gray-900">{order.order_details.bedrooms}</dd>
+              <dt className="text-sm font-medium text-gray-500 mb-1">Bedrooms</dt>
+              <dd className="text-2xl font-semibold text-gray-900">{order.order_details.bedrooms}</dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-gray-500">Bathrooms</dt>
-              <dd className="mt-1 text-lg text-gray-900">{order.order_details.bathrooms}</dd>
+              <dt className="text-sm font-medium text-gray-500 mb-1">Bathrooms</dt>
+              <dd className="text-2xl font-semibold text-gray-900">{order.order_details.bathrooms}</dd>
             </div>
-            {order.order_details.deep && (
+            {order.order_details.square_feet && (
               <div>
-                <dt className="text-sm font-medium text-gray-500">Type</dt>
-                <dd className="mt-1 text-lg text-gray-900">Deep Clean</dd>
-              </div>
-            )}
-            {order.order_details.addons && order.order_details.addons.length > 0 && (
-              <div className="md:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Add-ons</dt>
-                <dd className="mt-1 flex flex-wrap gap-2">
-                  {order.order_details.addons.map((addon, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {addon}
-                    </span>
-                  ))}
+                <dt className="text-sm font-medium text-gray-500 mb-1">Size</dt>
+                <dd className="text-2xl font-semibold text-gray-900">
+                  {order.order_details.square_feet.toLocaleString()}
+                  <span className="text-base font-normal text-gray-600 ml-1">sq ft</span>
                 </dd>
               </div>
             )}
           </dl>
+          
+          {/* Cleaning Type & Add-ons */}
+          {(order.order_details.deep || (order.order_details.addons && order.order_details.addons.length > 0)) && (
+            <div className="border-t border-gray-200 pt-4 space-y-3">
+              {order.order_details.deep && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500 mb-2">Cleaning Type</dt>
+                  <dd>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                      🌟 Deep Clean
+                    </span>
+                  </dd>
+                </div>
+              )}
+              
+              {order.order_details.addons && order.order_details.addons.length > 0 && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500 mb-2">
+                    Extra Services ({order.order_details.addons.length})
+                  </dt>
+                  <dd className="flex flex-wrap gap-2">
+                    {order.order_details.addons.map((addon, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                      >
+                        ✓ {addon}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Service Address */}
