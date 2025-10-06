@@ -177,30 +177,35 @@ export function OrderHeader({
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Mobile Layout */}
         <div className="flex flex-col space-y-4 md:hidden">
-          {/* Row 1: Back button + Service icon + Status badge */}
+          {/* Row 1: Back button + Service type text */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 flex-shrink-0"
                   aria-label="Go back to orders list"
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>
               )}
               
-              <span 
-                className="text-3xl" 
-                role="img" 
-                aria-label={`${serviceType.toLowerCase()} service`}
-              >
-                {serviceIcon}
-              </span>
+              <div className="flex items-center space-x-2 min-w-0">
+                <span 
+                  className="text-2xl flex-shrink-0" 
+                  role="img" 
+                  aria-label={`${serviceType.toLowerCase()} service`}
+                >
+                  {serviceIcon}
+                </span>
+                <h1 className="text-lg font-bold text-gray-900 truncate">
+                  {serviceType === 'LAUNDRY' ? 'Laundry' : 'Cleaning'} Service
+                </h1>
+              </div>
             </div>
             
             <div
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-semibold"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold flex-shrink-0 ml-3"
               style={{
                 backgroundColor: statusConfig.bg,
                 color: statusConfig.color,
@@ -208,8 +213,8 @@ export function OrderHeader({
               role="status"
               aria-label={`Order status: ${status.replace(/_/g, ' ').toLowerCase()}`}
             >
-              <span className="text-lg">{statusConfig.emoji}</span>
-              <span>{status.replace(/_/g, ' ')}</span>
+              <span className="text-base">{statusConfig.emoji}</span>
+              <span className="whitespace-nowrap">{status.replace(/_/g, ' ')}</span>
             </div>
           </div>
           

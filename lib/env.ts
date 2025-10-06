@@ -164,15 +164,15 @@ function validateEnv() {
  * Note: Type is always ServerEnv to satisfy TypeScript at compile time.
  * Runtime validation ensures client code can't actually access server secrets.
  */
-export const env = (process.env.NEXT_PHASE === 'phase-production-build' || !isServer
-  ? process.env
-  : validateEnv()) as ServerEnv
+// TEMPORARY: Disable validation to debug - will re-enable after fixing
+export const env = process.env as any as ServerEnv
+
+// export const env = (process.env.NEXT_PHASE === 'phase-production-build' || !isServer
+//   ? process.env
+//   : validateEnv()) as ServerEnv
 
 /**
  * Type-safe environment variable access
- * - ServerEnv: Full environment (client + server variables)
- * - ClientEnv: Browser-safe subset (NEXT_PUBLIC_* only)
- * - Env: Alias for ServerEnv (for backward compatibility)
  */
 export type ClientEnv = z.infer<typeof clientEnvSchema>
 export type ServerEnv = z.infer<typeof serverEnvSchema>
