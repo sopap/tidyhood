@@ -22,13 +22,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const refreshUser = async () => {
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser()
-      setUser(user)
-    } catch (error) {
-      console.error('Error fetching user:', error)
-      setUser(null)
+  const refreshUser = async (maxRetries = 3, timeoutMs = 10000) => {
+    let attempts = 0
+    
+    while (attempts < maxRetries) {
+      try {
+        // Create timeout promise
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+        )
+        
+        // Race between getUser and timeout
+        const userPromise = supabaseClient.auth.getUser()
+        const { data: { user } } = await Promise.race([userPromise, timeoutPromise]) as any
+        
+        setUser(user)
+        return // Success - exit retry loop
+      } catch (error) {
+        attempts++
+        
+        if (error instanceof Error && error.message === 'Timeout') {
+          console.warn(`RefreshUser timeout (attempt ${attempts}/${maxRetries})`)
+        } else {
+          console.error(`Error fetching user (attempt ${attempts}/${maxRetries}):`, error)
+        }
+        
+        if (attempts >= maxRetries) {
+          console.error('Error fetching user after max retries')
+          setUser(null)
+          return
+        }
+        
+        // Exponential backoff before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
+      }
     }
   }
 
