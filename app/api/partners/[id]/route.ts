@@ -29,10 +29,10 @@ export async function GET(
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     
-    // Fetch partner public information
+    // Fetch partner public information (using actual schema columns)
     const { data: partner, error } = await supabase
       .from('partners')
-      .select('id, name, photo_url, rating, review_count, phone')
+      .select('id, name, contact_phone, scorecard_json')
       .eq('id', partnerId)
       .single();
     
@@ -51,14 +51,19 @@ export async function GET(
       );
     }
     
-    // Return only public information
+    // Extract rating from scorecard_json if available
+    const scorecard = partner.scorecard_json || {};
+    const rating = scorecard.rating || 4.5; // Default rating
+    const review_count = scorecard.review_count || 0;
+    
+    // Return only public information (with defaults for missing fields)
     return NextResponse.json({
       id: partner.id,
       name: partner.name,
-      photo_url: partner.photo_url,
-      rating: partner.rating,
-      review_count: partner.review_count,
-      phone: partner.phone, // For contact functionality
+      photo_url: null, // Photo feature not yet implemented in DB
+      rating: rating,
+      review_count: review_count,
+      phone: partner.contact_phone, // Map contact_phone to phone for consistency
     });
     
   } catch (error) {
