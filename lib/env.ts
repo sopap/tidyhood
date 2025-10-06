@@ -18,7 +18,7 @@ const envSchema = z.object({
   // Site Configuration
   NEXT_PUBLIC_SITE_NAME: z.string().min(1).default('Tidyhood'),
   NEXT_PUBLIC_SITE_URL: z.string().url(),
-  NEXT_PUBLIC_BASE_URL: z.string().url(),
+  NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_ALLOWED_ZIPS: z.string().min(1).transform((val) => val.split(',')),
 
   // Supabase (REQUIRED)
@@ -34,10 +34,10 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().startsWith('sk_'),
   STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
 
-  // Twilio (REQUIRED)
-  TWILIO_ACCOUNT_SID: z.string().startsWith('AC'),
-  TWILIO_AUTH_TOKEN: z.string().min(32),
-  TWILIO_FROM_PHONE: z.string().regex(/^\+1\d{10}$/, 'Phone must be E.164 format: +1XXXXXXXXXX'),
+  // Twilio (Optional - for SMS notifications)
+  TWILIO_ACCOUNT_SID: z.string().startsWith('AC').optional(),
+  TWILIO_AUTH_TOKEN: z.string().min(32).optional(),
+  TWILIO_FROM_PHONE: z.string().regex(/^\+1\d{10}$/, 'Phone must be E.164 format: +1XXXXXXXXXX').optional(),
 
   // Admin Configuration
   ADMIN_EMAIL: z.string().email(),
