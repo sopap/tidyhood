@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { CleaningOrder, CleaningStatus } from '@/types/cleaningOrders';
-import { CLEANING_STAGES, CLEANING_STATUS_CONFIG } from '@/types/cleaningOrders';
+import { CLEANING_STAGES, getCleaningStatusConfig } from '@/types/cleaningOrders';
 
 interface CleaningTimelineProps {
   order: CleaningOrder;
@@ -106,7 +106,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
           {CLEANING_STAGES.map((stage, index) => {
             const isCompleted = completedStages.includes(stage.stage);
             const isCurrent = currentStage === stage.stage && !isCompleted;
-            const config = CLEANING_STATUS_CONFIG[order.status];
+            const config = getCleaningStatusConfig(order.status);
             
             return (
               <div
@@ -183,7 +183,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
           {CLEANING_STAGES.map((stage, index) => {
             const isCompleted = completedStages.includes(stage.stage);
             const isCurrent = currentStage === stage.stage && !isCompleted;
-            const config = CLEANING_STATUS_CONFIG[order.status];
+            const config = getCleaningStatusConfig(order.status);
             
             return (
               <div key={stage.stage} className="relative flex gap-6">
@@ -261,10 +261,10 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
             <span className="text-2xl">⚠️</span>
             <div>
               <h4 className="font-semibold text-orange-900">
-                {CLEANING_STATUS_CONFIG[order.status].label}
+                {getCleaningStatusConfig(order.status).label}
               </h4>
               <p className="text-sm text-orange-700 mt-1">
-                {CLEANING_STATUS_CONFIG[order.status].description}
+                {getCleaningStatusConfig(order.status).description}
               </p>
               {order.status === 'disputed' && order.dispute_reason && (
                 <p className="text-sm text-orange-600 mt-2 italic">
