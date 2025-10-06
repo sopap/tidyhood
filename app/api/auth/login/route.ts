@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const { email, password } = loginSchema.parse(body)
 
     // Get IP address for rate limiting
-    const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? '127.0.0.1'
+    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '127.0.0.1'
     
     // Check rate limit (5 attempts per 15 minutes)
     if (!checkRateLimit(ip, 5, 15 * 60 * 1000)) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

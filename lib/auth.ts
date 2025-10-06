@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { supabase } from './db'
 
 export async function getCurrentUser() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   
   const supabaseServer = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

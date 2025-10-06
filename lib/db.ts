@@ -1,34 +1,95 @@
-import { createClient } from '@supabase/supabase-js'
+/**
+ * Database Client Configuration
+ * 
+ * Provides Supabase client instances with proper configuration.
+ * 
+ * Query Timeouts:
+ * - Supabase handles timeouts at the project level (default: 8 seconds)
+ * - Configure in Supabase Dashboard → Settings → API → Statement Timeout
+ * - Recommended: 5000ms for API queries, 30000ms for background jobs
+ * 
+ * Best Practices:
+ * - Use getServiceClient() for server-side operations with elevated privileges
+ * - Always handle timeout errors gracefully
+ * - Add indexes for slow queries
+ * - Monitor query performance in Supabase Dashboard
+ */
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL')
-}
-if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY')
-}
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { env } from './env'
+
+/**
+ * Default timeout for database operations (milliseconds)
+ * This is a client-side timeout, Supabase also has server-side timeouts
+ */
+const DEFAULT_QUERY_TIMEOUT = 10000 // 10 seconds
 
 // Client for browser/server components
 export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  env.NEXT_PUBLIC_SUPABASE_URL,
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+    },
+    global: {
+      headers: {
+        'x-client-info': 'tidyhood-web',
+      },
+    },
+  }
 )
 
-// Admin client with service role (server-side only)
-export function getServiceClient() {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('Missing env.SUPABASE_SERVICE_ROLE_KEY')
-  }
-  
+/**
+ * Admin client with service role (server-side only)
+ * Use this for operations that require elevated privileges
+ */
+export function getServiceClient(): SupabaseClient {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          'x-client-info': 'tidyhood-server',
+        },
+      },
     }
   )
+}
+
+/**
+ * Execute a query with timeout protection
+ * Wraps Supabase queries with a client-side timeout
+ * 
+ * @param queryFn The query function to execute
+ * @param timeoutMs Timeout in milliseconds (default: 10000)
+ * @returns Promise that resolves with query result or rejects on timeout
+ * 
+ * @example
+ * const result = await withTimeout(
+ *   () => supabase.from('orders').select('*').eq('id', orderId).single(),
+ *   5000
+ * )
+ */
+export async function withTimeout<T>(
+  queryFn: () => Promise<T>,
+  timeoutMs: number = DEFAULT_QUERY_TIMEOUT
+): Promise<T> {
+  return Promise.race([
+    queryFn(),
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Query timeout after ${timeoutMs}ms`)),
+        timeoutMs
+      )
+    ),
+  ])
 }
 
 export type Database = {

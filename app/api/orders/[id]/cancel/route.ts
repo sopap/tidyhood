@@ -25,10 +25,11 @@ const cancelSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id: orderId } = await params
     const db = getServiceClient()
     
     // Parse request body
@@ -39,7 +40,7 @@ export async function POST(
     const { data: order, error: fetchError } = await db
       .from('orders')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single()
     
     if (fetchError || !order) {
@@ -74,7 +75,7 @@ export async function POST(
         const { data: refund, error: refundError } = await db
           .from('refunds')
           .insert({
-            order_id: params.id,
+            order_id: orderId,
             amount_cents: policy.refundAmount,
             reason: reason || 'Customer requested cancellation',
             approved_by: user.id,
@@ -102,7 +103,7 @@ export async function POST(
           //   processed_at: new Date().toISOString()
           // }).eq('id', refund.id)
           
-          console.log(`Refund of ${policy.refundAmount} cents would be processed for order ${params.id}`)
+          console.log(`Refund of ${policy.refundAmount} cents would be processed for order ${orderId}`)
         }
       }
       
@@ -124,7 +125,7 @@ export async function POST(
           canceled_reason: reason || 'Customer requested cancellation',
           updated_at: new Date().toISOString(),
         })
-        .eq('id', params.id)
+        .eq('id', orderId)
         .select()
         .single()
       
@@ -135,7 +136,7 @@ export async function POST(
       
       // 4. Log modification
       await db.from('order_modifications').insert({
-        order_id: params.id,
+        order_id: orderId,
         modification_type: 'CANCEL',
         old_slot_start: order.slot_start,
         old_slot_end: order.slot_end,
@@ -146,7 +147,7 @@ export async function POST(
       
       // 5. Create order event
       await db.from('order_events').insert({
-        order_id: params.id,
+        order_id: orderId,
         actor: user.id,
         actor_role: user.role || 'user',
         event_type: 'order_canceled',
@@ -167,7 +168,7 @@ export async function POST(
       //   body: refundAmount > 0 
       //     ? `Your order has been canceled. Refund of $${(refundAmount / 100).toFixed(2)} will be processed within 5-10 business days.`
       //     : 'Your order has been canceled.',
-      //   data: { order_id: params.id }
+      //   data: { order_id: orderId }
       // })
       
       // Build response message

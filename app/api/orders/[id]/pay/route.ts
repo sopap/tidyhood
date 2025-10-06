@@ -21,17 +21,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id: orderId } = await params
     const db = getServiceClient()
     
     // Fetch order
     const { data: order, error } = await db
       .from('orders')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .eq('user_id', user.id)
       .single()
     

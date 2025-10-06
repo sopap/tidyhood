@@ -30,10 +30,11 @@ const rescheduleSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id: orderId } = await params
     const db = getServiceClient()
     
     // Parse and validate request
@@ -51,7 +52,7 @@ export async function POST(
     const { data: order, error: fetchError } = await db
       .from('orders')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single()
     
     if (fetchError || !order) {
@@ -132,7 +133,7 @@ export async function POST(
           reschedule_fee_cents: policy.rescheduleFee,
           updated_at: new Date().toISOString()
         })
-        .eq('id', params.id)
+        .eq('id', orderId)
         .select()
         .single()
       
@@ -142,7 +143,7 @@ export async function POST(
       
       // 5. Log modification in order_modifications table
       await db.from('order_modifications').insert({
-        order_id: params.id,
+        order_id: orderId,
         modification_type: 'RESCHEDULE',
         old_slot_start: order.slot_start,
         old_slot_end: order.slot_end,
@@ -155,7 +156,7 @@ export async function POST(
       
       // 6. Create audit event in order_events
       await db.from('order_events').insert({
-        order_id: params.id,
+        order_id: orderId,
         actor: user.id,
         actor_role: user.role || 'user',
         event_type: 'order_rescheduled',
@@ -174,7 +175,7 @@ export async function POST(
       //   type: 'order_rescheduled',
       //   title: 'Service Rescheduled',
       //   body: `Your ${order.service_type.toLowerCase()} has been rescheduled to ${new Date(new_slot_start).toLocaleString()}`,
-      //   data: { order_id: params.id }
+      //   data: { order_id: orderId }
       // })
       
       return NextResponse.json({

@@ -8,11 +8,11 @@ import { handleApiError } from '@/lib/errors'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getServiceClient()
-    const { id } = params
+    const { id } = await params
 
     const { data: plan, error } = await db
       .from('subscriptions')
@@ -42,11 +42,11 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getServiceClient()
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
 
     const {
@@ -103,11 +103,11 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const db = getServiceClient()
-    const { id } = params
+    const { id } = await params
 
     // Soft delete by setting active to false
     const { error } = await db

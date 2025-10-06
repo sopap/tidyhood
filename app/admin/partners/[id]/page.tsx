@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -27,7 +27,8 @@ interface Stats {
   total_revenue_cents: number;
 }
 
-export default function PartnerDetail({ params }: { params: { id: string } }) {
+export default function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [partner, setPartner] = useState<Partner | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -37,13 +38,13 @@ export default function PartnerDetail({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     fetchPartner();
-  }, [params.id]);
+  }, [id]);
 
   async function fetchPartner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/partners/${params.id}`);
+      const res = await fetch(`/api/admin/partners/${id}`);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to fetch partner');
@@ -66,7 +67,7 @@ export default function PartnerDetail({ params }: { params: { id: string } }) {
     setToggling(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/partners/${params.id}`, {
+      const res = await fetch(`/api/admin/partners/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !partner.active }),

@@ -15,11 +15,12 @@ import type { TransitionRequest, TransitionResponse } from '@/types/cleaningOrde
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Validate session
     const user = await requireAuth();
+    const { id: orderId } = await params
 
     // 2. Parse request body
     const body: TransitionRequest = await req.json();
@@ -39,7 +40,7 @@ export async function POST(
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('id, user_id, service_type, status, partner_id')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single();
 
     if (orderError || !order) {
@@ -78,7 +79,7 @@ export async function POST(
     // 6. Call RPC transition function
     const { data: result, error: rpcError } = await supabase
       .rpc('transition_order_status', {
-        p_order_id: params.id,
+        p_order_id: orderId,
         p_action: action,
         p_actor_id: user.id,
         p_actor_role: actorRole,
@@ -206,17 +207,18 @@ async function triggerSideEffects(
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
+    const { id: orderId } = await params
     const supabase = getServiceClient();
 
     // Fetch order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('id, user_id, service_type, status, partner_id')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single();
 
     if (orderError || !order) {
@@ -251,7 +253,7 @@ export async function GET(
     // Call helper RPC to get valid actions
     const { data: actions, error: actionsError } = await supabase
       .rpc('get_valid_actions', {
-        p_order_id: params.id,
+        p_order_id: orderId,
         p_actor_role: actorRole
       });
 
@@ -264,7 +266,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      order_id: params.id,
+      order_id: orderId,
       status: order.status,
       service_type: order.service_type,
       actor_role: actorRole,

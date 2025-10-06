@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/partner/orders/[id] - Get partner order detail
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
@@ -22,7 +22,7 @@ export async function GET(
       );
     }
     
-    const orderId = params.id;
+    const { id: orderId } = await params;
     
     // Fetch order with related data
     const { data: order, error: orderError } = await db

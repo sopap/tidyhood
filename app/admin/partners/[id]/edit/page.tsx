@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
@@ -18,7 +18,8 @@ interface Partner {
   max_minutes_per_slot?: number;
 }
 
-export default function EditPartner({ params }: { params: { id: string } }) {
+export default function EditPartner({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -38,13 +39,13 @@ export default function EditPartner({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     fetchPartner();
-  }, [params.id]);
+  }, [id]);
 
   async function fetchPartner() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/partners/${params.id}`);
+      const res = await fetch(`/api/admin/partners/${id}`);
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to fetch partner');
@@ -129,7 +130,7 @@ export default function EditPartner({ params }: { params: { id: string } }) {
         ...(formData.service_type === 'CLEANING' && { max_minutes_per_slot: formData.max_minutes_per_slot }),
       };
 
-      const res = await fetch(`/api/admin/partners/${params.id}`, {
+      const res = await fetch(`/api/admin/partners/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -142,7 +143,7 @@ export default function EditPartner({ params }: { params: { id: string } }) {
       }
 
       // Success - redirect to partner detail page
-      router.push(`/admin/partners/${params.id}`);
+      router.push(`/admin/partners/${id}`);
     } catch (err) {
       console.error('Error updating partner:', err);
       setError(err instanceof Error ? err.message : 'Failed to update partner');
@@ -164,7 +165,7 @@ export default function EditPartner({ params }: { params: { id: string } }) {
       <div className="flex items-center justify-between">
         <div>
           <Link
-            href={`/admin/partners/${params.id}`}
+            href={`/admin/partners/${id}`}
             className="text-sm text-blue-600 hover:text-blue-700 mb-2 inline-block"
           >
             ← Back to Partner
@@ -377,7 +378,7 @@ export default function EditPartner({ params }: { params: { id: string } }) {
         {/* Form Actions */}
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg flex justify-between">
           <Link
-            href={`/admin/partners/${params.id}`}
+            href={`/admin/partners/${id}`}
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
           >
             Cancel

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { use, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PaymentModal } from '@/components/PaymentModal'
 import Link from 'next/link'
@@ -19,7 +19,8 @@ interface Order {
   address_snapshot: any
 }
 
-export default function PayOrderPage({ params }: { params: { id: string } }) {
+export default function PayOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
@@ -28,11 +29,11 @@ export default function PayOrderPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     fetchOrder()
-  }, [params.id])
+  }, [id])
 
   const fetchOrder = async () => {
     try {
-      const response = await fetch(`/api/orders/${params.id}`)
+      const response = await fetch(`/api/orders/${id}`)
       
       if (!response.ok) {
         throw new Error('Order not found')
@@ -55,7 +56,7 @@ export default function PayOrderPage({ params }: { params: { id: string } }) {
   }
 
   const handlePaymentSuccess = () => {
-    router.push(`/orders/${params.id}`)
+    router.push(`/orders/${id}`)
   }
 
   if (loading) {
@@ -159,7 +160,7 @@ export default function PayOrderPage({ params }: { params: { id: string } }) {
             {showPayment && (
               <PaymentModal
                 isOpen={true}
-                onClose={() => router.push(`/orders/${params.id}`)}
+                onClose={() => router.push(`/orders/${id}`)}
                 orderId={order.id}
                 amount={amount}
                 onSuccess={handlePaymentSuccess}

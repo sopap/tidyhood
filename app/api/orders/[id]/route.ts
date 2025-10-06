@@ -5,10 +5,11 @@ import { NotFoundError, ForbiddenError, handleApiError } from '@/lib/errors'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id: orderId } = await params
     const db = getServiceClient()
     
     // Fetch order
@@ -20,7 +21,7 @@ export async function GET(
         bags(*),
         cleaning_checklist(*)
       `)
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single()
     
     if (error || !order) {
@@ -40,7 +41,7 @@ export async function GET(
     const { data: events } = await db
       .from('order_events')
       .select('*')
-      .eq('order_id', params.id)
+      .eq('order_id', orderId)
       .order('ts', { ascending: true })
     
     return NextResponse.json({

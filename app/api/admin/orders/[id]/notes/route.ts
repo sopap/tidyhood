@@ -6,7 +6,7 @@ import { logAudit } from '@/lib/audit'
 // Get all notes for an order
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
@@ -20,7 +20,7 @@ export async function GET(
     }
 
     const db = getServiceClient()
-    const orderId = params.id
+    const { id: orderId } = await params
 
     const { data: notes, error } = await db
       .from('admin_notes')
@@ -46,7 +46,7 @@ export async function GET(
 // Add a new note to an order
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
@@ -69,7 +69,7 @@ export async function POST(
     }
 
     const db = getServiceClient()
-    const orderId = params.id
+    const { id: orderId } = await params
 
     // Verify order exists
     const { data: order, error: orderError } = await db

@@ -23,10 +23,11 @@ const updateStatusSchema = z.object({
 // POST /api/partner/orders/[id]/status - Update order status
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id: orderId } = await params
     const db = getServiceClient()
     
     // Verify user is a partner
@@ -44,7 +45,7 @@ export async function POST(
     const { data: order, error: orderError } = await db
       .from('orders')
       .select('*, profiles!orders_user_id_fkey(phone)')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single()
     
     if (orderError || !order) {
@@ -83,7 +84,7 @@ export async function POST(
     const { data: updatedOrder, error: updateError } = await db
       .from('orders')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', orderId)
       .select()
       .single()
     
@@ -94,7 +95,7 @@ export async function POST(
     
     // Log event
     await db.from('order_events').insert({
-      order_id: params.id,
+      order_id: orderId,
       actor: user.id,
       actor_role: user.role,
       event_type: 'status_updated',
@@ -108,7 +109,7 @@ export async function POST(
     // Send SMS notification to customer
     const customerPhone = order.profiles?.phone
     if (customerPhone) {
-      await sendStatusUpdateSMS(customerPhone, status, order.service_type, params.id)
+      await sendStatusUpdateSMS(customerPhone, status, order.service_type, orderId)
     }
     
     // Increment recurring subscription visit counter only when order is truly complete:
@@ -126,7 +127,7 @@ export async function POST(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               subscription_id: order.subscription_id,
-              order_id: params.id,
+              order_id: orderId,
             }),
           }
         )

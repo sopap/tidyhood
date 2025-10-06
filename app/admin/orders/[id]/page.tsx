@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import StatusBadge, { StatusTone } from '@/components/orders/StatusBadge'
@@ -65,7 +65,8 @@ function formatStatus(status: string): string {
   ).join(' ')
 }
 
-export default function AdminOrderDetailPage({ params }: { params: { id: string } }) {
+export default function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
@@ -76,12 +77,12 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
   useEffect(() => {
     fetchOrder()
-  }, [params.id])
+  }, [id])
 
   async function fetchOrder() {
     try {
       setLoading(true)
-      const response = await fetch(`/api/admin/orders?id=${params.id}`)
+      const response = await fetch(`/api/admin/orders?id=${id}`)
       
       if (!response.ok) {
         throw new Error('Failed to fetch order')
@@ -107,7 +108,7 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/orders/${params.id}/force-status`, {
+      const response = await fetch(`/api/admin/orders/${id}/force-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -132,7 +133,7 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/orders/${params.id}/notes`, {
+      const response = await fetch(`/api/admin/orders/${id}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: internalNote })
@@ -159,7 +160,7 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
     setActionLoading(true)
     try {
-      const response = await fetch(`/api/admin/orders/${params.id}/refund`, {
+      const response = await fetch(`/api/admin/orders/${id}/refund`, {
         method: 'POST'
       })
 

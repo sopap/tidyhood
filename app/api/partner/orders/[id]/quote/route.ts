@@ -14,10 +14,11 @@ const submitQuoteSchema = z.object({
 // POST /api/partner/orders/[id]/quote - Submit weight and quote for laundry order
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
+    const { id: orderId } = await params
     const db = getServiceClient()
     
     // Verify user is a partner
@@ -35,7 +36,7 @@ export async function POST(
     const { data: order, error: orderError } = await db
       .from('orders')
       .select('*, profiles!orders_user_id_fkey(phone)')
-      .eq('id', params.id)
+      .eq('id', orderId)
       .single()
     
     if (orderError || !order) {
@@ -97,7 +98,7 @@ export async function POST(
     const { data: updatedOrder, error: updateError } = await db
       .from('orders')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', orderId)
       .select()
       .single()
     
@@ -108,7 +109,7 @@ export async function POST(
     
     // Log event
     await db.from('order_events').insert({
-      order_id: params.id,
+      order_id: orderId,
       actor: user.id,
       actor_role: user.role,
       event_type: 'quote_submitted',
@@ -123,7 +124,7 @@ export async function POST(
     // Send SMS with payment link to customer
     const customerPhone = order.profiles?.phone
     if (customerPhone) {
-      const paymentUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://tidyhood.vercel.app'}/orders/${params.id}/pay`
+      const paymentUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://tidyhood.vercel.app'}/orders/${orderId}/pay`
       const amount = `$${(pricing.total_cents / 100).toFixed(2)}`
       
       await sendSMS({
@@ -143,7 +144,7 @@ export async function POST(
         quote_cents: pricing.total_cents,
         subtotal_cents: pricing.subtotal_cents,
         tax_cents: pricing.tax_cents,
-        payment_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://tidyhood.vercel.app'}/orders/${params.id}/pay`
+        payment_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://tidyhood.vercel.app'}/orders/${orderId}/pay`
       }
     })
   } catch (error) {

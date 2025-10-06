@@ -5,7 +5,7 @@ import { logAudit } from '@/lib/audit'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
@@ -35,7 +35,7 @@ export async function POST(
     }
 
     const db = getServiceClient()
-    const orderId = params.id
+    const { id: orderId } = await params
 
     // Get current order
     const { data: order, error: fetchError } = await db

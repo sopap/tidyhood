@@ -11,10 +11,10 @@ import { createClient } from '@supabase/supabase-js';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const partnerId = params.id;
+    const { id: partnerId } = await params;
     
     if (!partnerId) {
       return NextResponse.json(
