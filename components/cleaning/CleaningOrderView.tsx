@@ -7,6 +7,7 @@ import { FEATURES } from '@/lib/features';
 import { CleaningTimeline } from './CleaningTimeline';
 import { CleaningActions } from './CleaningActions';
 import { DisputeModal } from './DisputeModal';
+import { PartnerInfoCard } from './PartnerInfoCard';
 import { getCleaningStatusConfig } from '@/types/cleaningOrders';
 
 interface CleaningOrderViewProps {
@@ -213,6 +214,11 @@ export function CleaningOrderView({
           </h2>
           <CleaningTimeline order={order} />
         </div>
+        
+        {/* Partner Info Card - Only show if partner assigned */}
+        {order.partner_id && (
+          <PartnerInfoCard partnerId={order.partner_id} />
+        )}
         
         {/* Service Details */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
