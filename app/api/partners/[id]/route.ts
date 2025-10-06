@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseClient } from '@/lib/supabase-client';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * GET /api/partners/[id]
@@ -23,7 +23,11 @@ export async function GET(
       );
     }
     
-    const supabase = supabaseClient;
+    // Create server-side Supabase client for API routes
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     
     // Fetch partner public information
     const { data: partner, error } = await supabase
