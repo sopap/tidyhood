@@ -154,13 +154,17 @@ function validateEnv() {
  * This will throw an error at module load time if validation fails,
  * preventing the app from starting with invalid configuration.
  * 
- * During Next.js build phase, we skip validation to allow the build to complete.
- * Validation will run when the app actually starts.
+ * IMPORTANT: Client-side validation is skipped because NEXT_PUBLIC_* variables
+ * are embedded at build time by Next.js. If they're missing from the build,
+ * the server-side validation during build will catch it.
+ * 
+ * During Next.js build phase, we also skip validation to allow the build to complete.
+ * Validation will run when the app actually starts on the server.
  * 
  * Note: Type is always ServerEnv to satisfy TypeScript at compile time.
  * Runtime validation ensures client code can't actually access server secrets.
  */
-export const env = (process.env.NEXT_PHASE === 'phase-production-build' 
+export const env = (process.env.NEXT_PHASE === 'phase-production-build' || !isServer
   ? process.env
   : validateEnv()) as ServerEnv
 
