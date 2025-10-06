@@ -17,7 +17,7 @@ const envSchema = z.object({
 
   // Site Configuration
   NEXT_PUBLIC_SITE_NAME: z.string().min(1).default('Tidyhood'),
-  NEXT_PUBLIC_SITE_URL: z.string().url(),
+  NEXT_PUBLIC_SITE_URL: z.string().url().default('https://www.tidyhood.nyc'),
   NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_ALLOWED_ZIPS: z.string().min(1).transform((val) => val.split(',')),
 
@@ -40,16 +40,16 @@ const envSchema = z.object({
   TWILIO_FROM_PHONE: z.string().regex(/^\+1\d{10}$/, 'Phone must be E.164 format: +1XXXXXXXXXX').optional(),
 
   // Admin Configuration
-  ADMIN_EMAIL: z.string().email(),
+  ADMIN_EMAIL: z.string().email().optional(),
   SEED_ADMIN_EMAIL: z.string().email(),
 
   // Authentication
   JWT_PARTNER_ROLE_CLAIM: z.string().default('app_role'),
 
   // Business Rules
-  NYC_TAX_RATE: z.string().transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)),
-  FIRST_ORDER_CAP_CENTS: z.string().transform((val) => parseInt(val)).pipe(z.number().positive()),
-  LAUNDRY_MIN_LBS: z.string().transform((val) => parseInt(val)).pipe(z.number().positive()),
+  NYC_TAX_RATE: z.string().transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)).default('0.08875'),
+  FIRST_ORDER_CAP_CENTS: z.string().transform((val) => parseInt(val)).pipe(z.number().positive()).default('7500'),
+  LAUNDRY_MIN_LBS: z.string().transform((val) => parseInt(val)).pipe(z.number().positive()).default('10'),
 
   // Feature Flags (Optional)
   NEXT_PUBLIC_ENABLE_PARTNER_PORTAL: z.string().transform((val) => val === 'true').default('false'),
