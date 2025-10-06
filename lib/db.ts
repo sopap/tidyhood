@@ -17,6 +17,10 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { env } from './env'
+import { supabaseClient as supabase } from './supabase-client'
+
+// Re-export the singleton client to avoid multiple instances
+export { supabase }
 
 /**
  * Default timeout for database operations (milliseconds)
@@ -27,23 +31,6 @@ const DEFAULT_QUERY_TIMEOUT = 10000 // 10 seconds
 // TEMPORARY FIX: Hardcoding public values due to Vercel blocking env vars
 const SUPABASE_URL = 'https://gbymheksmnenurazuvjr.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieW1oZWtzbW5lbnVyYXp1dmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2MzExNDAsImV4cCI6MjA0NjIwNzE0MH0.SSbPkXHbwHjAz7L6uBTBs4NzfXcw4w4wHDax0BoB2ZA'
-
-// Client for browser/server components
-export const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-    },
-    global: {
-      headers: {
-        'x-client-info': 'tidyhood-web',
-      },
-    },
-  }
-)
 
 /**
  * Admin client with service role (server-side only)

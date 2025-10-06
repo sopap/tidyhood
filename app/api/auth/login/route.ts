@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     const cookieStore = await cookies()
+    // TEMPORARY FIX: Hardcoding values due to Vercel env var blocking
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      'https://gbymheksmnenurazuvjr.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieW1oZWtzbW5lbnVyYXp1dmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2MzExNDAsImV4cCI6MjA0NjIwNzE0MH0.SSbPkXHbwHjAz7L6uBTBs4NzfXcw4w4wHDax0BoB2ZA',
       {
         cookies: {
           get(name: string) {
