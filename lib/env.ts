@@ -41,7 +41,7 @@ const envSchema = z.object({
 
   // Admin Configuration
   ADMIN_EMAIL: z.string().email().optional(),
-  SEED_ADMIN_EMAIL: z.string().email(),
+  SEED_ADMIN_EMAIL: z.string().email().optional(),
 
   // Authentication
   JWT_PARTNER_ROLE_CLAIM: z.string().default('app_role'),
