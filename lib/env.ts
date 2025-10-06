@@ -19,7 +19,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_SITE_NAME: z.string().min(1).default('Tidyhood'),
   NEXT_PUBLIC_SITE_URL: z.string().url().default('https://www.tidyhood.nyc'),
   NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_ALLOWED_ZIPS: z.string().min(1).transform((val) => val.split(',')),
+  NEXT_PUBLIC_ALLOWED_ZIPS: z.string().min(1).default('10026,10027,10030').transform((val) => val.split(',')),
 
   // Supabase (REQUIRED)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
