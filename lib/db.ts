@@ -24,10 +24,14 @@ import { env } from './env'
  */
 const DEFAULT_QUERY_TIMEOUT = 10000 // 10 seconds
 
+// TEMPORARY FIX: Hardcoding public values due to Vercel blocking env vars
+const SUPABASE_URL = 'https://gbymheksmnenurazuvjr.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieW1oZWtzbW5lbnVyYXp1dmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2MzExNDAsImV4cCI6MjA0NjIwNzE0MH0.SSbPkXHbwHjAz7L6uBTBs4NzfXcw4w4wHDax0BoB2ZA'
+
 // Client for browser/server components
 export const supabase = createClient(
-  env.NEXT_PUBLIC_SUPABASE_URL,
-  env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
   {
     auth: {
       autoRefreshToken: true,
@@ -47,8 +51,8 @@ export const supabase = createClient(
  */
 export function getServiceClient(): SupabaseClient {
   return createClient(
-    env.NEXT_PUBLIC_SUPABASE_URL,
-    env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY, // Keep server-side secret from env
     {
       auth: {
         autoRefreshToken: false,

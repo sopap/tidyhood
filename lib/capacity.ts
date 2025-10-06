@@ -203,7 +203,8 @@ export function calculateCleaningMinutes(
  * Validate ZIP code is in allowed areas
  */
 export function validateZipCode(zip: string): boolean {
-  const allowedZipsEnv = process.env.NEXT_PUBLIC_ALLOWED_ZIPS || ''
+  // TEMPORARY FIX: Hardcoding allowed ZIPs due to Vercel env var issues
+  const allowedZipsEnv = '10025,10026,10027,10029,10030,10031,10032,10035,10037,10039,10128'
   console.log('[validateZipCode] NEXT_PUBLIC_ALLOWED_ZIPS:', allowedZipsEnv)
   const allowedZips = allowedZipsEnv.split(',').map(z => z.trim()).filter(z => z.length > 0)
   console.log('[validateZipCode] Parsed allowed ZIPs:', allowedZips)

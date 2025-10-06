@@ -19,9 +19,10 @@ export async function loadGoogleMaps(): Promise<typeof google> {
     return Promise.resolve(google);
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  // TEMPORARY FIX: Hardcoding API key due to Vercel env var issues
+  const apiKey = 'AIzaSyA3fgqYiv5a-a6T-cPDFeatGLi0Nkmkxgo';
   if (!apiKey) {
-    throw new Error('Google Maps API key not configured in environment variables');
+    throw new Error('Google Maps API key not configured');
   }
 
   // Create and store the loading promise

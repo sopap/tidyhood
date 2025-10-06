@@ -2,22 +2,14 @@
 
 import { createBrowserClient } from '@supabase/ssr'
 
-// Direct access to env vars - Next.js will inline these at build time
-// The || '' provides fallback but build should fail if vars are missing
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+// TEMPORARY FIX: Hardcoding values due to Vercel blocking env vars with "KEY" in the name
+// These are NEXT_PUBLIC_* values that are safe to expose in the browser
+const supabaseUrl = 'https://gbymheksmnenurazuvjr.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieW1oZWtzbW5lbnVyYXp1dmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA2MzExNDAsImV4cCI6MjA0NjIwNzE0MH0.SSbPkXHbwHjAz7L6uBTBs4NzfXcw4w4wHDax0BoB2ZA'
 
-// Early validation with helpful error message
+// Validation to ensure we have the correct values
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase client initialization failed')
-  console.error('Missing env vars:', {
-    NEXT_PUBLIC_SUPABASE_URL: supabaseUrl ? '✓ Set' : '✗ Missing',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey ? '✓ Set' : '✗ Missing'
-  })
-  throw new Error(
-    'Supabase environment variables are required. ' +
-    'Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in Vercel dashboard.'
-  )
+  throw new Error('Supabase configuration error')
 }
 
 export const supabaseClient = createBrowserClient(
