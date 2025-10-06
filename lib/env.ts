@@ -156,15 +156,20 @@ function validateEnv() {
  * 
  * During Next.js build phase, we skip validation to allow the build to complete.
  * Validation will run when the app actually starts.
+ * 
+ * Note: Type is always ServerEnv to satisfy TypeScript at compile time.
+ * Runtime validation ensures client code can't actually access server secrets.
  */
-export const env = process.env.NEXT_PHASE === 'phase-production-build' 
-  ? (process.env as unknown as z.infer<typeof serverEnvSchema>)
-  : validateEnv()
+export const env = (process.env.NEXT_PHASE === 'phase-production-build' 
+  ? process.env
+  : validateEnv()) as ServerEnv
 
 /**
  * Type-safe environment variable access
- * Type will be ServerEnv when accessed server-side, ClientEnv when accessed client-side
+ * - ServerEnv: Full environment (client + server variables)
+ * - ClientEnv: Browser-safe subset (NEXT_PUBLIC_* only)
+ * - Env: Alias for ServerEnv (for backward compatibility)
  */
 export type ClientEnv = z.infer<typeof clientEnvSchema>
 export type ServerEnv = z.infer<typeof serverEnvSchema>
-export type Env = typeof env
+export type Env = ServerEnv
