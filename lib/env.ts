@@ -47,25 +47,25 @@ const envSchema = z.object({
   JWT_PARTNER_ROLE_CLAIM: z.string().default('app_role'),
 
   // Business Rules
-  NYC_TAX_RATE: z.string().transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)).default('0.08875'),
-  FIRST_ORDER_CAP_CENTS: z.string().transform((val) => parseInt(val)).pipe(z.number().positive()).default('7500'),
-  LAUNDRY_MIN_LBS: z.string().transform((val) => parseInt(val)).pipe(z.number().positive()).default('10'),
+  NYC_TAX_RATE: z.string().default('0.08875').transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)),
+  FIRST_ORDER_CAP_CENTS: z.string().default('7500').transform((val) => parseInt(val)).pipe(z.number().positive()),
+  LAUNDRY_MIN_LBS: z.string().default('10').transform((val) => parseInt(val)).pipe(z.number().positive()),
 
   // Feature Flags (Optional)
-  NEXT_PUBLIC_ENABLE_PARTNER_PORTAL: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_ENABLE_CAPACITY_CALENDAR: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_ENABLE_AUTO_ASSIGN: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_ENABLE_AUTO_NOTIFICATIONS: z.string().transform((val) => val === 'true').default('false'),
+  NEXT_PUBLIC_ENABLE_PARTNER_PORTAL: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_ENABLE_CAPACITY_CALENDAR: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_ENABLE_AUTO_ASSIGN: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_ENABLE_AUTO_NOTIFICATIONS: z.string().default('false').transform((val) => val === 'true'),
 
   // Unified Order UI Feature Flags
-  NEXT_PUBLIC_UNIFIED_ORDER_UI: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_UNIFIED_ROLLOUT: z.string().transform((val) => parseInt(val)).pipe(z.number().min(0).max(100)).default('0'),
-  NEXT_PUBLIC_UNIFIED_TIMELINE: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_ENHANCED_ANIMATIONS: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_ANALYTICS: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_NEW_HEADER: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_NEW_TIMELINE: z.string().transform((val) => val === 'true').default('false'),
-  NEXT_PUBLIC_NEW_DETAILS_CARD: z.string().transform((val) => val === 'true').default('false'),
+  NEXT_PUBLIC_UNIFIED_ORDER_UI: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_UNIFIED_ROLLOUT: z.string().default('0').transform((val) => parseInt(val)).pipe(z.number().min(0).max(100)),
+  NEXT_PUBLIC_UNIFIED_TIMELINE: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_ENHANCED_ANIMATIONS: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_ANALYTICS: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_NEW_HEADER: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_NEW_TIMELINE: z.string().default('false').transform((val) => val === 'true'),
+  NEXT_PUBLIC_NEW_DETAILS_CARD: z.string().default('false').transform((val) => val === 'true'),
 
   // File Storage
   NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET: z.string().default('tidyhood-documents'),
@@ -73,7 +73,7 @@ const envSchema = z.object({
   // Observability (Optional - add when implementing)
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_ENVIRONMENT: z.string().optional(),
-  SENTRY_SAMPLE_RATE: z.string().transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)).default('1.0'),
+  SENTRY_SAMPLE_RATE: z.string().default('1.0').transform((val) => parseFloat(val)).pipe(z.number().min(0).max(1)),
 })
 
 /**
