@@ -299,6 +299,16 @@ export const CLEANING_STAGES: CleaningStageMapping[] = [
   },
 ];
 
+/**
+ * Stage-specific descriptions for timeline display
+ * These describe the STAGE, not the current order status
+ */
+export const CLEANING_STAGE_DESCRIPTIONS: Record<CleaningStage, string> = {
+  scheduled: "Your cleaner will arrive during the scheduled time window.",
+  in_progress: "Your cleaning is currently underway.",
+  completed: "Your cleaning has been completed. Thank you for using TidyHood!",
+};
+
 // ============================================================================
 // Status Display Configuration
 // ============================================================================

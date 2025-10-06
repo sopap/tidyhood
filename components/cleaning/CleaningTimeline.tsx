@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { CleaningOrder, CleaningStatus } from '@/types/cleaningOrders';
-import { CLEANING_STAGES, getCleaningStatusConfig } from '@/types/cleaningOrders';
+import { CLEANING_STAGES, CLEANING_STAGE_DESCRIPTIONS, getCleaningStatusConfig } from '@/types/cleaningOrders';
 
 interface CleaningTimelineProps {
   order: CleaningOrder;
@@ -106,7 +106,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
           {CLEANING_STAGES.map((stage, index) => {
             const isCompleted = completedStages.includes(stage.stage);
             const isCurrent = currentStage === stage.stage && !isCompleted;
-            const config = getCleaningStatusConfig(order.status);
+            const statusConfig = getCleaningStatusConfig(order.status);
             
             return (
               <div
@@ -118,7 +118,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                   className={`
                     relative rounded-lg border-2 p-4 transition-all
                     ${isCompleted ? 'border-green-500 bg-green-50' : ''}
-                    ${isCurrent ? `border-${config.color}-500 bg-${config.color}-50` : ''}
+                    ${isCurrent ? `border-${statusConfig.color}-500 bg-${statusConfig.color}-50` : ''}
                     ${!isCompleted && !isCurrent ? 'border-gray-200 bg-gray-50' : ''}
                   `}
                 >
@@ -128,7 +128,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                       className={`
                         flex h-10 w-10 items-center justify-center rounded-full text-xl
                         ${isCompleted ? 'bg-green-500 text-white' : ''}
-                        ${isCurrent ? `bg-${config.color}-500 text-white` : ''}
+                        ${isCurrent ? `bg-${statusConfig.color}-500 text-white` : ''}
                         ${!isCompleted && !isCurrent ? 'bg-gray-300 text-gray-600' : ''}
                       `}
                     >
@@ -137,7 +137,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                     <div>
                       <h3 className="font-semibold text-gray-900">{stage.label}</h3>
                       {isCurrent && (
-                        <p className="text-sm text-gray-600">{config.description}</p>
+                        <p className="text-sm text-gray-600">{CLEANING_STAGE_DESCRIPTIONS[stage.stage]}</p>
                       )}
                     </div>
                   </div>
@@ -183,7 +183,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
           {CLEANING_STAGES.map((stage, index) => {
             const isCompleted = completedStages.includes(stage.stage);
             const isCurrent = currentStage === stage.stage && !isCompleted;
-            const config = getCleaningStatusConfig(order.status);
+            const statusConfig = getCleaningStatusConfig(order.status);
             
             return (
               <div key={stage.stage} className="relative flex gap-6">
@@ -194,7 +194,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                     className={`
                       flex h-12 w-12 items-center justify-center rounded-full text-xl font-semibold z-10
                       ${isCompleted ? 'bg-green-500 text-white' : ''}
-                      ${isCurrent ? `bg-${config.color}-500 text-white` : ''}
+                      ${isCurrent ? `bg-${statusConfig.color}-500 text-white` : ''}
                       ${!isCompleted && !isCurrent ? 'bg-gray-300 text-gray-600' : ''}
                     `}
                   >
@@ -218,7 +218,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                     className={`
                       rounded-lg border-2 p-4 transition-all
                       ${isCompleted ? 'border-green-500 bg-green-50' : ''}
-                      ${isCurrent ? `border-${config.color}-500 bg-${config.color}-50` : ''}
+                      ${isCurrent ? `border-${statusConfig.color}-500 bg-${statusConfig.color}-50` : ''}
                       ${!isCompleted && !isCurrent ? 'border-gray-200 bg-white' : ''}
                     `}
                   >
@@ -227,7 +227,7 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                     </h3>
                     
                     {isCurrent && (
-                      <p className="text-sm text-gray-600 mb-3">{config.description}</p>
+                      <p className="text-sm text-gray-600 mb-3">{CLEANING_STAGE_DESCRIPTIONS[stage.stage]}</p>
                     )}
                     
                     {/* Hints (sub-states) */}
