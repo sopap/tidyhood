@@ -36,7 +36,7 @@ interface TimeSlot {
   service_type: string
 }
 
-type LaundryServiceType = 'wash_fold' | 'dry_clean' | 'mixed'
+type LaundryServiceType = 'washFold' | 'dryClean' | 'mixed'
 type WeightTier = 'small' | 'medium' | 'large'
 
 function LaundryBookingForm() {
@@ -65,7 +65,7 @@ function LaundryBookingForm() {
   const [isAddressCollapsed, setIsAddressCollapsed] = useState(false)
   
   // Service details
-  const [serviceType, setServiceType] = useState<LaundryServiceType>('wash_fold')
+  const [serviceType, setServiceType] = useState<LaundryServiceType>('washFold')
   const [weightTier, setWeightTier] = useState<WeightTier>('medium')
   const [estimatedPounds, setEstimatedPounds] = useState<number>(15)
   const [rushService, setRushService] = useState(false)
@@ -307,8 +307,8 @@ function LaundryBookingForm() {
             phone: phone,
             details: {
               serviceType,
-              weightTier: serviceType === 'wash_fold' ? weightTier : undefined,
-              estimatedPounds: serviceType === 'wash_fold' ? estimatedPounds : undefined,
+              weightTier: serviceType === 'washFold' ? weightTier : undefined,
+              estimatedPounds: serviceType === 'washFold' ? estimatedPounds : undefined,
               rushService
             }
           })
@@ -348,8 +348,8 @@ function LaundryBookingForm() {
             },
             details: {
               serviceType,
-              weightTier: serviceType === 'wash_fold' ? weightTier : undefined,
-              estimatedPounds: serviceType === 'wash_fold' ? estimatedPounds : undefined,
+              weightTier: serviceType === 'washFold' ? weightTier : undefined,
+              estimatedPounds: serviceType === 'washFold' ? estimatedPounds : undefined,
               rushService
             }
           })
@@ -485,9 +485,9 @@ function LaundryBookingForm() {
                   <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
-                      onClick={() => setServiceType('wash_fold')}
+                      onClick={() => setServiceType('washFold')}
                       className={`p-4 border-2 rounded-lg text-center transition-all ${
-                        serviceType === 'wash_fold'
+                        serviceType === 'washFold'
                           ? 'border-primary-600 bg-primary-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -498,9 +498,9 @@ function LaundryBookingForm() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setServiceType('dry_clean')}
+                      onClick={() => setServiceType('dryClean')}
                       className={`p-4 border-2 rounded-lg text-center transition-all ${
-                        serviceType === 'dry_clean'
+                        serviceType === 'dryClean'
                           ? 'border-primary-600 bg-primary-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -526,7 +526,7 @@ function LaundryBookingForm() {
                 </div>
 
                 {/* Weight Tier (for Wash & Fold) */}
-                {serviceType === 'wash_fold' && (
+                {serviceType === 'washFold' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Load Size
@@ -576,7 +576,7 @@ function LaundryBookingForm() {
                 )}
 
                 {/* Dry Clean Notice */}
-                {(serviceType === 'dry_clean' || serviceType === 'mixed') && (
+                {(serviceType === 'dryClean' || serviceType === 'mixed') && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <span className="text-xl flex-shrink-0">ℹ️</span>
@@ -639,7 +639,7 @@ function LaundryBookingForm() {
                       </div>
                       <div className="flex justify-between items-center pt-2 border-t border-primary-200">
                         <span className="font-medium">
-                          {serviceType === 'wash_fold' ? 'Estimated Total:' : 'Estimated Minimum:'}
+                          {serviceType === 'washFold' ? 'Estimated Total:' : 'Estimated Minimum:'}
                         </span>
                         <span className="text-2xl font-bold text-primary-600">
                           ${pricing.total.toFixed(2)}
@@ -647,7 +647,7 @@ function LaundryBookingForm() {
                       </div>
                     </div>
                     <div className="text-xs text-gray-600 mt-2">
-                      {serviceType === 'wash_fold' 
+                      {serviceType === 'washFold' 
                         ? 'Final price based on actual weight'
                         : 'Final price confirmed after inspection'}
                     </div>
