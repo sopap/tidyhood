@@ -9,6 +9,7 @@ const laundrySchema = z.object({
   zip: z.string().length(5),
   lbs: z.number().min(1).max(200),
   addons: z.array(z.string()).optional(),
+  rushService: z.boolean().optional(),
 })
 
 const cleaningSchema = z.object({
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
         zip: params.zip,
         lbs: params.lbs,
         addons: params.addons,
+        rushService: params.rushService,
       })
     } else {
       const params = cleaningSchema.parse(body)

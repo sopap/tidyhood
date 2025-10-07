@@ -65,6 +65,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   delivered: 'Delivered',
   completed: 'Completed',
   canceled: 'Canceled',
+  payment_failed: 'Payment Failed',
   // Cleaning v2 statuses
   assigned: 'Assigned',
   en_route: 'En Route',
@@ -90,6 +91,7 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
   delivered: 'green',
   completed: 'green',
   canceled: 'red',
+  payment_failed: 'red',
   // Cleaning v2 statuses
   assigned: 'blue',
   en_route: 'yellow',
@@ -138,6 +140,36 @@ const TRANSITIONS: TransitionRule[] = [
   { from: 'pending_pickup', to: 'canceled' },
   { from: 'at_facility', to: 'canceled' },
   { from: 'awaiting_payment', to: 'canceled' },
+  
+  // Payment authorization transitions (new)
+  // No-show handling: pending_pickup → canceled with no-show fee
+  { 
+    from: 'pending_pickup', 
+    to: 'canceled',
+    service: 'LAUNDRY',
+    condition: (order) => !!order.no_show_charged
+  },
+  // Auto-charge: at_facility → paid_processing (bypasses awaiting_payment)
+  { 
+    from: 'at_facility', 
+    to: 'paid_processing',
+    service: 'LAUNDRY',
+    condition: (order) => !!order.auth_payment_intent_id && !!order.paid_at
+  },
+  // Payment failed handling
+  { 
+    from: 'pending_pickup', 
+    to: 'payment_failed',
+    service: 'LAUNDRY',
+    condition: (order) => !!order.payment_error
+  },
+  // Recovery from payment failed
+  { 
+    from: 'payment_failed', 
+    to: 'pending_pickup',
+    service: 'LAUNDRY',
+    condition: (order) => !!order.auth_payment_intent_id && !order.payment_error
+  },
 ];
 
 /**

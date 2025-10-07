@@ -1,28 +1,20 @@
 /**
- * Structured Logging with Pino
+ * Simple Console Logger (Pino Replacement)
  * 
- * Provides JSON-structured logs with automatic PII redaction.
- * Use throughout the application instead of console.log/error.
+ * Temporary replacement for Pino to avoid worker thread crashes.
+ * Maintains the same API so all existing code works unchanged.
  * 
  * Features:
- * - JSON-structured output for easy parsing
- * - Automatic correlation ID tracking
- * - PII field redaction
- * - Different log levels (trace, debug, info, warn, error, fatal)
- * - Pretty printing in development
- * 
- * Usage:
- *   import { logger } from '@/lib/logger'
- *   logger.info({ orderId: '123', userId: '456' }, 'Order created')
- *   logger.error({ err }, 'Payment failed')
+ * - Same interface as Pino
+ * - PII redaction
+ * - No worker threads = no crashes
+ * - Easy to revert to Pino later
  */
 
-import pino from 'pino'
 import { env } from './env'
 
 /**
  * PII fields that should be redacted from logs
- * Never log these fields in plain text
  */
 const PII_FIELDS = [
   'password',
@@ -42,65 +34,139 @@ const PII_FIELDS = [
 ]
 
 /**
- * Redact PII fields from log objects
+ * Redact PII from an object
  */
-function redactPII(key: string): string {
-  const lowerKey = key.toLowerCase()
-  if (PII_FIELDS.some((field) => lowerKey.includes(field.toLowerCase()))) {
-    return '[REDACTED]'
+function redactPII(obj: any): any {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj
   }
-  return key
+
+  if (Array.isArray(obj)) {
+    return obj.map(redactPII)
+  }
+
+  const redacted: any = {}
+  for (const key in obj) {
+    const lowerKey = key.toLowerCase()
+    if (PII_FIELDS.some(field => lowerKey.includes(field.toLowerCase()))) {
+      redacted[key] = '[REDACTED]'
+    } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      redacted[key] = redactPII(obj[key])
+    } else {
+      redacted[key] = obj[key]
+    }
+  }
+  return redacted
 }
 
 /**
- * Create Pino logger instance
+ * Format log message with metadata
  */
-export const logger = pino({
-  level: env.NODE_ENV === 'production' ? 'info' : 'debug',
+function formatLog(level: string, obj: any, msg?: string): string {
+  const timestamp = new Date().toISOString()
+  const env_name = env.NODE_ENV || 'development'
   
-  // Redact PII fields
-  redact: {
-    paths: PII_FIELDS.map((field) => `*.${field}`),
-    censor: '[REDACTED]',
-  },
-
-  // Base fields included in every log
-  base: {
-    env: env.NODE_ENV,
+  const logData = {
+    level,
+    time: timestamp,
+    env: env_name,
     service: 'tidyhood',
-  },
+    ...(typeof obj === 'object' ? redactPII(obj) : {}),
+    ...(msg && { msg }),
+  }
+  
+  return JSON.stringify(logData, null, 2)
+}
 
-  // Format timestamps in ISO 8601
-  timestamp: pino.stdTimeFunctions.isoTime,
+/**
+ * Simple console-based logger with Pino-compatible API
+ */
+class ConsoleLogger {
+  trace(obj: any, msg?: string) {
+    if (env.NODE_ENV === 'development') {
+      console.log('[TRACE]', formatLog('trace', obj, msg))
+    }
+  }
 
-  // Pretty print in development for better DX
-  transport: env.NODE_ENV === 'development' 
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'HH:MM:ss',
-          ignore: 'pid,hostname',
-          singleLine: false,
-        },
-      }
-    : undefined,
+  debug(obj: any, msg?: string) {
+    if (env.NODE_ENV === 'development') {
+      console.log('[DEBUG]', formatLog('debug', obj, msg))
+    }
+  }
 
-  // Serializers for common objects
-  serializers: {
-    err: pino.stdSerializers.err,
-    error: pino.stdSerializers.err,
-    req: pino.stdSerializers.req,
-    res: pino.stdSerializers.res,
-  },
-})
+  info(obj: any, msg?: string) {
+    console.log('[INFO]', formatLog('info', obj, msg))
+  }
+
+  warn(obj: any, msg?: string) {
+    console.warn('[WARN]', formatLog('warn', obj, msg))
+  }
+
+  error(obj: any, msg?: string) {
+    console.error('[ERROR]', formatLog('error', obj, msg))
+  }
+
+  fatal(obj: any, msg?: string) {
+    console.error('[FATAL]', formatLog('fatal', obj, msg))
+  }
+
+  child(bindings: Record<string, any>) {
+    // Return a new logger with additional context
+    return new ChildLogger(bindings)
+  }
+
+  flush(callback?: () => void) {
+    // Console.log is synchronous, so just call callback immediately
+    if (callback) callback()
+  }
+}
+
+/**
+ * Child logger that includes additional context
+ */
+class ChildLogger {
+  private bindings: Record<string, any>
+
+  constructor(bindings: Record<string, any>) {
+    this.bindings = bindings
+  }
+
+  private mergeContext(obj: any) {
+    return { ...this.bindings, ...obj }
+  }
+
+  trace(obj: any, msg?: string) {
+    logger.trace(this.mergeContext(obj), msg)
+  }
+
+  debug(obj: any, msg?: string) {
+    logger.debug(this.mergeContext(obj), msg)
+  }
+
+  info(obj: any, msg?: string) {
+    logger.info(this.mergeContext(obj), msg)
+  }
+
+  warn(obj: any, msg?: string) {
+    logger.warn(this.mergeContext(obj), msg)
+  }
+
+  error(obj: any, msg?: string) {
+    logger.error(this.mergeContext(obj), msg)
+  }
+
+  fatal(obj: any, msg?: string) {
+    logger.fatal(this.mergeContext(obj), msg)
+  }
+}
+
+/**
+ * Export the logger instance
+ */
+export const logger = new ConsoleLogger()
 
 /**
  * Create a child logger with additional context
- * 
- * @example
- * const requestLogger = createLogger({ correlationId: req.id, userId: user.id })
- * requestLogger.info('Processing order')
  */
 export function createLogger(bindings: Record<string, any>) {
   return logger.child(bindings)
@@ -108,7 +174,6 @@ export function createLogger(bindings: Record<string, any>) {
 
 /**
  * Create a logger for a specific API route
- * Automatically includes route information
  */
 export function createRouteLogger(route: string, method: string, correlationId?: string) {
   return logger.child({
@@ -119,23 +184,7 @@ export function createRouteLogger(route: string, method: string, correlationId?:
 }
 
 /**
- * Log levels:
- * 
- * - trace (10): Very detailed debugging information
- * - debug (20): Debugging information
- * - info (30): Informational messages (default in production)
- * - warn (40): Warning messages
- * - error (50): Error messages
- * - fatal (60): Fatal errors that cause the process to exit
- */
-
-/**
  * Helper to measure execution time
- * 
- * @example
- * const end = startTimer()
- * await doSomething()
- * logger.info({ durationMs: end() }, 'Operation completed')
  */
 export function startTimer(): () => number {
   const start = Date.now()
@@ -143,45 +192,34 @@ export function startTimer(): () => number {
 }
 
 /**
- * Safe logging helper that ensures objects don't contain PII
- * Use this when you're unsure if an object might contain sensitive data
+ * Safe logging helper
  */
 export function logSafely(
   level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal',
   obj: Record<string, any>,
   msg: string
 ) {
-  const sanitized = Object.keys(obj).reduce((acc, key) => {
-    const lowerKey = key.toLowerCase()
-    if (PII_FIELDS.some((field) => lowerKey.includes(field.toLowerCase()))) {
-      acc[key] = '[REDACTED]'
-    } else {
-      acc[key] = obj[key]
-    }
-    return acc
-  }, {} as Record<string, any>)
-
-  logger[level](sanitized, msg)
+  logger[level](obj, msg)
 }
 
 /**
- * Flush logs before process exit
- * Call this in process handlers to ensure logs are written
+ * Flush logs (no-op for console logger)
  */
 export async function flushLogs(): Promise<void> {
-  return new Promise((resolve) => {
-    logger.flush(() => resolve())
-  })
+  return Promise.resolve()
 }
 
 /**
  * Log an error with full context
- * Includes stack trace and any additional context
  */
 export function logError(error: Error, context?: Record<string, any>) {
   logger.error(
     {
-      err: error,
+      err: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      },
       ...context,
     },
     error.message
@@ -190,7 +228,6 @@ export function logError(error: Error, context?: Record<string, any>) {
 
 /**
  * Log a business metric event
- * Use this for important business events that you want to track
  */
 export function logMetric(
   metric: string,
@@ -212,7 +249,6 @@ export function logMetric(
 
 /**
  * Log an audit event
- * Use for security-sensitive operations that need to be audited
  */
 export function logAudit(
   action: string,

@@ -29,6 +29,7 @@ export interface LaundryQuoteParams {
   zip: string
   lbs: number
   addons?: string[]
+  rushService?: boolean
 }
 
 export interface CleaningQuoteParams {
@@ -69,7 +70,7 @@ async function getPricingRules(serviceType: 'LAUNDRY' | 'CLEANING', zip: string)
  * Calculate laundry pricing
  */
 export async function quoteLaundry(params: LaundryQuoteParams): Promise<PricingBreakdown> {
-  const { zip, lbs, addons = [] } = params
+  const { zip, lbs, addons = [], rushService = false } = params
   
   const rules = await getPricingRules('LAUNDRY', zip)
   const items: PricingLineItem[] = []
@@ -107,22 +108,26 @@ export async function quoteLaundry(params: LaundryQuoteParams): Promise<PricingB
     }
   }
   
-  // Delivery fee
-  const deliveryRule = rules.find(r => r.unit_type === 'DELIVERY')
-  const deliveryCents = deliveryRule?.unit_price_cents || 0
+  // Calculate subtotal before rush service
+  let subtotal_cents = items.reduce((sum, item) => sum + item.total_cents, 0)
   
-  if (deliveryCents > 0) {
+  // Apply 25% rush service surcharge if selected
+  if (rushService) {
+    const rushCharge = Math.round(subtotal_cents * 0.25)
     items.push({
-      key: 'LND_DELIVERY_BASE',
-      label: 'Delivery Fee',
-      unit_price_cents: deliveryCents,
-      total_cents: deliveryCents,
+      key: 'LND_RUSH_24HR',
+      label: '24-Hour Rush Service (+25%)',
+      unit_price_cents: rushCharge,
+      total_cents: rushCharge,
       taxable: false,
     })
+    subtotal_cents += rushCharge
   }
   
-  // Calculate totals
-  const subtotal_cents = items.reduce((sum, item) => sum + item.total_cents, 0)
+  // Note: Delivery is included in base price (no separate fee)
+  const deliveryCents = 0
+  
+  // Calculate totals (subtotal already calculated above)
   const taxable_subtotal = items.filter(i => i.taxable).reduce((sum, item) => sum + item.total_cents, 0)
   const tax_cents = Math.round(taxable_subtotal * NYC_TAX_RATE)
   const total_cents = subtotal_cents + tax_cents

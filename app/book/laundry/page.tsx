@@ -1,41 +1,48 @@
-'use client';
+'use client'
 
-import { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
-import { AddressAutocomplete } from '@/components/AddressAutocomplete';
-import { Toast } from '@/components/Toast';
-import { Header } from '@/components/Header';
-import ServiceDetails from '@/components/booking/ServiceDetails';
-import EstimatePanel from '@/components/booking/EstimatePanel';
-import StickyCTA from '@/components/booking/StickyCTA';
-import { ServiceType, WeightTier, AddonKey, EstimateResult } from '@/lib/types';
-import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking';
+import { useState, useEffect, Suspense } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+import { AddressAutocomplete } from '@/components/AddressAutocomplete'
+import { PaymentModal } from '@/components/PaymentModal'
+import { Toast } from '@/components/Toast'
+import { Header } from '@/components/Header'
+import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
+import { Elements } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+import { StripePaymentCollector } from '@/components/booking/StripePaymentCollector'
+import { isSetupIntentEnabled } from '@/lib/feature-flags'
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface Address {
-  line1: string;
-  line2?: string;
-  city: string;
-  state: string;
-  zip: string;
-  formatted: string;
+  line1: string
+  line2?: string
+  city: string
+  state: string
+  zip: string
+  formatted: string
 }
 
 interface TimeSlot {
-  partner_id: string;
-  partner_name: string;
-  slot_start: string;
-  slot_end: string;
-  available_units: number;
-  max_units: number;
-  service_type: string;
+  partner_id: string
+  partner_name: string
+  slot_start: string
+  slot_end: string
+  available_units: number
+  max_units: number
+  service_type: string
 }
 
-function LaundryBookingForm() {
-  const router = useRouter();
-  const { user } = useAuth();
+type LaundryServiceType = 'wash_fold' | 'dry_clean' | 'mixed'
+type WeightTier = 'small' | 'medium' | 'large'
 
+function LaundryBookingForm() {
+  const router = useRouter()
+  const { user } = useAuth()
+  
   // Persistent booking data
   const {
     loaded: persistedLoaded,
@@ -45,77 +52,103 @@ function LaundryBookingForm() {
     updatePhone: updatePersistedPhone,
     address: persistedAddress,
     updateAddress: updatePersistedAddress,
-    homeSize: persistedHomeSize,
-    updateHomeSize: updatePersistedHomeSize,
     prefillMsg,
     clearAll,
-  } = usePersistentBooking();
-
+  } = usePersistentBooking()
+  
   // Address state
-  const [address, setAddress] = useState<Address | null>(null);
-  const [isAddressValid, setIsAddressValid] = useState(false);
-  const [addressLine2, setAddressLine2] = useState('');
-  const [phone, setPhone] = useState('');
-  const [specialInstructions, setSpecialInstructions] = useState('');
-  const [isAddressCollapsed, setIsAddressCollapsed] = useState(false);
-
+  const [address, setAddress] = useState<Address | null>(null)
+  const [isAddressValid, setIsAddressValid] = useState(false)
+  const [addressLine2, setAddressLine2] = useState('')
+  const [phone, setPhone] = useState('')
+  const [specialInstructions, setSpecialInstructions] = useState('')
+  const [isAddressCollapsed, setIsAddressCollapsed] = useState(false)
+  
   // Service details
-  const [serviceType, setServiceType] = useState<ServiceType>('washFold');
-  const [weightTier, setWeightTier] = useState<WeightTier>('small');
-  const [addons, setAddons] = useState<Partial<Record<AddonKey, boolean>>>({});
-  const [serviceAvailability, setServiceAvailability] = useState<string[]>([]);
-
+  const [serviceType, setServiceType] = useState<LaundryServiceType>('wash_fold')
+  const [weightTier, setWeightTier] = useState<WeightTier>('medium')
+  const [estimatedPounds, setEstimatedPounds] = useState<number>(15)
+  const [rushService, setRushService] = useState(false)
+  
   // Schedule
-  const [date, setDate] = useState('');
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-
-  // Delivery
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [availableDeliverySlots, setAvailableDeliverySlots] = useState<TimeSlot[]>([]);
-  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<TimeSlot | null>(null);
-  const [useDefaultDelivery, setUseDefaultDelivery] = useState(true);
-
-  // Estimate
-  const [estimate, setEstimate] = useState<EstimateResult | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Time slot expansion
-  const [slotsExpanded, setSlotsExpanded] = useState(false);
-
+  const [date, setDate] = useState('')
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+  
+  // Pricing
+  const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
+  const [loading, setLoading] = useState(false)
+  
   // Toast notifications
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null)
+  
+  // Payment modal state (old flow)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  
+  // Setup Intent state (new flow)
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [isSetupIntentFlow, setIsSetupIntentFlow] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Hydrate form from persisted data on mount
   useEffect(() => {
-    if (!persistedLoaded) return;
+    if (!persistedLoaded) return
 
     // Set phone with formatting
     if (persistedPhone) {
-      setPhone(formatPhone(persistedPhone));
+      setPhone(formatPhone(persistedPhone))
     }
 
     // Set address fields
     if (persistedAddress?.line1) {
-      setAddressLine2(persistedAddress.line2 || '');
-      // Note: Full address will need to be re-geocoded or set via AddressAutocomplete
+      setAddressLine2(persistedAddress.line2 || '')
     }
-  }, [persistedLoaded, persistedPhone, persistedAddress]);
+  }, [persistedLoaded, persistedPhone, persistedAddress])
 
+  // Check feature flag for Setup Intent
+  useEffect(() => {
+    const checkFeatureFlag = async () => {
+      const enabled = await isSetupIntentEnabled()
+      setIsSetupIntentFlow(enabled)
+    }
+    checkFeatureFlag()
+  }, [])
+  
+  // Handle 3DS redirect return
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const setupIntentClientSecret = urlParams.get('setup_intent_client_secret')
+    const redirectStatus = urlParams.get('redirect_status')
+    
+    if (setupIntentClientSecret) {
+      if (redirectStatus === 'succeeded') {
+        setToast({
+          message: 'Payment method verified successfully! Completing your booking...',
+          type: 'success'
+        })
+      } else if (redirectStatus === 'failed') {
+        setToast({
+          message: 'Payment verification failed. Please try again.',
+          type: 'error'
+        })
+      }
+    }
+  }, [])
+  
   // Load last order for smart defaults
   useEffect(() => {
     const loadLastOrder = async () => {
-      if (!user) return;
+      if (!user) return
 
       try {
-        const response = await fetch('/api/orders?limit=1');
+        const response = await fetch('/api/orders?limit=1')
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json()
           if (data.orders && data.orders.length > 0) {
-            const lastOrder = data.orders[0];
-
+            const lastOrder = data.orders[0]
+            
             // Pre-fill address
             if (lastOrder.address_snapshot) {
               setAddress({
@@ -124,281 +157,233 @@ function LaundryBookingForm() {
                 city: lastOrder.address_snapshot.city,
                 state: 'NY',
                 zip: lastOrder.address_snapshot.zip,
-                formatted: `${lastOrder.address_snapshot.line1}, ${lastOrder.address_snapshot.city}, NY ${lastOrder.address_snapshot.zip}`,
-              });
-              setAddressLine2(lastOrder.address_snapshot.line2 || '');
-              setIsAddressCollapsed(true);
+                formatted: `${lastOrder.address_snapshot.line1}, ${lastOrder.address_snapshot.city}, NY ${lastOrder.address_snapshot.zip}`
+              })
+              setAddressLine2(lastOrder.address_snapshot.line2 || '')
+              setIsAddressValid(true)
+              setIsAddressCollapsed(true)
+            }
+            
+            // Pre-fill service details if it was a laundry order
+            if (lastOrder.service_type === 'LAUNDRY' && lastOrder.order_details) {
+              if (lastOrder.order_details.serviceType) {
+                setServiceType(lastOrder.order_details.serviceType)
+              }
+              if (lastOrder.order_details.weightTier) {
+                setWeightTier(lastOrder.order_details.weightTier)
+              }
             }
           }
         }
-
+        
         // Pre-fill phone from user profile
         if (user.phone) {
-          setPhone(user.phone);
+          setPhone(user.phone)
         }
       } catch (err) {
-        console.error('Failed to load last order:', err);
+        console.error('Failed to load last order:', err)
       }
-    };
+    }
 
-    loadLastOrder();
-  }, [user]);
+    loadLastOrder()
+  }, [user])
 
-  // Check service availability when address changes
+  // Update estimated pounds based on weight tier
   useEffect(() => {
-    const checkAvailability = async () => {
-      if (!address?.zip) {
-        setServiceAvailability([]);
-        return;
-      }
+    const tierPounds = {
+      small: 10,
+      medium: 15,
+      large: 25
+    }
+    setEstimatedPounds(tierPounds[weightTier])
+  }, [weightTier])
+
+  // Calculate price whenever service details change
+  useEffect(() => {
+    const calculatePrice = async () => {
+      if (!address) return
 
       try {
-        const response = await fetch(
-          `/api/services/available?zip=${address.zip}&service_type=LAUNDRY`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          setServiceAvailability(data.available_capabilities || []);
-          
-          // Auto-switch service type if current selection is unavailable
-          const serviceMap: Record<ServiceType, string> = {
-            'washFold': 'wash_fold',
-            'dryClean': 'dry_clean',
-            'mixed': 'mixed'
-          };
-          
-          const currentCapability = serviceMap[serviceType];
-          if (data.available_capabilities && 
-              data.available_capabilities.length > 0 &&
-              !data.available_capabilities.includes(currentCapability)) {
-            // Switch to first available service
-            const firstAvailable = data.available_capabilities[0];
-            const reverseMap: Record<string, ServiceType> = {
-              'wash_fold': 'washFold',
-              'dry_clean': 'dryClean',
-              'mixed': 'mixed'
-            };
-            if (reverseMap[firstAvailable]) {
-              setServiceType(reverseMap[firstAvailable]);
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Failed to check service availability:', err);
-        // Fail open - show all services if API fails
-        setServiceAvailability(['wash_fold', 'dry_clean', 'mixed']);
-      }
-    };
-
-    checkAvailability();
-  }, [address, serviceType]);
-
-  // Calculate estimate whenever service details change
-  useEffect(() => {
-    const calculateEstimate = async () => {
-      if (!address) return;
-
-      // For dry clean, we don't need a weight tier
-      if (serviceType === 'dryClean') {
-        setIsEstimating(true);
-        try {
-          const response = await fetch('/api/estimate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              serviceType,
-              addons,
-              zip: address.zip,
-            }),
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to calculate estimate');
-          }
-          
-          const result = await response.json();
-          setEstimate(result);
-        } catch (err) {
-          console.error('Estimate calculation error:', err);
-        } finally {
-          setIsEstimating(false);
-        }
-        return;
-      }
-
-      // For wash & fold or mixed, we need a weight tier
-      if (!weightTier) return;
-
-      setIsEstimating(true);
-      try {
-        const response = await fetch('/api/estimate', {
+        const response = await fetch('/api/price/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            serviceType,
-            weightTier,
-            addons,
+            service: 'LAUNDRY',
             zip: address.zip,
-          }),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to calculate estimate');
-        }
-        
-        const result = await response.json();
-        setEstimate(result);
-      } catch (err) {
-        console.error('Estimate calculation error:', err);
-      } finally {
-        setIsEstimating(false);
-      }
-    };
+            lbs: estimatedPounds, // API expects 'lbs' not 'estimatedPounds'
+            addons: [], // No addons for now
+            rushService
+          })
+        })
 
-    calculateEstimate();
-  }, [address, serviceType, weightTier, addons]);
+        if (response.ok) {
+          const quote = await response.json()
+          setPricing({
+            subtotal: quote.subtotal_cents / 100,
+            tax: quote.tax_cents / 100,
+            total: quote.total_cents / 100
+          })
+        }
+      } catch (err) {
+        console.error('Price calculation error:', err)
+      }
+    }
+
+    calculatePrice()
+  }, [address, serviceType, weightTier, estimatedPounds, rushService])
 
   // Fetch slots when date changes
   useEffect(() => {
     const fetchSlots = async () => {
-      if (!date || !address) return;
+      if (!date || !address) return
 
       try {
-        setLoading(true);
-        const response = await fetch(`/api/slots?service=LAUNDRY&zip=${address.zip}&date=${date}`);
+        setLoading(true)
+        const response = await fetch(
+          `/api/slots?service=LAUNDRY&zip=${address.zip}&date=${date}`
+        )
         if (response.ok) {
-          const data = await response.json();
-          setAvailableSlots(data.slots || []);
+          const data = await response.json()
+          setAvailableSlots(data.slots || [])
         }
       } catch (err) {
-        console.error('Failed to fetch slots:', err);
+        console.error('Failed to fetch slots:', err)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-
-    fetchSlots();
-  }, [date, address]);
-
-  // Auto-calculate delivery date/time (48h after pickup) when pickup slot selected
-  useEffect(() => {
-    if (!selectedSlot || !useDefaultDelivery) return;
-
-    const pickupTime = new Date(selectedSlot.slot_start);
-    const defaultDeliveryTime = new Date(pickupTime.getTime() + 48 * 60 * 60 * 1000);
-
-    const deliveryDateStr = defaultDeliveryTime.toISOString().split('T')[0];
-    setDeliveryDate(deliveryDateStr);
-
-    const deliverySlotEnd = new Date(defaultDeliveryTime.getTime() + 2 * 60 * 60 * 1000);
-    setSelectedDeliverySlot({
-      partner_id: selectedSlot.partner_id,
-      partner_name: 'Available',
-      slot_start: defaultDeliveryTime.toISOString(),
-      slot_end: deliverySlotEnd.toISOString(),
-      available_units: 1,
-      max_units: 1,
-      service_type: 'LAUNDRY',
-    });
-  }, [selectedSlot, useDefaultDelivery]);
-
-  // Fetch delivery slots when custom delivery date selected
-  useEffect(() => {
-    if (!useDefaultDelivery && deliveryDate && address) {
-      const fetchDeliverySlots = async () => {
-        try {
-          const response = await fetch(`/api/slots?service=LAUNDRY&zip=${address.zip}&date=${deliveryDate}`);
-          if (response.ok) {
-            const data = await response.json();
-            setAvailableDeliverySlots(data.slots || []);
-          }
-        } catch (err) {
-          console.error('Failed to fetch delivery slots:', err);
-        }
-      };
-      fetchDeliverySlots();
     }
-  }, [useDefaultDelivery, deliveryDate, address]);
+
+    fetchSlots()
+  }, [date, address])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!user) {
-      router.push('/login?returnTo=/book/laundry');
-      return;
+      router.push('/login?returnTo=/book/laundry')
+      return
     }
 
     if (!address || !selectedSlot) {
-      setToast({ message: 'Please complete all required fields', type: 'warning' });
-      return;
+      setToast({ message: 'Please complete all required fields', type: 'warning' })
+      return
     }
-
-    // For wash & fold, require weight tier
-    if (serviceType === 'washFold' && !weightTier) {
-      setToast({ message: 'Please select a size', type: 'warning' });
-      return;
+    
+    // If Setup Intent is enabled, require payment method
+    if (isSetupIntentFlow && !paymentMethodId) {
+      setToast({ message: 'Please provide a payment method', type: 'warning' })
+      return
     }
 
     try {
-      setLoading(true);
-      setSubmitting(true);
-      const idempotencyKey = `laundry-${Date.now()}-${Math.random()}`;
+      setLoading(true)
+      setSubmitting(true)
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify({
-          service_type: 'LAUNDRY',
-          phone: phone,
-          slot: {
-            partner_id: selectedSlot.partner_id,
-            slot_start: selectedSlot.slot_start,
-            slot_end: selectedSlot.slot_end,
-          },
-          delivery_slot: selectedDeliverySlot
-            ? {
-                slot_start: selectedDeliverySlot.slot_start,
-                slot_end: selectedDeliverySlot.slot_end,
-              }
-            : undefined,
-          address: {
-            line1: address.line1,
-            line2: addressLine2 || undefined,
-            city: address.city,
-            zip: address.zip,
-            notes: specialInstructions || undefined,
-          },
-          details: {
-            serviceType,
-            weightTier: weightTier || undefined,
-            addons: Object.keys(addons).filter((key) => addons[key as AddonKey]),
-          },
-        }),
-      });
+      let orderId: string
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create order');
+      if (isSetupIntentFlow && paymentMethodId) {
+        // NEW FLOW: Use Setup Intent saga
+        
+        const setupResponse = await fetch('/api/payment/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_type: 'LAUNDRY',
+            service_category: serviceType,
+            estimated_amount_cents: Math.round(pricing.total * 100),
+            payment_method_id: paymentMethodId,
+            slot: {
+              partner_id: selectedSlot.partner_id,
+              slot_start: selectedSlot.slot_start,
+              slot_end: selectedSlot.slot_end,
+            },
+            address: {
+              line1: address.line1,
+              line2: addressLine2 || undefined,
+              city: address.city,
+              zip: address.zip,
+              notes: specialInstructions || undefined,
+            },
+            phone: phone,
+            details: {
+              serviceType,
+              weightTier: serviceType === 'wash_fold' ? weightTier : undefined,
+              estimatedPounds: serviceType === 'wash_fold' ? estimatedPounds : undefined,
+              rushService
+            }
+          })
+        })
+
+        if (!setupResponse.ok) {
+          const error = await setupResponse.json()
+          throw new Error(error.error || 'Failed to setup payment')
+        }
+
+        const setupResult = await setupResponse.json()
+        orderId = setupResult.order_id
+      } else {
+        // OLD FLOW: Deferred payment (existing code)
+        
+        const idempotencyKey = `laundry-${Date.now()}-${Math.random()}`
+
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idempotencyKey
+          },
+          body: JSON.stringify({
+            service_type: 'LAUNDRY',
+            slot: {
+              partner_id: selectedSlot.partner_id,
+              slot_start: selectedSlot.slot_start,
+              slot_end: selectedSlot.slot_end
+            },
+            address: {
+              line1: address.line1,
+              line2: addressLine2 || undefined,
+              city: address.city,
+              zip: address.zip,
+              notes: specialInstructions || undefined
+            },
+            details: {
+              serviceType,
+              weightTier: serviceType === 'wash_fold' ? weightTier : undefined,
+              estimatedPounds: serviceType === 'wash_fold' ? estimatedPounds : undefined,
+              rushService
+            }
+          })
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to create order')
+        }
+
+        const order = await response.json()
+        orderId = order.id
       }
 
-      const order = await response.json();
-
-      router.push(`/orders/${order.id}`);
+      // Redirect to order page
+      router.push(`/orders/${orderId}`)
+      
     } catch (err: any) {
-      console.error('Order creation error:', err);
-      setToast({
-        message: err.message || 'Failed to create order. Please try again.',
-        type: 'error',
-      });
+      console.error('Order creation error:', err)
+      setToast({ 
+        message: err.message || 'Failed to create order. Please try again.', 
+        type: 'error' 
+      })
     } finally {
-      setLoading(false);
-      setSubmitting(false);
+      setLoading(false)
+      setSubmitting(false)
     }
-  };
+  }
+
+  const handlePaymentSuccess = () => {
+    if (createdOrderId) {
+      router.push(`/orders/${createdOrderId}`)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -408,19 +393,19 @@ function LaundryBookingForm() {
         <div className="max-w-3xl mx-auto">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Book Laundry Service</h1>
-            <p className="text-gray-600">Fill out the form below to schedule your pickup</p>
+            <p className="text-gray-600">Schedule your laundry pickup and delivery</p>
           </div>
 
           {/* Cancellation Policy Banner */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
-              <span className="text-2xl flex-shrink-0" aria-hidden="true">✓</span>
+              <span className="text-2xl flex-shrink-0" aria-hidden="true">📋</span>
               <div>
-                <h3 className="font-semibold text-green-900 mb-1">
-                  Flexible Cancellation
+                <h3 className="font-semibold text-blue-900 mb-1">
+                  Flexible Cancellation Policy
                 </h3>
-                <p className="text-sm text-green-700">
-                  Free to cancel or reschedule anytime before pickup. No fees, no hassle.
+                <p className="text-sm text-blue-700">
+                  Free cancellation or rescheduling with 24+ hours notice. Changes made within 24 hours incur a 15% service fee.
                 </p>
               </div>
             </div>
@@ -428,14 +413,14 @@ function LaundryBookingForm() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
-            <div className="ui-dense bg-white rounded-lg shadow-md p-6" id="address-section">
+            <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">📍 Service Address</h2>
+                <h2 className="text-xl font-bold text-gray-900">📍 Pickup Address</h2>
                 {isAddressCollapsed && (
                   <button
                     type="button"
                     onClick={() => setIsAddressCollapsed(false)}
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm text-primary-600 hover:text-primary-700"
                   >
                     Edit
                   </button>
@@ -443,7 +428,7 @@ function LaundryBookingForm() {
               </div>
 
               {isAddressCollapsed && address ? (
-                <div className="bg-blue-50 rounded-lg p-4">
+                <div className="bg-primary-50 rounded-lg p-4">
                   <p className="font-medium">{address.line1}</p>
                   {addressLine2 && <p className="text-sm text-gray-600">{addressLine2}</p>}
                   <p className="text-sm text-gray-600">
@@ -452,325 +437,351 @@ function LaundryBookingForm() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <AddressAutocomplete 
+                  <AddressAutocomplete
                     onAddressSelect={(addr) => {
-                      setAddress(addr);
+                      setAddress(addr)
                       if (addr) {
                         updatePersistedAddress({
                           line1: addr.line1,
                           line2: addressLine2,
                           zip: addr.zip,
-                        });
+                        })
                       }
                     }}
                     onValidityChange={setIsAddressValid}
-                    defaultValue={address?.formatted} 
-                    showLabel={false} 
+                    defaultValue={address?.formatted}
+                    showLabel={false}
                   />
                   <input
                     type="text"
                     value={addressLine2}
                     onChange={(e) => {
-                      setAddressLine2(e.target.value);
+                      setAddressLine2(e.target.value)
                       if (address) {
                         updatePersistedAddress({
                           line1: address.line1,
                           line2: e.target.value,
                           zip: address.zip,
-                        });
+                        })
                       }
                     }}
                     placeholder="Apartment, Suite, etc. (optional)"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                    className="input-field"
                   />
                 </div>
               )}
             </div>
 
             {/* Service Details */}
-            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">🧺 Service Details</h2>
-              <ServiceDetails
-                serviceType={serviceType}
-                onServiceTypeChange={setServiceType}
-                weightTier={weightTier}
-                onWeightTierChange={setWeightTier}
-                addons={addons}
-                onAddonsChange={setAddons}
-                specialInstructions={specialInstructions}
-                onSpecialInstructionsChange={setSpecialInstructions}
-                availableServices={serviceAvailability}
-              />
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">👕 Service Details</h2>
+              
+              <div className="space-y-4">
+                {/* Service Type Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Service Type
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setServiceType('wash_fold')}
+                      className={`p-4 border-2 rounded-lg text-center transition-all ${
+                        serviceType === 'wash_fold'
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">🧺</div>
+                      <div className="font-medium text-sm">Wash & Fold</div>
+                      <div className="text-xs text-gray-500 mt-1">Per pound pricing</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setServiceType('dry_clean')}
+                      className={`p-4 border-2 rounded-lg text-center transition-all ${
+                        serviceType === 'dry_clean'
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">👔</div>
+                      <div className="font-medium text-sm">Dry Clean</div>
+                      <div className="text-xs text-gray-500 mt-1">Per item pricing</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setServiceType('mixed')}
+                      className={`p-4 border-2 rounded-lg text-center transition-all ${
+                        serviceType === 'mixed'
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">🔄</div>
+                      <div className="font-medium text-sm">Mixed</div>
+                      <div className="text-xs text-gray-500 mt-1">Both services</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weight Tier (for Wash & Fold) */}
+                {serviceType === 'wash_fold' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Load Size
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setWeightTier('small')}
+                        className={`p-4 border-2 rounded-lg text-center transition-all ${
+                          weightTier === 'small'
+                            ? 'border-primary-600 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-medium">Small</div>
+                        <div className="text-xs text-gray-500 mt-1">~10 lbs</div>
+                        <div className="text-xs text-gray-400">1-2 loads</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWeightTier('medium')}
+                        className={`p-4 border-2 rounded-lg text-center transition-all ${
+                          weightTier === 'medium'
+                            ? 'border-primary-600 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-medium">Medium</div>
+                        <div className="text-xs text-gray-500 mt-1">~15 lbs</div>
+                        <div className="text-xs text-gray-400">2-3 loads</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWeightTier('large')}
+                        className={`p-4 border-2 rounded-lg text-center transition-all ${
+                          weightTier === 'large'
+                            ? 'border-primary-600 bg-primary-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-medium">Large</div>
+                        <div className="text-xs text-gray-500 mt-1">~25 lbs</div>
+                        <div className="text-xs text-gray-400">3-4 loads</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Dry Clean Notice */}
+                {(serviceType === 'dry_clean' || serviceType === 'mixed') && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl flex-shrink-0">ℹ️</span>
+                      <div>
+                        <p className="text-sm text-yellow-900 font-medium">
+                          Dry Clean Pricing
+                        </p>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Final price will be quoted after inspecting your items. You'll receive the exact quote before we proceed.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Service Information Banner */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl flex-shrink-0">✓</span>
+                    <div>
+                      <p className="text-sm text-green-900 font-medium">
+                        Free Pickup & Delivery Included
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        We pick up your laundry and deliver it back to you at no extra charge. Standard turnaround: 2-3 business days.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rush Service Option */}
+                <div>
+                  <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all">
+                    <input
+                      type="checkbox"
+                      checked={rushService}
+                      onChange={(e) => setRushService(e.target.checked)}
+                      className="w-5 h-5"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">⚡ 24-Hour Rush Service (+25%)</div>
+                      <div className="text-sm text-gray-500">
+                        Same-day return if picked up before 11 AM, otherwise next-day delivery
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Live Pricing */}
+                {address && pricing.total > 0 && (
+                  <div className="bg-primary-50 rounded-lg p-4 mt-4">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal:</span>
+                        <span>${pricing.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tax (8.875%):</span>
+                        <span>${pricing.tax.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-primary-200">
+                        <span className="font-medium">
+                          {serviceType === 'wash_fold' ? 'Estimated Total:' : 'Estimated Minimum:'}
+                        </span>
+                        <span className="text-2xl font-bold text-primary-600">
+                          ${pricing.total.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-2">
+                      {serviceType === 'wash_fold' 
+                        ? 'Final price based on actual weight'
+                        : 'Final price confirmed after inspection'}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Estimate Panel */}
-            {address && <EstimatePanel estimate={estimate} isLoading={isEstimating} serviceType={serviceType} />}
-
             {/* Schedule */}
-            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">📅 Schedule Pickup</h2>
-
-              {!address ? (
-                // Empty state when no address is entered
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-3" role="img" aria-label="Location pin">📍</div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Enter your address first
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    We check real-time availability for your specific area. 
-                    Please enter your service address above to view available time slots.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const addressSection = document.getElementById('address-section');
-                      if (addressSection) {
-                        addressSection.scrollIntoView({ 
-                          behavior: 'smooth', 
-                          block: 'start' 
-                        });
-                        // Focus on address input after scroll
-                        setTimeout(() => {
-                          const addressInput = addressSection.querySelector('input[type="text"]') as HTMLInputElement;
-                          if (addressInput) {
-                            addressInput.focus();
-                          }
-                        }, 600);
-                      }
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pickup Date
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => {
+                      setDate(e.target.value)
+                      setSelectedSlot(null)
                     }}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-2 py-1"
-                    aria-label="Scroll to and focus on address section"
-                  >
-                    ↑ Go to address section
-                  </button>
+                    min={new Date().toISOString().split('T')[0]}
+                    className="input-field"
+                    required
+                  />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pickup Date</label>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => {
-                        setDate(e.target.value);
-                        setSelectedSlot(null);
-                      }}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                      required
-                    />
-                  </div>
 
-                  {date && (
+                {date && address && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Time Slots</label>
-                    <p className="text-xs text-gray-600 mb-3">We'll text you 15 min before arrival.</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Available Time Slots
+                    </label>
                     {loading ? (
                       <p className="text-gray-500">Loading slots...</p>
                     ) : availableSlots.length === 0 ? (
                       <p className="text-red-600">No slots available. Please select a different date.</p>
                     ) : (
                       <div className="space-y-2">
-                        {(slotsExpanded ? availableSlots : availableSlots.slice(0, 6)).map((slot) => {
-                          const isSelected = selectedSlot?.slot_start === slot.slot_start;
-                          const isFull = slot.available_units === 0;
-
-                          return (
-                            <label
-                              key={`${slot.partner_id}-${slot.slot_start}`}
-                              className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
-                                isSelected
-                                  ? 'border-blue-600 bg-blue-50'
-                                  : isFull
-                                  ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                                  : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                              }`}
-                            >
-                              <div className="flex items-center">
-                                <input
-                                  type="radio"
-                                  name="slot"
-                                  checked={isSelected}
-                                  onChange={() => !isFull && setSelectedSlot(slot)}
-                                  disabled={isFull}
-                                  className="mr-3"
-                                />
-                                <div className={`font-medium ${isFull ? 'line-through text-gray-400' : ''}`}>
+                        {availableSlots.map(slot => (
+                          <label
+                            key={`${slot.partner_id}-${slot.slot_start}`}
+                            className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                              selectedSlot?.slot_start === slot.slot_start
+                                ? 'border-primary-600 bg-primary-50'
+                                : ''
+                            }`}
+                          >
+                            <div className="flex items-center">
+                              <input
+                                type="radio"
+                                name="slot"
+                                checked={selectedSlot?.slot_start === slot.slot_start}
+                                onChange={() => setSelectedSlot(slot)}
+                                className="mr-3"
+                              />
+                              <div>
+                                <div className="font-medium">
                                   {new Date(slot.slot_start).toLocaleTimeString('en-US', {
                                     hour: 'numeric',
                                     minute: '2-digit',
-                                    hour12: true,
+                                    hour12: true
                                   })}{' '}
                                   -{' '}
                                   {new Date(slot.slot_end).toLocaleTimeString('en-US', {
                                     hour: 'numeric',
                                     minute: '2-digit',
-                                    hour12: true,
+                                    hour12: true
                                   })}
                                 </div>
+                                <div className="text-sm text-gray-600">{slot.partner_name}</div>
                               </div>
-                              <span
-                                className={`text-xs px-2 py-1 rounded ${
-                                  isFull
-                                    ? 'bg-red-100 text-red-700'
-                                    : slot.available_units < 5
-                                    ? 'bg-orange-100 text-orange-700'
-                                    : 'bg-green-100 text-green-700'
-                                }`}
-                              >
-                                {isFull ? 'Full' : slot.available_units < 5 ? `Only ${slot.available_units} left` : `${slot.available_units} available`}
-                              </span>
-                            </label>
-                          );
-                        })}
-                        {availableSlots.length > 6 && !slotsExpanded && (
-                          <button
-                            type="button"
-                            onClick={() => setSlotsExpanded(true)}
-                            className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline"
-                          >
-                            Show all {availableSlots.length} slots
-                          </button>
-                        )}
+                            </div>
+                            <span className="text-sm text-gray-500">
+                              {slot.available_units} available
+                            </span>
+                          </label>
+                        ))}
                       </div>
                     )}
                   </div>
                 )}
               </div>
-            )}
             </div>
 
-            {/* Delivery Window */}
-            {selectedSlot && (
-              <div className="ui-dense bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">🚚 Delivery Window</h2>
-
-                <div className="space-y-4">
-                  {useDefaultDelivery && selectedDeliverySlot && (
-                    <div className="relative bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="absolute left-0 top-0 h-full w-1 rounded-l-lg bg-green-500" aria-hidden="true" />
-                      <div className="flex items-start gap-3 pl-2">
-                        <span className="text-2xl" aria-hidden="true">🚚</span>
-                        <div>
-                          <p className="font-semibold text-green-900">
-                            Delivery: {new Date(selectedDeliverySlot.slot_start).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </p>
-                          <p className="text-sm text-green-700">
-                            {new Date(selectedDeliverySlot.slot_start).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}{' '}
-                            -{' '}
-                            {new Date(selectedDeliverySlot.slot_end).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}{' '}
-                            (48 hours after pickup)
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={!useDefaultDelivery}
-                      onChange={(e) => {
-                        setUseDefaultDelivery(!e.target.checked);
-                        if (e.target.checked) {
-                          setSelectedDeliverySlot(null);
-                        }
-                      }}
-                      className="mr-3"
-                    />
-                    <span className="text-sm text-gray-700">Choose a different delivery time</span>
-                  </label>
-
-                  {!useDefaultDelivery && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Date</label>
-                        <input
-                          type="date"
-                          value={deliveryDate}
-                          onChange={(e) => {
-                            setDeliveryDate(e.target.value);
-                            setSelectedDeliverySlot(null);
-                          }}
-                          min={new Date(new Date(selectedSlot.slot_start).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                        />
-                      </div>
-
-                      {deliveryDate && availableDeliverySlots.length > 0 && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Available Delivery Slots</label>
-                          <div className="space-y-2">
-                            {availableDeliverySlots.map((slot) => (
-                              <label
-                                key={`${slot.partner_id}-${slot.slot_start}`}
-                                className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                                  selectedDeliverySlot?.slot_start === slot.slot_start ? 'border-blue-600 bg-blue-50' : ''
-                                }`}
-                              >
-                                <div className="flex items-center">
-                                  <input
-                                    type="radio"
-                                    name="deliverySlot"
-                                    checked={selectedDeliverySlot?.slot_start === slot.slot_start}
-                                    onChange={() => setSelectedDeliverySlot(slot)}
-                                    className="mr-3"
-                                  />
-                                  <div className="font-medium">
-                                    {new Date(slot.slot_start).toLocaleTimeString('en-US', {
-                                      hour: 'numeric',
-                                      minute: '2-digit',
-                                      hour12: true,
-                                    })}{' '}
-                                    -{' '}
-                                    {new Date(slot.slot_end).toLocaleTimeString('en-US', {
-                                      hour: 'numeric',
-                                      minute: '2-digit',
-                                      hour12: true,
-                                    })}
-                                  </div>
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
+            {/* Payment Method Collection - Only if Setup Intent enabled */}
+            {isSetupIntentFlow && address && selectedSlot && pricing.total > 0 && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">💳 Payment Method</h2>
+                
+                <Elements stripe={stripePromise}>
+                  <StripePaymentCollector
+                    estimatedAmountCents={Math.round(pricing.total * 100)}
+                    onPaymentMethodReady={setPaymentMethodId}
+                    onError={setPaymentError}
+                    userId={user?.id || ''}
+                  />
+                </Elements>
+                
+                {paymentError && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700">{paymentError}</p>
+                  </div>
+                )}
+                
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    💡 <strong>$0.00 charged now.</strong> Your card is securely saved. You'll be charged the exact amount after we complete your laundry.
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* Contact */}
-            <div className="ui-dense bg-white rounded-lg shadow-md p-6">
+            {/* Contact & Notes */}
+            <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact Information</h2>
-
+              
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number
+                  </label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => {
-                      const formatted = formatPhone(e.target.value);
-                      setPhone(formatted);
-                      updatePersistedPhone(e.target.value);
+                      const formatted = formatPhone(e.target.value)
+                      setPhone(formatted)
+                      updatePersistedPhone(e.target.value)
                     }}
                     placeholder="(555) 123-4567"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                    className="input-field"
                     required
                   />
                   <div className="flex items-center justify-between mt-2">
@@ -794,9 +805,9 @@ function LaundryBookingForm() {
                     <button
                       type="button"
                       onClick={() => {
-                        clearAll();
-                        setPhone('');
-                        setAddressLine2('');
+                        clearAll()
+                        setPhone('')
+                        setAddressLine2('')
                       }}
                       className="text-xs text-blue-600 hover:text-blue-700 underline"
                     >
@@ -805,18 +816,18 @@ function LaundryBookingForm() {
                   </div>
                 </div>
 
-                {serviceType !== 'mixed' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pickup Notes (Optional)</label>
-                    <textarea
-                      value={specialInstructions}
-                      onChange={(e) => setSpecialInstructions(e.target.value)}
-                      placeholder="e.g., Doorman pickup, leave with concierge..."
-                      rows={3}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Special Instructions (Optional)
+                  </label>
+                  <textarea
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    placeholder="e.g., Stain treatment preferences, access instructions..."
+                    rows={3}
+                    className="input-field"
+                  />
+                </div>
               </div>
             </div>
 
@@ -827,33 +838,32 @@ function LaundryBookingForm() {
                 disabled={
                   !persistedLoaded || 
                   loading || 
+                  submitting ||
                   !address || 
                   !isAddressValid || 
-                  !selectedSlot || 
-                  !phone?.trim() || 
+                  !selectedSlot ||
+                  !phone?.trim() ||
                   phone.replace(/\D/g, '').length < 10 ||
-                  (serviceType === 'washFold' && !weightTier)
+                  (isSetupIntentFlow && !paymentMethodId)
                 }
-                className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-disabled={loading}
+                className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Scheduling…' : 'Schedule Pickup'}
               </button>
-              <div aria-live="polite" aria-atomic="true" className="sr-only">
-                {submitting && 'Processing your booking request'}
-              </div>
+              
+              {/* Payment messaging */}
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900 font-medium">💰 Pay After Pickup</p>
+                <p className="text-sm text-blue-900 font-medium">
+                  {isSetupIntentFlow ? '💳 Secure Booking' : '💰 Pay After Service'}
+                </p>
                 <p className="text-xs text-blue-700 mt-1">
-                  {serviceType === 'dryClean'
-                    ? "No payment required now. We'll send you a quote after inspection."
-                    : serviceType === 'mixed'
-                    ? "No payment required now. We'll send a quote for all items after pickup."
-                    : "No payment required now. We'll weigh your items after pickup and send you a quote to approve."}
+                  {isSetupIntentFlow
+                    ? "Your card is securely saved. You'll be charged $0.00 now and the exact amount after we complete your laundry."
+                    : "No payment required now. We'll send you the final invoice after completing your laundry."}
                 </p>
               </div>
             </div>
-
+            
             {/* Accessibility: Prefill announcement */}
             {prefillMsg && (
               <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
@@ -861,47 +871,44 @@ function LaundryBookingForm() {
               </div>
             )}
           </form>
+
+          {/* Payment Modal */}
+          {createdOrderId && (
+            <PaymentModal
+              isOpen={showPaymentModal}
+              onClose={() => setShowPaymentModal(false)}
+              orderId={createdOrderId}
+              amount={Math.round(pricing.total * 100)}
+              onSuccess={handlePaymentSuccess}
+            />
+          )}
         </div>
       </main>
 
-      {toast && <Toast message={toast.message} type={toast.type} isVisible={!!toast} onClose={() => setToast(null)} />}
-      
-      <StickyCTA
-        label={submitting ? 'Scheduling…' : 'Schedule Pickup'}
-        onClick={() => {
-          const form = document.querySelector('form');
-          if (form) {
-            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-          }
-        }}
-        disabled={
-          loading || 
-          !address || 
-          !isAddressValid || 
-          !selectedSlot || 
-          !phone?.trim() || 
-          phone.replace(/\D/g, '').length < 10 ||
-          (serviceType === 'washFold' && !weightTier)
-        }
-        sublabel="Pay After Pickup"
-      />
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={!!toast}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
-  );
+  )
 }
 
 export default function LaundryBookingPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
-      }
-    >
+      </div>
+    }>
       <LaundryBookingForm />
     </Suspense>
-  );
+  )
 }

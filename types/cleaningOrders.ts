@@ -22,7 +22,8 @@ export type LaundryStatus =
   | 'out_for_delivery'
   | 'delivered'
   | 'completed'
-  | 'canceled';
+  | 'canceled'
+  | 'payment_failed';  // Payment authorization failed
 
 /**
  * Cleaning-specific statuses (pay-to-book workflow)

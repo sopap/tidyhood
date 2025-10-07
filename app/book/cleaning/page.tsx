@@ -14,6 +14,13 @@ import EstimateBadge from '@/components/cleaning/EstimateBadge'
 import FrequencySelector from '@/components/cleaning/FrequencySelector'
 import { CleaningType, CleaningAddonKey, Frequency } from '@/lib/types'
 import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
+import { Elements } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+import { StripePaymentCollector } from '@/components/booking/StripePaymentCollector'
+import { isSetupIntentEnabled } from '@/lib/feature-flags'
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface Address {
   line1: string
@@ -81,9 +88,15 @@ function CleaningBookingForm() {
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null)
   
-  // Payment modal state
+  // Payment modal state (old flow)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
+  
+  // Setup Intent state (new flow)
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [isSetupIntentFlow, setIsSetupIntentFlow] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Hydrate form from persisted data on mount
   useEffect(() => {
@@ -108,6 +121,37 @@ function CleaningBookingForm() {
     }
   }, [persistedLoaded, persistedPhone, persistedAddress, persistedHomeSize])
 
+  // Check feature flag for Setup Intent
+  useEffect(() => {
+    const checkFeatureFlag = async () => {
+      const enabled = await isSetupIntentEnabled()
+      setIsSetupIntentFlow(enabled)
+    }
+    checkFeatureFlag()
+  }, [])
+  
+  // Handle 3DS redirect return
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const setupIntentClientSecret = urlParams.get('setup_intent_client_secret')
+    const redirectStatus = urlParams.get('redirect_status')
+    
+    if (setupIntentClientSecret) {
+      if (redirectStatus === 'succeeded') {
+        setToast({
+          message: 'Payment method verified successfully! Completing your booking...',
+          type: 'success'
+        })
+        // Order should already be created by saga
+      } else if (redirectStatus === 'failed') {
+        setToast({
+          message: 'Payment verification failed. Please try again.',
+          type: 'error'
+        })
+      }
+    }
+  }, [])
+  
   // Load last order for smart defaults
   useEffect(() => {
     const loadLastOrder = async () => {
@@ -236,85 +280,174 @@ function CleaningBookingForm() {
       setToast({ message: 'Please complete all required fields', type: 'warning' })
       return
     }
+    
+    // If Setup Intent is enabled, require payment method
+    if (isSetupIntentFlow && !paymentMethodId) {
+      setToast({ message: 'Please provide a payment method', type: 'warning' })
+      return
+    }
 
     try {
       setLoading(true)
-      
-      // Step 1: Create subscription if recurring
-      let subscriptionId: string | undefined
-      if (frequency !== 'oneTime') {
-        const subResponse = await fetch('/api/recurring/plan', {
+      setSubmitting(true)
+
+      let orderId: string
+
+      if (isSetupIntentFlow && paymentMethodId) {
+        // NEW FLOW: Use Setup Intent saga
+        
+        // Step 1: Create subscription if recurring
+        let subscriptionId: string | undefined
+        if (frequency !== 'oneTime') {
+          const subResponse = await fetch('/api/recurring/plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,
+              service_type: 'CLEANING',
+              frequency,
+              day_of_week: new Date(selectedSlot.slot_start).getDay(),
+              time_window: new Date(selectedSlot.slot_start).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                hour12: true
+              }).replace(' ', '–') + new Date(selectedSlot.slot_end).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                hour12: true
+              }),
+              default_addons: addons,
+              first_visit_deep: firstVisitDeep,
+              next_date: null,
+            })
+          })
+
+          if (subResponse.ok) {
+            const { plan } = await subResponse.json()
+            subscriptionId = plan.id
+          }
+        }
+        
+        // Step 2: Call payment setup API
+        const setupResponse = await fetch('/api/payment/setup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            user_id: user.id,
             service_type: 'CLEANING',
-            frequency,
-            day_of_week: new Date(selectedSlot.slot_start).getDay(),
-            time_window: new Date(selectedSlot.slot_start).toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              hour12: true
-            }).replace(' ', '–') + new Date(selectedSlot.slot_end).toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              hour12: true
-            }),
-            default_addons: addons,
-            first_visit_deep: firstVisitDeep,
-            next_date: null, // Will be set after first visit completes
+            service_category: 'standard',
+            estimated_amount_cents: Math.round(pricing.total * 100),
+            payment_method_id: paymentMethodId,
+            slot: {
+              partner_id: selectedSlot.partner_id,
+              slot_start: selectedSlot.slot_start,
+              slot_end: selectedSlot.slot_end,
+            },
+            address: {
+              line1: address.line1,
+              line2: addressLine2 || undefined,
+              city: address.city,
+              zip: address.zip,
+              notes: specialInstructions || undefined,
+            },
+            phone: phone,
+            details: {
+              bedrooms,
+              bathrooms,
+              cleaningType,
+              addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
+              frequency,
+              firstVisitDeep,
+              subscription_id: subscriptionId
+            },
+            subscription_id: subscriptionId
           })
         })
 
-        if (subResponse.ok) {
-          const { plan } = await subResponse.json()
-          subscriptionId = plan.id
+        if (!setupResponse.ok) {
+          const error = await setupResponse.json()
+          throw new Error(error.error || 'Failed to setup payment')
         }
-      }
 
-      // Step 2: Create order
-      const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
+        const setupResult = await setupResponse.json()
+        orderId = setupResult.order_id
+      } else {
+        // OLD FLOW: Deferred payment (existing code)
+        
+        // Step 1: Create subscription if recurring
+        let subscriptionId: string | undefined
+        if (frequency !== 'oneTime') {
+          const subResponse = await fetch('/api/recurring/plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,
+              service_type: 'CLEANING',
+              frequency,
+              day_of_week: new Date(selectedSlot.slot_start).getDay(),
+              time_window: new Date(selectedSlot.slot_start).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                hour12: true
+              }).replace(' ', '–') + new Date(selectedSlot.slot_end).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                hour12: true
+              }),
+              default_addons: addons,
+              first_visit_deep: firstVisitDeep,
+              next_date: null,
+            })
+          })
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKey
-        },
-        body: JSON.stringify({
-          service_type: 'CLEANING',
-          slot: {
-            partner_id: selectedSlot.partner_id,
-            slot_start: selectedSlot.slot_start,
-            slot_end: selectedSlot.slot_end
+          if (subResponse.ok) {
+            const { plan } = await subResponse.json()
+            subscriptionId = plan.id
+          }
+        }
+
+        // Step 2: Create order
+        const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
+
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idempotencyKey
           },
-          address: {
-            line1: address.line1,
-            line2: addressLine2 || undefined,
-            city: address.city,
-            zip: address.zip,
-            notes: specialInstructions || undefined
-          },
-          details: {
-            bedrooms,
-            bathrooms,
-            cleaningType,
-            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
-            frequency,
-            firstVisitDeep
-          },
-          subscription_id: subscriptionId
+          body: JSON.stringify({
+            service_type: 'CLEANING',
+            slot: {
+              partner_id: selectedSlot.partner_id,
+              slot_start: selectedSlot.slot_start,
+              slot_end: selectedSlot.slot_end
+            },
+            address: {
+              line1: address.line1,
+              line2: addressLine2 || undefined,
+              city: address.city,
+              zip: address.zip,
+              notes: specialInstructions || undefined
+            },
+            details: {
+              bedrooms,
+              bathrooms,
+              cleaningType,
+              addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
+              frequency,
+              firstVisitDeep
+            },
+            subscription_id: subscriptionId
+          })
         })
-      })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create order')
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to create order')
+        }
+
+        const order = await response.json()
+        orderId = order.id
       }
 
-      const order = await response.json()
+      // Redirect to order page
+      router.push(`/orders/${orderId}`)
       
-      // Show payment modal instead of redirecting
-      setCreatedOrderId(order.id)
-      setShowPaymentModal(true)
     } catch (err: any) {
       console.error('Order creation error:', err)
       setToast({ 
@@ -323,6 +456,7 @@ function CleaningBookingForm() {
       })
     } finally {
       setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -605,6 +739,35 @@ function CleaningBookingForm() {
               </div>
             </div>
 
+            {/* Payment Method Collection - Only if Setup Intent enabled */}
+            {isSetupIntentFlow && address && selectedSlot && pricing.total > 0 && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">💳 Payment Method</h2>
+                
+                <Elements stripe={stripePromise}>
+                  <StripePaymentCollector
+                    estimatedAmountCents={Math.round(pricing.total * 100)}
+                    onPaymentMethodReady={setPaymentMethodId}
+                    onError={setPaymentError}
+                    userId={user?.id || ''}
+                    serviceType="CLEANING"
+                  />
+                </Elements>
+                
+                {paymentError && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700">{paymentError}</p>
+                  </div>
+                )}
+                
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    💡 <strong>$0.00 charged now.</strong> Your card is securely saved. You'll be charged the exact amount after we complete your cleaning.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Contact & Notes */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact Information</h2>
@@ -679,14 +842,33 @@ function CleaningBookingForm() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <button
                 type="submit"
-                disabled={!persistedLoaded || loading || !address || !isAddressValid || !selectedSlot}
+                disabled={
+                  !persistedLoaded || 
+                  loading || 
+                  submitting ||
+                  !address || 
+                  !isAddressValid || 
+                  !selectedSlot ||
+                  !phone?.trim() ||
+                  phone.replace(/\D/g, '').length < 10 ||
+                  (isSetupIntentFlow && !paymentMethodId)
+                }
                 className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Processing...' : `Confirm & Pay $${pricing.total.toFixed(2)}`}
+                {submitting ? 'Scheduling…' : 'Schedule Cleaning'}
               </button>
-              <p className="text-xs text-gray-500 text-center mt-3">
-                You'll be charged after cleaning. Secure payment by Stripe.
-              </p>
+              
+              {/* Payment messaging */}
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900 font-medium">
+                  {isSetupIntentFlow ? '💳 Secure Booking' : '💰 Pay After Service'}
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {isSetupIntentFlow
+                    ? "Your card is securely saved. You'll be charged $0.00 now and the exact amount after we complete your cleaning."
+                    : "No payment required now. We'll send you the final invoice after completing your cleaning."}
+                </p>
+              </div>
             </div>
             {/* Accessibility: Prefill announcement */}
             {prefillMsg && (
