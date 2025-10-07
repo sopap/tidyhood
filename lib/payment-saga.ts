@@ -292,7 +292,7 @@ export class PaymentAuthorizationSaga {
       payment_method_id: confirmed.payment_method as string,
       status: confirmed.status,
       requires_action: confirmed.status === 'requires_action',
-      client_secret: confirmed.status === 'requires_action' ? confirmed.client_secret : undefined,
+      client_secret: confirmed.status === 'requires_action' ? (confirmed.client_secret ?? undefined) : undefined,
       card_validated: false // Will be set by validation step
     };
   }
