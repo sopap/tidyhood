@@ -34,29 +34,53 @@ export async function GET() {
     }
     
     // Fetch payment methods from Stripe
-    const paymentMethods = await executeWithQuota(() =>
-      stripe.paymentMethods.list({
-        customer: profile.stripe_customer_id,
-        type: 'card',
-      })
-    );
-    
-    // Transform to simpler format
-    const methods = paymentMethods.data.map(pm => ({
-      id: pm.id,
-      brand: pm.card?.brand || 'card',
-      last4: pm.card?.last4 || '0000',
-      exp_month: pm.card?.exp_month || 1,
-      exp_year: pm.card?.exp_year || 2024,
-    }));
-    
-    logger.info({
-      event: 'payment_methods_retrieved',
-      user_id: user.id,
-      count: methods.length
-    });
-    
-    return NextResponse.json({ payment_methods: methods });
+    try {
+      const paymentMethods = await executeWithQuota(() =>
+        stripe.paymentMethods.list({
+          customer: profile.stripe_customer_id,
+          type: 'card',
+        })
+      );
+      
+      // Transform to simpler format
+      const methods = paymentMethods.data.map(pm => ({
+        id: pm.id,
+        brand: pm.card?.brand || 'card',
+        last4: pm.card?.last4 || '0000',
+        exp_month: pm.card?.exp_month || 1,
+        exp_year: pm.card?.exp_year || 2024,
+      }));
+      
+      logger.info({
+        event: 'payment_methods_retrieved',
+        user_id: user.id,
+        count: methods.length
+      });
+      
+      return NextResponse.json({ payment_methods: methods });
+    } catch (stripeError: any) {
+      // Handle case where Stripe customer doesn't exist (e.g., deleted or from old test data)
+      if (stripeError.type === 'StripeInvalidRequestError' && stripeError.message?.includes('No such customer')) {
+        logger.warn({
+          event: 'stripe_customer_not_found',
+          user_id: user.id,
+          customer_id: profile.stripe_customer_id,
+          action: 'clearing_invalid_customer_id'
+        });
+        
+        // Clear invalid customer ID from profile
+        await db
+          .from('profiles')
+          .update({ stripe_customer_id: null })
+          .eq('id', user.id);
+        
+        // Return empty list so user can add a new card
+        return NextResponse.json({ payment_methods: [] });
+      }
+      
+      // Re-throw other Stripe errors
+      throw stripeError;
+    }
     
   } catch (error) {
     logger.error({
