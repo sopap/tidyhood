@@ -18,7 +18,7 @@ export default function OrderCard({ order, onOpen, onOrderUpdate }: OrderCardPro
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [canceling, setCanceling] = useState(false);
   
-  const ui = statusToUI(order.status);
+  const ui = statusToUI(order.status, order.service_type);
   const serviceName = order.service_type === 'LAUNDRY' ? 'Laundry' : 'Cleaning';
   const total = order.quote_cents || order.total_cents;
   

@@ -22,7 +22,7 @@ interface CleaningActionsProps {
  * - User role
  * - Business rules (e.g., dispute window)
  * 
- * Mobile: Large tap targets (min 44px), sticky bottom bar for primary action
+ * Mobile: Large tap targets (min 44px), stacked layout
  * Desktop: Inline button group
  */
 export function CleaningActions({
@@ -84,7 +84,6 @@ export function CleaningActions({
           break;
         
         case 'calendar':
-          // Add to calendar (Google Calendar, iCal, etc.)
           const calendarUrl = generateCalendarLink(order);
           window.open(calendarUrl, '_blank');
           break;
@@ -107,45 +106,48 @@ export function CleaningActions({
   
   return (
     <div className={`cleaning-actions ${className}`}>
-      {/* Unified Button Group - Works on both mobile and desktop */}
       <div className="space-y-3">
-        {/* Primary Action - Full Width */}
+        {/* Primary Action - Full Width on Mobile, Prominent on Desktop */}
         <button
           onClick={() => handleAction(primaryAction.type)}
           disabled={isLoading}
           className={`
-            w-full h-12 md:h-auto md:px-6 md:py-3 rounded-xl font-semibold text-white shadow-md
+            w-full px-6 py-3 rounded-lg font-semibold text-white shadow-sm
             ${getPrimaryButtonClass(primaryAction.type)}
-            hover:opacity-90 hover:shadow-lg active:scale-[0.98]
+            hover:opacity-90 hover:shadow active:scale-[0.98]
             disabled:opacity-50 disabled:cursor-not-allowed
-            transition-all duration-200
+            transition-all duration-150
             flex items-center justify-center gap-2
+            min-h-[44px]
           `}
         >
           {getButtonIcon(primaryAction.type)}
           <span>{primaryAction.label}</span>
         </button>
         
-        {/* Secondary Actions - Grid Layout */}
+        {/* Secondary Actions - Responsive Grid */}
         {secondaryActions.length > 0 && (
-          <div className={`grid ${secondaryActions.length === 1 ? 'grid-cols-1' : secondaryActions.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
+          <div className={`
+            grid gap-2
+            ${secondaryActions.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}
+          `}>
             {secondaryActions.map((action) => (
               <button
                 key={action.type}
                 onClick={() => handleAction(action.type)}
                 disabled={isLoading}
                 className={`
-                  h-11 rounded-lg font-medium text-sm shadow-sm
+                  px-4 py-2.5 rounded-lg font-medium text-sm
                   ${getSecondaryButtonClass(action.type)}
-                  hover:bg-gray-50 hover:shadow active:scale-[0.98]
+                  hover:shadow-sm active:scale-[0.98]
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-all duration-200
-                  flex items-center justify-center gap-2
+                  transition-all duration-150
+                  flex items-center justify-center gap-1.5
+                  min-h-[42px]
                 `}
               >
                 {getButtonIcon(action.type)}
-                <span className="hidden sm:inline">{action.label}</span>
-                <span className="sm:hidden">{action.label.split(' ')[0]}</span>
+                <span>{action.label}</span>
               </button>
             ))}
           </div>
@@ -234,16 +236,12 @@ function getAvailableActions(
         break;
       
       default:
-        // Fallback for any unhandled statuses
         actions.push(
           { type: 'contact', label: 'Contact Support' }
         );
         break;
     }
   }
-  
-  // Partner actions are handled in partner portal (StatusUpdater component)
-  // Admin actions are handled in admin panel
   
   return actions;
 }

@@ -7,6 +7,18 @@
     --foreground-rgb: 15, 23, 42; /* text-DEFAULT */
     --background-start-rgb: 247, 247, 249; /* background */
     --background-end-rgb: 247, 247, 249;
+    
+    /* Z-index scale for layering */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-toast: 1060;
+  }
+
+  html {
+    scroll-padding-top: 80px; /* Header height + buffer for anchor links */
   }
 
   body {
@@ -17,29 +29,241 @@
   /* Ensure all interactive elements have visible focus */
   *:focus-visible {
     @apply outline-none ring-2 ring-focus ring-offset-2;
+    border-radius: 4px;
+  }
+  
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
 @layer components {
-  /* Buttons - PRD Spec with responsive touch targets */
+  /* Buttons - Enhanced with gradients, shadows and animations */
   .btn-primary {
-    @apply bg-brand text-white rounded-input font-medium 
-           hover:bg-brand-700 active:bg-brand-800
+    @apply bg-gradient-to-r from-brand to-brand-700 text-white font-semibold rounded-xl shadow-lg
+           hover:shadow-xl hover:from-brand-600 hover:to-brand-800
            disabled:opacity-50 disabled:cursor-not-allowed 
-           transition-colors duration-150
-           focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2;
+           transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
+           focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2;
     /* Ensure minimum 44px touch target */
     @apply px-4 py-3 min-h-[44px] sm:px-5 sm:py-3 md:px-6 md:py-3;
   }
 
   .btn-secondary {
-    @apply bg-white text-brand border-2 border-brand rounded-input font-medium 
-           hover:bg-brand-50 active:bg-brand-100
+    @apply bg-white text-brand border-2 border-brand font-semibold rounded-xl shadow-md
+           hover:shadow-lg hover:bg-brand-50 hover:border-brand-600
            disabled:opacity-50 disabled:cursor-not-allowed 
-           transition-colors duration-150
-           focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2;
+           transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
+           focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2;
     /* Ensure minimum 44px touch target */
     @apply px-4 py-3 min-h-[44px] sm:px-5 sm:py-3 md:px-6 md:py-3;
+  }
+
+  /* Enhanced destructive button */
+  .btn-destructive {
+    @apply bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl shadow-lg
+           hover:shadow-xl hover:from-red-600 hover:to-red-700
+           disabled:opacity-50 disabled:cursor-not-allowed 
+           transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
+           focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+    @apply px-4 py-3 min-h-[44px] sm:px-5 sm:py-3 md:px-6 md:py-3;
+  }
+
+  /* Outline/ghost button variant */
+  .btn-outline {
+    @apply bg-white text-gray-700 border-2 border-gray-200 font-semibold rounded-xl shadow-md
+           hover:shadow-lg hover:bg-gray-50 hover:border-gray-300
+           disabled:opacity-50 disabled:cursor-not-allowed 
+           transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
+           focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2;
+    @apply px-4 py-3 min-h-[44px] sm:px-5 sm:py-3 md:px-6 md:py-3;
+  }
+
+  /* Design System Utility Classes - Phase 0 Quick Wins */
+  
+  /* Standard Card Components */
+  .card-standard {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  .card-padding {
+    @apply p-4 md:p-6;
+  }
+  
+  .card-padding-compact {
+    @apply p-4 md:p-5;
+  }
+  
+  .card-padding-spacious {
+    @apply p-6 md:p-8;
+  }
+
+  /* Info/Alert Banner Components */
+  .banner-info {
+    @apply bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6;
+  }
+  
+  .banner-success {
+    @apply bg-green-50 border border-green-200 rounded-xl p-4 mb-6;
+  }
+  
+  .banner-warning {
+    @apply bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6;
+  }
+  
+  .banner-error {
+    @apply bg-red-50 border border-red-200 rounded-xl p-4 mb-6;
+  }
+
+  /* Banner Content Styling */
+  .banner-content {
+    @apply flex items-start gap-3;
+  }
+  
+  .banner-icon {
+    @apply text-2xl flex-shrink-0;
+  }
+  
+  .banner-title {
+    @apply font-semibold mb-1;
+  }
+  
+  .banner-title-info {
+    @apply text-blue-900;
+  }
+  
+  .banner-title-success {
+    @apply text-green-900;
+  }
+  
+  .banner-title-warning {
+    @apply text-yellow-900;
+  }
+  
+  .banner-title-error {
+    @apply text-red-900;
+  }
+  
+  .banner-description {
+    @apply text-sm;
+  }
+  
+  .banner-description-info {
+    @apply text-blue-700;
+  }
+  
+  .banner-description-success {
+    @apply text-green-700;
+  }
+  
+  .banner-description-warning {
+    @apply text-yellow-700;
+  }
+  
+  .banner-description-error {
+    @apply text-red-700;
+  }
+
+  /* Status Badge Utilities */
+  .status-badge {
+    @apply inline-flex items-center gap-2 rounded-full font-medium transition-colors;
+  }
+  
+  .status-badge-sm {
+    @apply px-2.5 py-0.5 text-xs;
+  }
+  
+  .status-badge-md {
+    @apply px-3 py-1 text-sm;
+  }
+  
+  .status-badge-lg {
+    @apply px-4 py-2 text-base;
+  }
+  
+  .status-badge-blue {
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
+  
+  .status-badge-green {
+    @apply bg-green-100 text-green-800 border border-green-200;
+  }
+  
+  .status-badge-yellow {
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200;
+  }
+  
+  .status-badge-red {
+    @apply bg-red-100 text-red-800 border border-red-200;
+  }
+  
+  .status-badge-purple {
+    @apply bg-purple-100 text-purple-800 border border-purple-200;
+  }
+  
+  .status-badge-gray {
+    @apply bg-gray-100 text-gray-800 border border-gray-200;
+  }
+
+  /* Price Display Components */
+  .price-display {
+    @apply bg-white rounded-lg border border-gray-200 px-4 py-3 shadow-sm;
+  }
+  
+  .price-amount {
+    @apply text-3xl font-bold text-gray-900;
+  }
+  
+  .price-label {
+    @apply text-sm font-medium text-gray-600;
+  }
+  
+  .price-summary {
+    @apply bg-brand-50 rounded-xl p-4 border border-brand-100;
+  }
+  
+  .price-summary-row {
+    @apply flex justify-between text-sm;
+  }
+  
+  .price-summary-total {
+    @apply flex justify-between items-center pt-2 border-t border-brand-200;
+  }
+  
+  .price-summary-total-amount {
+    @apply text-2xl font-bold text-brand-700;
+  }
+
+  /* Typography Utilities */
+  .heading-page {
+    @apply text-3xl md:text-4xl font-bold text-text mb-4;
+  }
+  
+  .heading-section {
+    @apply text-xl md:text-2xl font-bold text-text mb-4;
+  }
+  
+  .heading-card {
+    @apply text-base md:text-lg font-semibold text-text mb-3;
+  }
+  
+  .text-body {
+    @apply text-base text-text-secondary leading-relaxed;
+  }
+  
+  .text-small {
+    @apply text-sm text-text-tertiary;
+  }
+  
+  .text-micro {
+    @apply text-xs text-text-tertiary;
   }
 
   /* Button size variants */
@@ -64,10 +288,10 @@
     @apply absolute inset-0 m-auto w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin;
   }
 
-  /* Input Fields - PRD Spec: 44px height, 12px radius, 2px focus ring */
+  /* Input Fields - PRD Spec: 48px height (iOS standard), 12px radius, 2px focus ring */
   .input-field {
-    @apply block w-full h-11 rounded-input border border-border 
-           px-4 py-2.5
+    @apply block w-full h-12 rounded-input border border-border 
+           px-4 py-3
            text-text placeholder:text-text-muted
            focus:border-brand focus:ring-2 focus:ring-brand focus:ring-opacity-20 
            disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed

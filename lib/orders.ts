@@ -21,10 +21,10 @@ export interface StatusUIConfig {
 
 /**
  * Maps database status to user-friendly UI label and color tone
- * Uses unified state machine helpers
+ * Uses unified state machine helpers with service-aware labeling
  */
-export function statusToUI(status: OrderStatus): StatusUIConfig {
-  const label = getStatusLabel(status);
+export function statusToUI(status: OrderStatus, serviceType?: string): StatusUIConfig {
+  const label = getStatusLabel(status, serviceType);
   const color = getStatusColor(status);
   
   // Map state machine colors to UI tones

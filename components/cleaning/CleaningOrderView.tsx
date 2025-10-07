@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { CleaningOrder } from '@/types/cleaningOrders';
+import type { CleaningOrder, StatusConfig } from '@/types/cleaningOrders';
 import { FEATURES } from '@/lib/features';
-import { CleaningTimeline } from './CleaningTimeline';
+import { CleaningTimeline } from './CleaningTimelineEnhanced';
 import { CleaningActions } from './CleaningActions';
 import { DisputeModal } from './DisputeModal';
 import { PartnerInfoCard } from './PartnerInfoCard';
@@ -43,8 +43,8 @@ export function CleaningOrderView({
     return null;
   }
   
-  // Use safe status config getter that handles legacy statuses
-  const statusConfig = getCleaningStatusConfig(order.status);
+  // Use dynamic status config that handles pending + partner_id edge case
+  const statusConfig = getDynamicStatusConfig(order);
   
   /**
    * Handle dispute submission
@@ -265,93 +265,96 @@ export function CleaningOrderView({
           <CleaningTimeline order={order} />
         </div>
         
-        {/* Desktop: 2x2 Grid for Info Cards | Mobile: Stacked */}
+        {/* Desktop: 2 columns | Mobile: Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Partner Info Card - Only show if partner assigned */}
           {order.partner_id && (
             <PartnerInfoCard partnerId={order.partner_id} />
           )}
           
-          {/* Service Details - Clean, professional design */}
+          {/* Combined Service Details & Address Card */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">
-              Service Details
-            </h2>
-            
-            {/* Primary Info - Simple inline display */}
-            <div className="text-sm text-gray-700">
-              <span className="font-semibold">{order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} Bedroom${order.order_details.bedrooms !== 1 ? 's' : ''}`}</span>
-              {' · '}
-              <span className="font-semibold">{order.order_details.bathrooms} Bathroom{order.order_details.bathrooms !== 1 ? 's' : ''}</span>
-              {order.order_details.square_feet && (
-                <>
-                  {' · '}
-                  <span className="font-semibold">{order.order_details.square_feet.toLocaleString()} sq ft</span>
-                </>
+            {/* Service Details Section */}
+            <div className="mb-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-3">
+                Service Details
+              </h2>
+              
+              {/* Primary Info */}
+              <div className="text-sm text-gray-700 mb-3">
+                <span className="font-semibold">{order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} Bedroom${order.order_details.bedrooms !== 1 ? 's' : ''}`}</span>
+                {' · '}
+                <span className="font-semibold">{order.order_details.bathrooms} Bathroom{order.order_details.bathrooms !== 1 ? 's' : ''}</span>
+                {order.order_details.square_feet && (
+                  <>
+                    {' · '}
+                    <span className="font-semibold">{order.order_details.square_feet.toLocaleString()} sq ft</span>
+                  </>
+                )}
+              </div>
+              
+              {/* Cleaning Type & Add-ons */}
+              {(order.order_details.deep || (order.order_details.addons && order.order_details.addons.length > 0)) && (
+                <div className="space-y-2">
+                  {order.order_details.deep && (
+                    <div>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                        🌟 Deep Clean
+                      </span>
+                    </div>
+                  )}
+                  
+                  {order.order_details.addons && order.order_details.addons.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2">Extra Services</p>
+                      <div className="flex flex-wrap gap-2">
+                        {order.order_details.addons.map((addon, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                          >
+                            ✓ {addon}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             
-            {/* Cleaning Type & Add-ons */}
-            {(order.order_details.deep || (order.order_details.addons && order.order_details.addons.length > 0)) && (
-              <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
-                {order.order_details.deep && (
-                  <div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border border-purple-200">
-                      🌟 Deep Clean
-                    </span>
+            {/* Service Address Section */}
+            <div className="pt-6 border-t border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900 mb-3">
+                Service Address
+              </h2>
+              <address className="not-italic text-gray-700 space-y-1 text-sm">
+                <p className="font-medium">{order.address_snapshot.line1}</p>
+                {order.address_snapshot.line2 && <p className="text-gray-600">{order.address_snapshot.line2}</p>}
+                <p className="text-gray-600">{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
+                {order.address_snapshot.notes && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 bg-amber-50 rounded-lg p-3">
+                    <p className="text-xs font-medium text-amber-900 mb-1">Access Notes</p>
+                    <p className="text-xs text-amber-800">{order.address_snapshot.notes}</p>
                   </div>
                 )}
-                
-                {order.order_details.addons && order.order_details.addons.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Extra Services</p>
-                    <div className="flex flex-wrap gap-2">
-                      {order.order_details.addons.map((addon, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                        >
-                          ✓ {addon}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+              </address>
+            </div>
           </div>
-          
-          {/* Service Address - Clean, professional design */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">
-              Service Address
-            </h2>
-            <address className="not-italic text-gray-700 space-y-1 text-sm">
-              <p className="font-medium">{order.address_snapshot.line1}</p>
-              {order.address_snapshot.line2 && <p className="text-gray-600">{order.address_snapshot.line2}</p>}
-              <p className="text-gray-600">{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
-              {order.address_snapshot.notes && (
-                <div className="mt-3 pt-3 border-t border-gray-200 bg-amber-50 rounded-lg p-3">
-                  <p className="text-xs font-medium text-amber-900 mb-1">Access Notes</p>
-                  <p className="text-xs text-amber-800">{order.address_snapshot.notes}</p>
-                </div>
-              )}
-            </address>
-          </div>
-          
-          {/* Actions - Clean, professional design */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
-            <h2 className="text-base font-semibold text-gray-900 mb-4">
-              Actions
-            </h2>
-            <CleaningActions
-              order={order}
-              userRole={userRole}
-              onOpenDispute={() => setShowDisputeModal(true)}
-              onRate={handleRate}
-              onContact={handleContact}
-            />
-          </div>
+        </div>
+        
+        {/* Actions Card - Full width */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
+            Actions
+          </h2>
+          <CleaningActions
+            order={order}
+            userRole={userRole}
+            onOpenDispute={() => setShowDisputeModal(true)}
+            onRate={handleRate}
+            onContact={handleContact}
+          />
         </div>
       </div>
       
@@ -383,13 +386,45 @@ function getStatusBadgeClass(color: string): string {
 }
 
 /**
+ * Get dynamic status config based on order state
+ */
+function getDynamicStatusConfig(order: CleaningOrder): StatusConfig {
+  // Handle 'pending' status with partner assigned - this is a common edge case
+  if (order.status === 'pending' && order.partner_id) {
+    return {
+      label: 'Partner Assigned',
+      color: 'green',
+      icon: '✅',
+      description: 'Your cleaner is confirmed and ready',
+    };
+  }
+  
+  // Handle 'pending' status without partner
+  if (order.status === 'pending' && !order.partner_id) {
+    return {
+      label: 'Finding Your Cleaner',
+      color: 'blue',
+      icon: '🔍',
+      description: 'Matching you with the best available cleaner',
+    };
+  }
+  
+  return getCleaningStatusConfig(order.status);
+}
+
+/**
  * Get customer-friendly status description
  */
 function getStatusDescription(order: CleaningOrder): string {
+  // Handle pending status separately to avoid contradictions
+  if (order.status === 'pending') {
+    if (order.partner_id) {
+      return "Your cleaner is confirmed and will arrive during your scheduled time window.";
+    }
+    return "We're finding the perfect cleaner for your appointment. You'll be notified once assigned.";
+  }
+  
   const descriptions: Record<string, string> = {
-    pending: order.partner_id 
-      ? "Your cleaner is confirmed! They'll arrive during your scheduled time window."
-      : "We're assigning your appointment to a professional cleaner.",
     assigned: `Your cleaner is ready and will arrive on ${formatDate(order.slot_start)}.`,
     en_route: "Your cleaner is on the way to your location.",
     on_site: "Your cleaner has arrived and will begin shortly.",

@@ -9,11 +9,11 @@ export function MobileCTABar() {
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-      className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-50 lg:hidden shadow-xl"
+      className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 lg:hidden shadow-xl pb-[env(safe-area-inset-bottom)]"
       role="navigation"
       aria-label="Mobile booking actions"
     >
-      <div className="flex gap-3 max-w-md mx-auto">
+      <div className="flex gap-3 max-w-md mx-auto px-4 pt-4 pb-4">
         <Link
           href="/book/laundry"
           className="flex-1 bg-primary-600 text-white px-4 py-3 rounded-lg font-semibold text-center hover:bg-primary-700 active:bg-primary-800 transition-colors focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2"

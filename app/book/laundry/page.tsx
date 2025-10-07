@@ -8,6 +8,8 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { PaymentModal } from '@/components/PaymentModal'
 import { Toast } from '@/components/Toast'
 import { Header } from '@/components/Header'
+import { PolicyBanner, ServiceInfoBanner, PaymentBanner, DryCleanBanner, RushServiceBanner } from '@/components/ui/InfoBanner'
+import { PriceSummary, EstimateBadge } from '@/components/ui/PriceDisplay'
 import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
@@ -397,30 +399,18 @@ function LaundryBookingForm() {
           </div>
 
           {/* Cancellation Policy Banner */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl flex-shrink-0" aria-hidden="true">📋</span>
-              <div>
-                <h3 className="font-semibold text-blue-900 mb-1">
-                  Flexible Cancellation Policy
-                </h3>
-                <p className="text-sm text-blue-700">
-                  Free cancellation or rescheduling with 24+ hours notice. Changes made within 24 hours incur a 15% service fee.
-                </p>
-              </div>
-            </div>
-          </div>
+          <PolicyBanner />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="card-standard card-padding">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">📍 Pickup Address</h2>
+                <h2 className="heading-section">📍 Pickup Address</h2>
                 {isAddressCollapsed && (
                   <button
                     type="button"
                     onClick={() => setIsAddressCollapsed(false)}
-                    className="text-sm text-primary-600 hover:text-primary-700"
+                    className="text-sm text-brand hover:text-brand-700 transition-colors"
                   >
                     Edit
                   </button>
@@ -428,7 +418,7 @@ function LaundryBookingForm() {
               </div>
 
               {isAddressCollapsed && address ? (
-                <div className="bg-primary-50 rounded-lg p-4">
+                <div className="bg-brand-50 rounded-xl p-4 border border-brand-100">
                   <p className="font-medium">{address.line1}</p>
                   {addressLine2 && <p className="text-sm text-gray-600">{addressLine2}</p>}
                   <p className="text-sm text-gray-600">
@@ -473,8 +463,8 @@ function LaundryBookingForm() {
             </div>
 
             {/* Service Details */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">👕 Service Details</h2>
+            <div className="card-standard card-padding">
+              <h2 className="heading-section">👕 Service Details</h2>
               
               <div className="space-y-4">
                 {/* Service Type Selector */}
@@ -482,13 +472,13 @@ function LaundryBookingForm() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Service Type
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => setServiceType('washFold')}
-                      className={`p-4 border-2 rounded-lg text-center transition-all ${
+                      className={`p-4 border-2 rounded-xl text-center transition-all ${
                         serviceType === 'washFold'
-                          ? 'border-primary-600 bg-primary-50'
+                          ? 'border-brand bg-brand-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -499,9 +489,9 @@ function LaundryBookingForm() {
                     <button
                       type="button"
                       onClick={() => setServiceType('dryClean')}
-                      className={`p-4 border-2 rounded-lg text-center transition-all ${
+                      className={`p-4 border-2 rounded-xl text-center transition-all ${
                         serviceType === 'dryClean'
-                          ? 'border-primary-600 bg-primary-50'
+                          ? 'border-brand bg-brand-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -512,9 +502,9 @@ function LaundryBookingForm() {
                     <button
                       type="button"
                       onClick={() => setServiceType('mixed')}
-                      className={`p-4 border-2 rounded-lg text-center transition-all ${
+                      className={`p-4 border-2 rounded-xl text-center transition-all ${
                         serviceType === 'mixed'
-                          ? 'border-primary-600 bg-primary-50'
+                          ? 'border-brand bg-brand-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -531,13 +521,13 @@ function LaundryBookingForm() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Load Size
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 xs:grid-cols-3 gap-3">
                       <button
                         type="button"
                         onClick={() => setWeightTier('small')}
-                        className={`p-4 border-2 rounded-lg text-center transition-all ${
+                        className={`p-4 border-2 rounded-xl text-center transition-all ${
                           weightTier === 'small'
-                            ? 'border-primary-600 bg-primary-50'
+                            ? 'border-brand bg-brand-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
@@ -548,9 +538,9 @@ function LaundryBookingForm() {
                       <button
                         type="button"
                         onClick={() => setWeightTier('medium')}
-                        className={`p-4 border-2 rounded-lg text-center transition-all ${
+                        className={`p-4 border-2 rounded-xl text-center transition-all ${
                           weightTier === 'medium'
-                            ? 'border-primary-600 bg-primary-50'
+                            ? 'border-brand bg-brand-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
@@ -561,9 +551,9 @@ function LaundryBookingForm() {
                       <button
                         type="button"
                         onClick={() => setWeightTier('large')}
-                        className={`p-4 border-2 rounded-lg text-center transition-all ${
+                        className={`p-4 border-2 rounded-xl text-center transition-all ${
                           weightTier === 'large'
-                            ? 'border-primary-600 bg-primary-50'
+                            ? 'border-brand bg-brand-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                       >
@@ -577,35 +567,11 @@ function LaundryBookingForm() {
 
                 {/* Dry Clean Notice */}
                 {(serviceType === 'dryClean' || serviceType === 'mixed') && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <span className="text-xl flex-shrink-0">ℹ️</span>
-                      <div>
-                        <p className="text-sm text-yellow-900 font-medium">
-                          Dry Clean Pricing
-                        </p>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          Final price will be quoted after inspecting your items. You'll receive the exact quote before we proceed.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <DryCleanBanner />
                 )}
 
                 {/* Service Information Banner */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl flex-shrink-0">✓</span>
-                    <div>
-                      <p className="text-sm text-green-900 font-medium">
-                        Free Pickup & Delivery Included
-                      </p>
-                      <p className="text-xs text-green-700 mt-1">
-                        We pick up your laundry and deliver it back to you at no extra charge. Standard turnaround: 2-3 business days.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <ServiceInfoBanner service="laundry" />
 
                 {/* Rush Service Option */}
                 <div>
@@ -614,7 +580,7 @@ function LaundryBookingForm() {
                       type="checkbox"
                       checked={rushService}
                       onChange={(e) => setRushService(e.target.checked)}
-                      className="w-5 h-5"
+                      className="w-6 h-6"
                     />
                     <div className="flex-1">
                       <div className="font-medium">⚡ 24-Hour Rush Service (+25%)</div>
@@ -627,38 +593,25 @@ function LaundryBookingForm() {
 
                 {/* Live Pricing */}
                 {address && pricing.total > 0 && (
-                  <div className="bg-primary-50 rounded-lg p-4 mt-4">
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>${pricing.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Tax (8.875%):</span>
-                        <span>${pricing.tax.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-primary-200">
-                        <span className="font-medium">
-                          {serviceType === 'washFold' ? 'Estimated Total:' : 'Estimated Minimum:'}
-                        </span>
-                        <span className="text-2xl font-bold text-primary-600">
-                          ${pricing.total.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-600 mt-2">
-                      {serviceType === 'washFold' 
-                        ? 'Final price based on actual weight'
-                        : 'Final price confirmed after inspection'}
-                    </div>
-                  </div>
+                  <PriceSummary
+                    rows={[
+                      { label: 'Subtotal', amount: pricing.subtotal },
+                      { label: 'Tax (8.875%)', amount: pricing.tax }
+                    ]}
+                    total={pricing.total}
+                    totalLabel={serviceType === 'washFold' ? 'Estimated Total' : 'Estimated Minimum'}
+                    note={serviceType === 'washFold' 
+                      ? 'Final price based on actual weight'
+                      : 'Final price confirmed after inspection'}
+                    className="mt-4"
+                  />
                 )}
               </div>
             </div>
 
             {/* Schedule */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">📅 Schedule Pickup</h2>
+            <div className="card-standard card-padding">
+              <h2 className="heading-section">📅 Schedule Pickup</h2>
               
               <div className="space-y-4">
                 <div>
@@ -737,8 +690,8 @@ function LaundryBookingForm() {
 
             {/* Payment Method Collection - Only if Setup Intent enabled */}
             {isSetupIntentFlow && address && selectedSlot && pricing.total > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">💳 Payment Method</h2>
+              <div className="card-standard card-padding">
+                <h2 className="heading-section">💳 Payment Method</h2>
                 
                 <Elements stripe={stripePromise}>
                   <StripePaymentCollector
@@ -764,8 +717,8 @@ function LaundryBookingForm() {
             )}
 
             {/* Contact & Notes */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact Information</h2>
+            <div className="card-standard card-padding">
+              <h2 className="heading-section">✉️ Contact Information</h2>
               
               <div className="space-y-4">
                 <div>
@@ -832,7 +785,7 @@ function LaundryBookingForm() {
             </div>
 
             {/* Submit */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="card-standard card-padding">
               <button
                 type="submit"
                 disabled={
@@ -852,16 +805,7 @@ function LaundryBookingForm() {
               </button>
               
               {/* Payment messaging */}
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900 font-medium">
-                  {isSetupIntentFlow ? '💳 Secure Booking' : '💰 Pay After Service'}
-                </p>
-                <p className="text-xs text-blue-700 mt-1">
-                  {isSetupIntentFlow
-                    ? "Your card is securely saved. You'll be charged $0.00 now and the exact amount after we complete your laundry."
-                    : "No payment required now. We'll send you the final invoice after completing your laundry."}
-                </p>
-              </div>
+              <PaymentBanner isSetupIntent={isSetupIntentFlow} className="mt-4" />
             </div>
             
             {/* Accessibility: Prefill announcement */}

@@ -11,8 +11,8 @@ export function Header() {
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    // Smart navigation: logged in users go to orders, others to home
-    router.push(user ? '/orders' : '/')
+    // Logo always takes users to landing page
+    router.push('/')
   }
 
   const handleLogout = async () => {
@@ -24,7 +24,7 @@ export function Header() {
     <header className="container mx-auto px-4 py-3 md:py-4">
       <div className="flex items-center justify-between">
         <Link 
-          href={user ? '/orders' : '/'}
+          href="/"
           onClick={handleLogoClick}
           className="flex items-center hover:opacity-80 transition-opacity"
         >
@@ -34,10 +34,10 @@ export function Header() {
             width={420}
             height={105}
             priority
-            className="h-[58px] md:h-[67px] lg:h-[77px] w-auto"
+            className="h-12 md:h-[67px] lg:h-[77px] w-auto"
           />
         </Link>
-        <nav className="space-x-4">
+        <nav className="space-x-6">
           {user ? (
             // Logged in navigation
             <>

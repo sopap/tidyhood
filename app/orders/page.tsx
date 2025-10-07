@@ -206,10 +206,10 @@ function OrdersContent() {
           ) : (
             <>
               <Section
-                title="Upcoming Pickups"
+                title="Upcoming Services"
                 orders={grouped.upcoming}
                 initialCount={3}
-                emptyHint="No upcoming pickups scheduled."
+                emptyHint="No upcoming services scheduled."
                 onOpen={handleOpenOrder}
               />
               

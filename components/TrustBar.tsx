@@ -16,8 +16,8 @@ export function TrustBar() {
       <div className="flex items-center gap-2 text-sm md:text-base text-text-secondary">
         <span className="text-lg" role="img" aria-label="Star rating">⭐</span>
         <span className="font-semibold">4.9</span>
-        <span className="hidden sm:inline">from Harlem residents</span>
-        <span className="sm:hidden">from customers</span>
+        <span className="hidden sm:inline">Harlem Resident Rating</span>
+        <span className="sm:hidden">Customer Rating</span>
       </div>
       <span className="text-gray-400">•</span>
       <div className="text-sm md:text-base text-text-secondary">

@@ -31,6 +31,13 @@ export type Action =
   | 'rate'
   | 'rebook';
 
+interface TransitionRule {
+  from: OrderStatus;
+  to: OrderStatus;
+  service?: ServiceType;
+  condition?: (order: any) => boolean;
+}
+
 /**
  * Terminal statuses where no further transitions are possible
  */
@@ -51,7 +58,53 @@ export const CANCELLABLE_STATUSES: OrderStatus[] = [
 ];
 
 /**
- * Status display labels for UI
+ * Service-specific status labels for better UX
+ */
+export const SERVICE_AWARE_STATUS_LABELS: Record<string, Record<OrderStatus, string>> = {
+  LAUNDRY: {
+    pending: 'Confirmed',
+    pending_pickup: 'Pending Pickup',
+    at_facility: 'At Facility',
+    awaiting_payment: 'Awaiting Payment',
+    paid_processing: 'Processing',
+    in_progress: 'In Progress',
+    out_for_delivery: 'Out for Delivery',
+    delivered: 'Delivered',
+    completed: 'Completed',
+    canceled: 'Canceled',
+    payment_failed: 'Payment Failed',
+    assigned: 'Assigned',
+    en_route: 'En Route',
+    on_site: 'On Site',
+    disputed: 'Disputed',
+    refunded: 'Refunded',
+    cleaner_no_show: 'No-Show',
+    customer_no_show: 'Customer No-Show',
+  },
+  CLEANING: {
+    pending: 'Confirmed',
+    pending_pickup: 'Scheduled',  // Better for cleaning - no pickup involved
+    at_facility: 'Confirmed',
+    awaiting_payment: 'Awaiting Payment',
+    paid_processing: 'Confirmed',
+    in_progress: 'In Progress',
+    out_for_delivery: 'Completed',
+    delivered: 'Completed',
+    completed: 'Completed',
+    canceled: 'Canceled',
+    payment_failed: 'Payment Failed',
+    assigned: 'Cleaner Assigned',
+    en_route: 'Cleaner En Route',
+    on_site: 'Cleaner On Site',
+    disputed: 'Disputed',
+    refunded: 'Refunded',
+    cleaner_no_show: 'Cleaner No-Show',
+    customer_no_show: 'Customer No-Show',
+  }
+};
+
+/**
+ * Fallback status labels for backward compatibility
  */
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   // Laundry statuses
@@ -102,13 +155,6 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
   customer_no_show: 'orange',
 };
 
-interface TransitionRule {
-  from: OrderStatus;
-  to: OrderStatus;
-  service?: ServiceType;
-  condition?: (order: any) => boolean;
-}
-
 /**
  * Valid state transitions
  */
@@ -121,7 +167,7 @@ const TRANSITIONS: TransitionRule[] = [
     from: 'awaiting_payment', 
     to: 'paid_processing', 
     service: 'LAUNDRY',
-    condition: (order) => !!order.paid_at
+    condition: (order: any) => !!order.paid_at
   },
   { from: 'paid_processing', to: 'in_progress', service: 'LAUNDRY' },
   { from: 'in_progress', to: 'out_for_delivery', service: 'LAUNDRY' },
@@ -147,28 +193,28 @@ const TRANSITIONS: TransitionRule[] = [
     from: 'pending_pickup', 
     to: 'canceled',
     service: 'LAUNDRY',
-    condition: (order) => !!order.no_show_charged
+    condition: (order: any) => !!order.no_show_charged
   },
   // Auto-charge: at_facility → paid_processing (bypasses awaiting_payment)
   { 
     from: 'at_facility', 
     to: 'paid_processing',
     service: 'LAUNDRY',
-    condition: (order) => !!order.auth_payment_intent_id && !!order.paid_at
+    condition: (order: any) => !!order.auth_payment_intent_id && !!order.paid_at
   },
   // Payment failed handling
   { 
     from: 'pending_pickup', 
     to: 'payment_failed',
     service: 'LAUNDRY',
-    condition: (order) => !!order.payment_error
+    condition: (order: any) => !!order.payment_error
   },
   // Recovery from payment failed
   { 
     from: 'payment_failed', 
     to: 'pending_pickup',
     service: 'LAUNDRY',
-    condition: (order) => !!order.auth_payment_intent_id && !order.payment_error
+    condition: (order: any) => !!order.auth_payment_intent_id && !order.payment_error
   },
 ];
 
@@ -251,9 +297,12 @@ export function isCancellable(status: OrderStatus): boolean {
 }
 
 /**
- * Get status display label
+ * Get status display label (service-aware)
  */
-export function getStatusLabel(status: OrderStatus): string {
+export function getStatusLabel(status: OrderStatus, serviceType?: string): string {
+  if (serviceType && SERVICE_AWARE_STATUS_LABELS[serviceType]) {
+    return SERVICE_AWARE_STATUS_LABELS[serviceType][status] || status;
+  }
   return STATUS_LABELS[status] || status;
 }
 

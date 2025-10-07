@@ -127,7 +127,7 @@ export default function OrderDetailPage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Link href="/orders" className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+            <Link href="/orders" className="inline-block bg-brand text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition-colors">
               Back to Orders
             </Link>
           </div>
@@ -235,8 +235,8 @@ export default function OrderDetailPage() {
       <Header />
 
       {/* Sticky back button (mobile only) - Enhanced with gradient */}
-      <div className="sticky top-0 z-30 border-b border-gray-200 bg-gradient-to-r from-white to-blue-50 px-4 py-3 shadow-sm backdrop-blur md:hidden">
-        <Link href="/orders" className="text-sm text-blue-700 inline-flex items-center font-medium hover:text-blue-800 transition-colors">
+      <div className="sticky top-0 z-30 border-b border-gray-200 bg-gradient-to-r from-white to-brand-50 px-4 py-3 shadow-sm backdrop-blur md:hidden">
+        <Link href="/orders" className="text-sm text-brand inline-flex items-center font-medium hover:text-brand-700 transition-colors">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -249,7 +249,7 @@ export default function OrderDetailPage() {
           {/* Back button (desktop) */}
           <Link 
             href="/orders" 
-            className="hidden md:inline-flex items-center text-blue-600 hover:text-blue-700 mb-4 text-sm font-medium"
+            className="hidden md:inline-flex items-center text-brand hover:text-brand-700 mb-4 text-sm font-medium transition-colors"
           >
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -356,13 +356,13 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-4">
                 {policy.canReschedule && (
                   <button
                     onClick={() => setShowRescheduleModal(true)}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-brand to-brand-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-brand-600 hover:to-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     Reschedule Pickup
@@ -371,9 +371,9 @@ export default function OrderDetailPage() {
                 {policy.canCancel && (
                   <button
                     onClick={() => setShowCancelModal(true)}
-                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 bg-white border-2 border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                     Cancel Order

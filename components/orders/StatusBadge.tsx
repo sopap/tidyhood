@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type StatusTone = 'blue' | 'indigo' | 'green' | 'yellow' | 'gray';
+export type StatusTone = 'blue' | 'indigo' | 'green' | 'yellow' | 'gray' | 'red' | 'orange';
 
 interface StatusBadgeProps {
   tone?: StatusTone;
@@ -14,6 +14,8 @@ export default function StatusBadge({ tone = 'gray', children }: StatusBadgeProp
     green: 'bg-green-50 text-green-700 border-green-200',
     yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
     gray: 'bg-gray-50 text-gray-700 border-gray-200',
+    red: 'bg-red-50 text-red-700 border-red-200',
+    orange: 'bg-orange-50 text-orange-700 border-orange-200',
   };
 
   return (

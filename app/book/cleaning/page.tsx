@@ -12,6 +12,8 @@ import CleaningTypeSelector from '@/components/cleaning/CleaningTypeSelector'
 import CleaningAddons from '@/components/cleaning/CleaningAddons'
 import EstimateBadge from '@/components/cleaning/EstimateBadge'
 import FrequencySelector from '@/components/cleaning/FrequencySelector'
+import { PolicyBanner, ServiceInfoBanner, PaymentBanner, DryCleanBanner } from '@/components/ui/InfoBanner'
+import { PriceSummary } from '@/components/ui/PriceDisplay'
 import { CleaningType, CleaningAddonKey, Frequency } from '@/lib/types'
 import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
 import { Elements } from '@stripe/react-stripe-js'
@@ -478,30 +480,18 @@ function CleaningBookingForm() {
           </div>
 
           {/* Cancellation Policy Banner */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl flex-shrink-0" aria-hidden="true">📋</span>
-              <div>
-                <h3 className="font-semibold text-blue-900 mb-1">
-                  Flexible Cancellation Policy
-                </h3>
-                <p className="text-sm text-blue-700">
-                  Free cancellation or rescheduling with 24+ hours notice. Changes made within 24 hours incur a 15% service fee.
-                </p>
-              </div>
-            </div>
-          </div>
+          <PolicyBanner />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="card-standard card-padding">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">📍 Service Address</h2>
+                <h2 className="heading-section">📍 Service Address</h2>
                 {isAddressCollapsed && (
                   <button
                     type="button"
                     onClick={() => setIsAddressCollapsed(false)}
-                    className="text-sm text-primary-600 hover:text-primary-700"
+                    className="text-sm text-brand hover:text-brand-700 transition-colors"
                   >
                     Edit
                   </button>
@@ -509,7 +499,7 @@ function CleaningBookingForm() {
               </div>
 
               {isAddressCollapsed && address ? (
-                <div className="bg-primary-50 rounded-lg p-4">
+                <div className="bg-brand-50 rounded-xl p-4 border border-brand-100">
                   <p className="font-medium">{address.line1}</p>
                   {addressLine2 && <p className="text-sm text-gray-600">{addressLine2}</p>}
                   <p className="text-sm text-gray-600">
@@ -554,8 +544,8 @@ function CleaningBookingForm() {
             </div>
 
             {/* Home Details */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">✨ Home Details</h2>
+            <div className="card-standard card-padding">
+              <h2 className="heading-section">✨ Home Details</h2>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -635,34 +625,23 @@ function CleaningBookingForm() {
 
                 {/* Live Pricing */}
                 {address && pricing.total > 0 && (
-                  <div className="bg-primary-50 rounded-lg p-4 mt-4">
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>${pricing.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Tax (8.875%):</span>
-                        <span>${pricing.tax.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-primary-200">
-                        <span className="font-medium">Estimated Total:</span>
-                        <span className="text-2xl font-bold text-primary-600">
-                          ${pricing.total.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-600 mt-2">
-                      Final price confirmed after cleaning
-                    </div>
-                  </div>
+                  <PriceSummary
+                    rows={[
+                      { label: 'Subtotal', amount: pricing.subtotal },
+                      { label: 'Tax (8.875%)', amount: pricing.tax }
+                    ]}
+                    total={pricing.total}
+                    totalLabel="Estimated Total"
+                    note="Final price confirmed after cleaning"
+                    className="mt-4"
+                  />
                 )}
               </div>
             </div>
 
             {/* Schedule */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">📅 Schedule Cleaning</h2>
+            <div className="card-standard card-padding">
+              <h2 className="heading-section">📅 Schedule Cleaning</h2>
               
               <div className="space-y-4">
                 <div>
@@ -696,9 +675,9 @@ function CleaningBookingForm() {
                         {availableSlots.map(slot => (
                           <label
                             key={`${slot.partner_id}-${slot.slot_start}`}
-                            className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                            className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-gray-50 transition-all ${
                               selectedSlot?.slot_start === slot.slot_start
-                                ? 'border-primary-600 bg-primary-50'
+                                ? 'border-brand bg-brand-50'
                                 : ''
                             }`}
                           >
@@ -741,8 +720,8 @@ function CleaningBookingForm() {
 
             {/* Payment Method Collection - Only if Setup Intent enabled */}
             {isSetupIntentFlow && address && selectedSlot && pricing.total > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">💳 Payment Method</h2>
+              <div className="card-standard card-padding">
+                <h2 className="heading-section">💳 Payment Method</h2>
                 
                 <Elements stripe={stripePromise}>
                   <StripePaymentCollector
@@ -769,8 +748,8 @@ function CleaningBookingForm() {
             )}
 
             {/* Contact & Notes */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">✉️ Contact Information</h2>
+            <div className="card-standard card-padding">
+              <h2 className="heading-section">✉️ Contact Information</h2>
               
               <div className="space-y-4">
                 <div>
@@ -853,7 +832,7 @@ function CleaningBookingForm() {
             </div>
 
             {/* Submit */}
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="card-standard card-padding">
               <button
                 type="submit"
                 disabled={
@@ -873,16 +852,7 @@ function CleaningBookingForm() {
               </button>
               
               {/* Payment messaging */}
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900 font-medium">
-                  {isSetupIntentFlow ? '💳 Secure Booking' : '💰 Pay After Service'}
-                </p>
-                <p className="text-xs text-blue-700 mt-1">
-                  {isSetupIntentFlow
-                    ? "Your card is securely saved. You'll be charged $0.00 now and the exact amount after we complete your cleaning."
-                    : "No payment required now. We'll send you the final invoice after completing your cleaning."}
-                </p>
-              </div>
+              <PaymentBanner isSetupIntent={isSetupIntentFlow} className="mt-4" />
             </div>
             {/* Accessibility: Prefill announcement */}
             {prefillMsg && (
