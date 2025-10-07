@@ -824,7 +824,16 @@ function LaundryBookingForm() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <button
                 type="submit"
-                disabled={!persistedLoaded || loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
+                disabled={
+                  !persistedLoaded || 
+                  loading || 
+                  !address || 
+                  !isAddressValid || 
+                  !selectedSlot || 
+                  !phone?.trim() || 
+                  phone.replace(/\D/g, '').length < 10 ||
+                  (serviceType === 'washFold' && !weightTier)
+                }
                 className="w-full bg-blue-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-disabled={loading}
               >
@@ -865,7 +874,15 @@ function LaundryBookingForm() {
             form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
           }
         }}
-        disabled={loading || !address || !isAddressValid || !selectedSlot || (serviceType === 'washFold' && !weightTier)}
+        disabled={
+          loading || 
+          !address || 
+          !isAddressValid || 
+          !selectedSlot || 
+          !phone?.trim() || 
+          phone.replace(/\D/g, '').length < 10 ||
+          (serviceType === 'washFold' && !weightTier)
+        }
         sublabel="Pay After Pickup"
       />
     </div>
