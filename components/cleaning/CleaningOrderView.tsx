@@ -265,98 +265,93 @@ export function CleaningOrderView({
           <CleaningTimeline order={order} />
         </div>
         
-        {/* Partner Info Card - Only show if partner assigned */}
-        {order.partner_id && (
-          <PartnerInfoCard partnerId={order.partner_id} />
-        )}
-        
-        {/* Service Details - Clean, professional design */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            Service Details
-          </h2>
+        {/* Desktop: 2x2 Grid for Info Cards | Mobile: Stacked */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          {/* Partner Info Card - Only show if partner assigned */}
+          {order.partner_id && (
+            <PartnerInfoCard partnerId={order.partner_id} />
+          )}
           
-          {/* Primary Info - Simple inline display */}
-          <div className="text-sm text-gray-700 mb-6">
-            <span className="font-semibold">{order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} Bedroom${order.order_details.bedrooms !== 1 ? 's' : ''}`}</span>
-            {' · '}
-            <span className="font-semibold">{order.order_details.bathrooms} Bathroom{order.order_details.bathrooms !== 1 ? 's' : ''}</span>
-            {order.order_details.square_feet && (
-              <>
-                {' · '}
-                <span className="font-semibold">{order.order_details.square_feet.toLocaleString()} sq ft</span>
-              </>
-            )}
-          </div>
-          
-          {/* Cleaning Type & Add-ons */}
-          {(order.order_details.deep || (order.order_details.addons && order.order_details.addons.length > 0)) && (
-            <div className="border-t border-gray-200 pt-4 space-y-3">
-              {order.order_details.deep && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500 mb-2">Cleaning Type</dt>
-                  <dd>
+          {/* Service Details - Clean, professional design */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">
+              Service Details
+            </h2>
+            
+            {/* Primary Info - Simple inline display */}
+            <div className="text-sm text-gray-700">
+              <span className="font-semibold">{order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} Bedroom${order.order_details.bedrooms !== 1 ? 's' : ''}`}</span>
+              {' · '}
+              <span className="font-semibold">{order.order_details.bathrooms} Bathroom{order.order_details.bathrooms !== 1 ? 's' : ''}</span>
+              {order.order_details.square_feet && (
+                <>
+                  {' · '}
+                  <span className="font-semibold">{order.order_details.square_feet.toLocaleString()} sq ft</span>
+                </>
+              )}
+            </div>
+            
+            {/* Cleaning Type & Add-ons */}
+            {(order.order_details.deep || (order.order_details.addons && order.order_details.addons.length > 0)) && (
+              <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                {order.order_details.deep && (
+                  <div>
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border border-purple-200">
                       🌟 Deep Clean
                     </span>
-                  </dd>
-                </div>
-              )}
-              
-              {order.order_details.addons && order.order_details.addons.length > 0 && (
-                <div>
-                  <dt className="text-sm font-medium text-gray-500 mb-2">
-                    Extra Services ({order.order_details.addons.length})
-                  </dt>
-                  <dd className="flex flex-wrap gap-2">
-                    {order.order_details.addons.map((addon, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                      >
-                        ✓ {addon}
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        
-        {/* Service Address - Clean, professional design */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            Service Address
-          </h2>
-          <address className="not-italic text-gray-700 space-y-1 text-base">
-            <p className="font-medium">{order.address_snapshot.line1}</p>
-            {order.address_snapshot.line2 && <p className="text-gray-600">{order.address_snapshot.line2}</p>}
-            <p className="text-gray-600">{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
-            {order.address_snapshot.notes && (
-              <div className="mt-4 pt-4 border-t border-gray-200 bg-amber-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-amber-900 mb-1 flex items-center gap-2">
-                  <span>📝</span>
-                  Access Notes
-                </p>
-                <p className="text-sm text-amber-800">{order.address_snapshot.notes}</p>
+                  </div>
+                )}
+                
+                {order.order_details.addons && order.order_details.addons.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Extra Services</p>
+                    <div className="flex flex-wrap gap-2">
+                      {order.order_details.addons.map((addon, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                        >
+                          ✓ {addon}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </address>
-        </div>
-        
-        {/* Actions - Clean, professional design */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">
-            Actions
-          </h2>
-          <CleaningActions
-            order={order}
-            userRole={userRole}
-            onOpenDispute={() => setShowDisputeModal(true)}
-            onRate={handleRate}
-            onContact={handleContact}
-          />
+          </div>
+          
+          {/* Service Address - Clean, professional design */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">
+              Service Address
+            </h2>
+            <address className="not-italic text-gray-700 space-y-1 text-sm">
+              <p className="font-medium">{order.address_snapshot.line1}</p>
+              {order.address_snapshot.line2 && <p className="text-gray-600">{order.address_snapshot.line2}</p>}
+              <p className="text-gray-600">{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
+              {order.address_snapshot.notes && (
+                <div className="mt-3 pt-3 border-t border-gray-200 bg-amber-50 rounded-lg p-3">
+                  <p className="text-xs font-medium text-amber-900 mb-1">Access Notes</p>
+                  <p className="text-xs text-amber-800">{order.address_snapshot.notes}</p>
+                </div>
+              )}
+            </address>
+          </div>
+          
+          {/* Actions - Clean, professional design */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">
+              Actions
+            </h2>
+            <CleaningActions
+              order={order}
+              userRole={userRole}
+              onOpenDispute={() => setShowDisputeModal(true)}
+              onRate={handleRate}
+              onContact={handleContact}
+            />
+          </div>
         </div>
       </div>
       
