@@ -251,8 +251,10 @@ function formatPaymentRequestSMS({
  * 1. Find orders with expired grace periods
  * 2. Apply no-show fee
  * 3. Update order status
+ * 
+ * NOTE: This should be moved to a separate cron job file
  */
-export async function checkExpiredGracePeriods() {
+async function checkExpiredGracePeriods() {
   const db = getServiceClient();
   const now = new Date().toISOString();
   
