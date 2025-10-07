@@ -35,7 +35,7 @@ interface SagaStep {
 interface BookingParams {
   user_id: string;
   service_type: 'LAUNDRY' | 'CLEANING';
-  service_category: 'wash_fold' | 'dry_clean' | 'mixed' | 'standard';
+  service_category: 'washFold' | 'dryClean' | 'mixed' | 'standard';
   estimated_amount_cents: number;
   payment_method_id: string;
   slot: {

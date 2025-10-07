@@ -10,7 +10,7 @@ import { logPaymentError, createErrorResponse } from '@/lib/payment-errors';
 const setupSchema = z.object({
   service_type: z.enum(['LAUNDRY', 'CLEANING']),
   estimated_amount_cents: z.number().int().positive(),
-  service_category: z.enum(['wash_fold', 'dry_clean', 'mixed', 'standard']),
+  service_category: z.enum(['washFold', 'dryClean', 'mixed', 'standard']),
   payment_method_id: z.string(),
   slot: z.object({
     partner_id: z.string().uuid(),
