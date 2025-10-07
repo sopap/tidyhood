@@ -129,55 +129,93 @@ export function CleaningOrderView({
   
   return (
     <div className="cleaning-order-view">
-      {/* Header Section */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      {/* Header Section - Compact on mobile, full on desktop */}
+      <div className="bg-white md:bg-gradient-to-r md:from-white md:to-blue-50 border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 md:py-6">
           {/* Back Button */}
-          <Link href="/orders" className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-3 text-sm font-medium">
+          <Link href="/orders" className="inline-flex items-center text-blue-600 hover:text-blue-700 mb-3 md:mb-4 text-sm font-medium transition-colors">
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to Orders
           </Link>
           
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-900">
+          {/* Mobile: Compact Header */}
+          <div className="md:hidden">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold text-gray-900 mb-2">
                   Cleaning Service
                 </h1>
-                {/* Status Badge - Fixed overlap with gap-2 instead of gap-1 */}
+                {/* Status Badge - More subtle on mobile */}
                 <span
                   className={`
-                    inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium
+                    inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border
                     ${getStatusBadgeClass(statusConfig.color)}
                   `}
                 >
-                  <span className="text-base leading-none">{statusConfig.icon}</span>
+                  <span className="text-sm leading-none">{statusConfig.icon}</span>
                   <span className="whitespace-nowrap">{statusConfig.label}</span>
                 </span>
               </div>
               
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>Order #{order.id.slice(0, 8)}</span>
-                <span>•</span>
-                <span>{formatDate(order.slot_start)}</span>
-                {order.slot_start && order.slot_end && (
-                  <>
-                    <span>•</span>
-                    <span>{formatTimeRange(order.slot_start, order.slot_end)}</span>
-                  </>
-                )}
+              {/* Price - Compact */}
+              <div className="text-right flex-shrink-0">
+                <div className="text-2xl font-bold text-gray-900">
+                  ${(order.total_cents / 100).toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-600">
+                  Total
+                </div>
               </div>
             </div>
             
-            {/* Price */}
-            <div className="text-right">
-              <div className="text-2xl font-bold text-gray-900">
-                ${(order.total_cents / 100).toFixed(2)}
+            <div className="text-xs text-gray-600">
+              Order #{order.id.slice(0, 8)} · {formatDate(order.slot_start)} · {formatTimeRange(order.slot_start, order.slot_end)}
+            </div>
+          </div>
+          
+          {/* Desktop: Full Header */}
+          <div className="hidden md:block">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    Cleaning Service
+                  </h1>
+                  {/* Status Badge - Enhanced with better spacing and pill shape */}
+                  <span
+                    className={`
+                      inline-flex items-center gap-3 px-4 py-2 rounded-full text-sm font-semibold shadow-sm
+                      ${getStatusBadgeClass(statusConfig.color)}
+                    `}
+                  >
+                    <span className="text-lg leading-none">{statusConfig.icon}</span>
+                    <span className="whitespace-nowrap">{statusConfig.label}</span>
+                  </span>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                  <span className="font-medium">Order #{order.id.slice(0, 8)}</span>
+                  <span className="text-gray-400">•</span>
+                  <span>{formatDate(order.slot_start)}</span>
+                  {order.slot_start && order.slot_end && (
+                    <>
+                      <span className="text-gray-400">•</span>
+                      <span className="font-medium">{formatTimeRange(order.slot_start, order.slot_end)}</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="text-sm text-gray-600">
-                {order.status === 'refunded' ? 'Refunded' : 'Total Paid'}
+              
+              {/* Price - Enhanced with better visual emphasis */}
+              <div className="text-left md:text-right bg-white rounded-lg px-4 py-3 border border-gray-200 shadow-sm">
+                <div className="text-3xl font-bold text-gray-900 mb-1">
+                  ${(order.total_cents / 100).toFixed(2)}
+                </div>
+                <div className="text-sm font-medium text-gray-600">
+                  {order.status === 'refunded' ? 'Refunded' : 'Total Paid'}
+                </div>
               </div>
             </div>
           </div>
@@ -207,18 +245,21 @@ export function CleaningOrderView({
         </div>
       )}
       
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Status Description */}
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
-          <p className="text-sm text-blue-900">
-            {getStatusDescription(order)}
-          </p>
+      {/* Main Content - Added bottom padding for footer clearance */}
+      <div className="max-w-4xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6">
+        {/* Status Description - Enhanced with icon and gradient */}
+        <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl flex-shrink-0">{statusConfig.icon}</span>
+            <p className="text-sm leading-relaxed text-blue-900 font-medium">
+              {getStatusDescription(order)}
+            </p>
+          </div>
         </div>
         
-        {/* Timeline */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        {/* Timeline - Enhanced with better card styling */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Progress
           </h2>
           <CleaningTimeline order={order} />
@@ -229,32 +270,24 @@ export function CleaningOrderView({
           <PartnerInfoCard partnerId={order.partner_id} />
         )}
         
-        {/* Service Details */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        {/* Service Details - Clean, professional design */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Service Details
           </h2>
           
-          {/* Primary Info Grid */}
-          <dl className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <dt className="text-sm font-medium text-gray-500 mb-1">Bedrooms</dt>
-              <dd className="text-2xl font-semibold text-gray-900">{order.order_details.bedrooms}</dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500 mb-1">Bathrooms</dt>
-              <dd className="text-2xl font-semibold text-gray-900">{order.order_details.bathrooms}</dd>
-            </div>
+          {/* Primary Info - Simple inline display */}
+          <div className="text-sm text-gray-700 mb-6">
+            <span className="font-semibold">{order.order_details.bedrooms === 0 ? 'Studio' : `${order.order_details.bedrooms} Bedroom${order.order_details.bedrooms !== 1 ? 's' : ''}`}</span>
+            {' · '}
+            <span className="font-semibold">{order.order_details.bathrooms} Bathroom{order.order_details.bathrooms !== 1 ? 's' : ''}</span>
             {order.order_details.square_feet && (
-              <div>
-                <dt className="text-sm font-medium text-gray-500 mb-1">Size</dt>
-                <dd className="text-2xl font-semibold text-gray-900">
-                  {order.order_details.square_feet.toLocaleString()}
-                  <span className="text-base font-normal text-gray-600 ml-1">sq ft</span>
-                </dd>
-              </div>
+              <>
+                {' · '}
+                <span className="font-semibold">{order.order_details.square_feet.toLocaleString()} sq ft</span>
+              </>
             )}
-          </dl>
+          </div>
           
           {/* Cleaning Type & Add-ons */}
           {(order.order_details.deep || (order.order_details.addons && order.order_details.addons.length > 0)) && (
@@ -291,26 +324,30 @@ export function CleaningOrderView({
           )}
         </div>
         
-        {/* Service Address */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        {/* Service Address - Clean, professional design */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Service Address
           </h2>
-          <address className="not-italic text-gray-700">
-            <p>{order.address_snapshot.line1}</p>
-            {order.address_snapshot.line2 && <p>{order.address_snapshot.line2}</p>}
-            <p>{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
+          <address className="not-italic text-gray-700 space-y-1 text-base">
+            <p className="font-medium">{order.address_snapshot.line1}</p>
+            {order.address_snapshot.line2 && <p className="text-gray-600">{order.address_snapshot.line2}</p>}
+            <p className="text-gray-600">{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
             {order.address_snapshot.notes && (
-              <p className="mt-2 text-sm text-gray-600">
-                <strong>Notes:</strong> {order.address_snapshot.notes}
-              </p>
+              <div className="mt-4 pt-4 border-t border-gray-200 bg-amber-50 rounded-lg p-4">
+                <p className="text-sm font-medium text-amber-900 mb-1 flex items-center gap-2">
+                  <span>📝</span>
+                  Access Notes
+                </p>
+                <p className="text-sm text-amber-800">{order.address_snapshot.notes}</p>
+              </div>
             )}
           </address>
         </div>
         
-        {/* Actions */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        {/* Actions - Clean, professional design */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8 hover:shadow-md transition-shadow">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
             Actions
           </h2>
           <CleaningActions
@@ -355,8 +392,10 @@ function getStatusBadgeClass(color: string): string {
  */
 function getStatusDescription(order: CleaningOrder): string {
   const descriptions: Record<string, string> = {
-    pending: "We're finding the perfect cleaner for your appointment.",
-    assigned: `Your cleaner has been assigned and will arrive on ${formatDate(order.slot_start)}.`,
+    pending: order.partner_id 
+      ? "Your cleaner is confirmed! They'll arrive during your scheduled time window."
+      : "We're assigning your appointment to a professional cleaner.",
+    assigned: `Your cleaner is ready and will arrive on ${formatDate(order.slot_start)}.`,
     en_route: "Your cleaner is on the way to your location.",
     on_site: "Your cleaner has arrived and will begin shortly.",
     in_progress: "Your cleaning is currently in progress.",

@@ -824,16 +824,30 @@ function CleaningBookingForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <span>📝</span>
                     Cleaning Notes (Optional)
                   </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Help us serve you better! Include details about pets, access instructions, areas needing special attention, or any specific requests.
+                  </p>
                   <textarea
                     value={specialInstructions}
                     onChange={(e) => setSpecialInstructions(e.target.value)}
-                    placeholder="e.g., Pets at home, areas needing special attention, access instructions..."
-                    rows={3}
-                    className="input-field"
+                    placeholder="Examples:&#10;• Two friendly dogs at home&#10;• Gate code is #1234&#10;• Please focus on kitchen and bathrooms&#10;• Keys under mat"
+                    rows={5}
+                    className="input-field resize-y min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-gray-500">
+                      {specialInstructions.length} characters
+                    </p>
+                    {specialInstructions.length > 500 && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        ⚠️ Try to keep notes concise
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

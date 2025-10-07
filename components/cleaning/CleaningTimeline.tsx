@@ -114,30 +114,23 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                 className="flex-shrink-0 snap-center w-64 px-4 first:pl-0 last:pr-0"
               >
                 {/* Stage Card */}
-                <div
-                  className={`
-                    relative rounded-lg border-2 p-4 transition-all
-                    ${isCompleted ? 'border-green-500 bg-green-50' : ''}
-                    ${isCurrent ? `border-${statusConfig.color}-500 bg-${statusConfig.color}-50` : ''}
-                    ${!isCompleted && !isCurrent ? 'border-gray-200 bg-gray-50' : ''}
-                  `}
-                >
+                <div className="relative rounded-lg border border-gray-200 bg-white p-4 transition-all">
                   {/* Stage Icon & Label */}
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-3">
                     <div
                       className={`
-                        flex h-10 w-10 items-center justify-center rounded-full text-xl
+                        flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold
                         ${isCompleted ? 'bg-green-500 text-white' : ''}
-                        ${isCurrent ? `bg-${statusConfig.color}-500 text-white` : ''}
-                        ${!isCompleted && !isCurrent ? 'bg-gray-300 text-gray-600' : ''}
+                        ${isCurrent ? 'bg-blue-500 text-white' : ''}
+                        ${!isCompleted && !isCurrent ? 'bg-gray-200 text-gray-500' : ''}
                       `}
                     >
                       {isCompleted ? '✓' : stage.icon}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{stage.label}</h3>
                       {isCurrent && (
-                        <p className="text-sm text-gray-600">{CLEANING_STAGE_DESCRIPTIONS[stage.stage]}</p>
+                        <p className="text-xs text-gray-600 mt-0.5">{CLEANING_STAGE_DESCRIPTIONS[stage.stage]}</p>
                       )}
                     </div>
                   </div>
@@ -214,20 +207,25 @@ export function CleaningTimeline({ order, className = '' }: CleaningTimelineProp
                 
                 {/* Stage Content */}
                 <div className="flex-1 pb-8">
-                  <div
-                    className={`
-                      rounded-lg border-2 p-4 transition-all
-                      ${isCompleted ? 'border-green-500 bg-green-50' : ''}
-                      ${isCurrent ? `border-${statusConfig.color}-500 bg-${statusConfig.color}-50` : ''}
-                      ${!isCompleted && !isCurrent ? 'border-gray-200 bg-white' : ''}
-                    `}
-                  >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {stage.label}
-                    </h3>
+                  <div className="rounded-lg border border-gray-200 bg-white p-4 transition-all">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div
+                        className={`
+                          flex h-10 w-10 items-center justify-center rounded-full text-lg font-semibold
+                          ${isCompleted ? 'bg-green-500 text-white' : ''}
+                          ${isCurrent ? 'bg-blue-500 text-white' : ''}
+                          ${!isCompleted && !isCurrent ? 'bg-gray-200 text-gray-500' : ''}
+                        `}
+                      >
+                        {isCompleted ? '✓' : stage.icon}
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {stage.label}
+                      </h3>
+                    </div>
                     
                     {isCurrent && (
-                      <p className="text-sm text-gray-600 mb-3">{CLEANING_STAGE_DESCRIPTIONS[stage.stage]}</p>
+                      <p className="text-sm text-gray-600 mb-2">{CLEANING_STAGE_DESCRIPTIONS[stage.stage]}</p>
                     )}
                     
                     {/* Hints (sub-states) */}

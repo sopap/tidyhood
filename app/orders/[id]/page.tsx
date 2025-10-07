@@ -234,10 +234,10 @@ export default function OrderDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      {/* Sticky back button (mobile only) */}
-      <div className="sticky top-0 z-30 border-b bg-white/90 px-4 py-2 backdrop-blur md:hidden">
-        <Link href="/orders" className="text-sm text-blue-700 inline-flex items-center hover:text-blue-800">
-          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Sticky back button (mobile only) - Enhanced with gradient */}
+      <div className="sticky top-0 z-30 border-b border-gray-200 bg-gradient-to-r from-white to-blue-50 px-4 py-3 shadow-sm backdrop-blur md:hidden">
+        <Link href="/orders" className="text-sm text-blue-700 inline-flex items-center font-medium hover:text-blue-800 transition-colors">
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back to Orders

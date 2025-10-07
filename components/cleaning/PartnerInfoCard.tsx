@@ -74,8 +74,8 @@ export function PartnerInfoCard({ partnerId, className = '' }: PartnerInfoCardPr
   }
   
   return (
-    <div className={`partner-info-card bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-6 ${className}`}>
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className={`partner-info-card bg-white rounded-xl border border-gray-200 shadow-sm p-6 ${className}`}>
+      <h2 className="text-base font-semibold text-gray-900 mb-4">
         Your Cleaner
       </h2>
       
@@ -86,10 +86,10 @@ export function PartnerInfoCard({ partnerId, className = '' }: PartnerInfoCardPr
             <img
               src={partner.photo_url}
               alt={partner.name}
-              className="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow-md"
+              className="h-16 w-16 rounded-full object-cover border-2 border-gray-200"
             />
           ) : (
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ring-2 ring-white shadow-md">
+            <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center border-2 border-gray-200">
               <span className="text-2xl font-bold text-white">
                 {partner.name.charAt(0).toUpperCase()}
               </span>
@@ -99,7 +99,7 @@ export function PartnerInfoCard({ partnerId, className = '' }: PartnerInfoCardPr
         
         {/* Partner Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 truncate">
+          <h3 className="text-base font-semibold text-gray-900 truncate">
             {partner.name}
           </h3>
           
@@ -107,22 +107,22 @@ export function PartnerInfoCard({ partnerId, className = '' }: PartnerInfoCardPr
           {partner.rating !== null && partner.rating !== undefined && (
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center">
-                <span className="text-yellow-400 text-lg">★</span>
-                <span className="text-sm font-semibold text-gray-700 ml-1">
+                <span className="text-yellow-500 text-base">★</span>
+                <span className="text-sm font-medium text-gray-700 ml-1">
                   {partner.rating.toFixed(1)}
                 </span>
               </div>
               {partner.review_count && partner.review_count > 0 && (
                 <span className="text-sm text-gray-500">
-                  ({partner.review_count} {partner.review_count === 1 ? 'review' : 'reviews'})
+                  {partner.review_count}
                 </span>
               )}
             </div>
           )}
           
           {/* Verified Badge */}
-          <div className="flex items-center gap-1 mt-2">
-            <svg className="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex items-center gap-1 mt-1">
+            <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span className="text-xs text-green-700 font-medium">
@@ -130,25 +130,12 @@ export function PartnerInfoCard({ partnerId, className = '' }: PartnerInfoCardPr
             </span>
           </div>
         </div>
-        
-        {/* Contact Button - Desktop */}
-        <div className="hidden md:block">
-          <button
-            onClick={() => handleContact(partner)}
-            className="px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 active:scale-95 transition-all duration-200 flex items-center gap-2"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-            </svg>
-            Contact
-          </button>
-        </div>
       </div>
       
-      {/* Contact Button - Mobile (Full Width) */}
+      {/* Contact Button - Full Width with better styling */}
       <button
         onClick={() => handleContact(partner)}
-        className="md:hidden mt-4 w-full px-4 py-3 bg-white border-2 border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+        className="mt-4 w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />

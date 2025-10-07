@@ -107,90 +107,50 @@ export function CleaningActions({
   
   return (
     <div className={`cleaning-actions ${className}`}>
-      {/* Desktop: Inline Button Group */}
-      <div className="hidden md:flex md:items-center md:gap-3">
-        {/* Primary Action */}
+      {/* Unified Button Group - Works on both mobile and desktop */}
+      <div className="space-y-3">
+        {/* Primary Action - Full Width */}
         <button
           onClick={() => handleAction(primaryAction.type)}
           disabled={isLoading}
           className={`
-            flex-1 px-6 py-3 rounded-lg font-semibold text-white
+            w-full h-12 md:h-auto md:px-6 md:py-3 rounded-xl font-semibold text-white shadow-md
             ${getPrimaryButtonClass(primaryAction.type)}
-            hover:opacity-90 active:scale-95
+            hover:opacity-90 hover:shadow-lg active:scale-[0.98]
             disabled:opacity-50 disabled:cursor-not-allowed
             transition-all duration-200
+            flex items-center justify-center gap-2
           `}
         >
-          {primaryAction.icon && <span className="mr-2">{primaryAction.icon}</span>}
-          {primaryAction.label}
+          {getButtonIcon(primaryAction.type)}
+          <span>{primaryAction.label}</span>
         </button>
         
-        {/* Secondary Actions */}
-        {secondaryActions.map((action) => (
-          <button
-            key={action.type}
-            onClick={() => handleAction(action.type)}
-            disabled={isLoading}
-            className={`
-              px-4 py-3 rounded-lg font-medium
-              ${getSecondaryButtonClass(action.type)}
-              hover:bg-gray-100 active:scale-95
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-all duration-200
-            `}
-          >
-            {action.icon && <span className="mr-2">{action.icon}</span>}
-            {action.label}
-          </button>
-        ))}
-      </div>
-      
-      {/* Mobile: Sticky Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-inset-bottom">
-        {/* Primary Action - Full Width Button */}
-        <button
-          onClick={() => handleAction(primaryAction.type)}
-          disabled={isLoading}
-          className={`
-            w-full h-12 rounded-lg font-semibold text-white mb-3
-            ${getPrimaryButtonClass(primaryAction.type)}
-            hover:opacity-90 active:scale-[0.98]
-            disabled:opacity-50 disabled:cursor-not-allowed
-            transition-all duration-200
-            flex items-center justify-center
-          `}
-        >
-          {primaryAction.icon && <span className="mr-2 text-lg">{primaryAction.icon}</span>}
-          {primaryAction.label}
-        </button>
-        
-        {/* Secondary Actions - Compact Row */}
+        {/* Secondary Actions - Grid Layout */}
         {secondaryActions.length > 0 && (
-          <div className="flex gap-2">
+          <div className={`grid ${secondaryActions.length === 1 ? 'grid-cols-1' : secondaryActions.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
             {secondaryActions.map((action) => (
               <button
                 key={action.type}
                 onClick={() => handleAction(action.type)}
                 disabled={isLoading}
                 className={`
-                  flex-1 h-10 rounded-lg font-medium text-sm
+                  h-11 rounded-lg font-medium text-sm shadow-sm
                   ${getSecondaryButtonClass(action.type)}
-                  hover:bg-gray-100 active:scale-[0.98]
+                  hover:bg-gray-50 hover:shadow active:scale-[0.98]
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-200
-                  flex items-center justify-center
+                  flex items-center justify-center gap-2
                 `}
               >
-                {action.icon && <span className="mr-1">{action.icon}</span>}
-                {action.label}
+                {getButtonIcon(action.type)}
+                <span className="hidden sm:inline">{action.label}</span>
+                <span className="sm:hidden">{action.label.split(' ')[0]}</span>
               </button>
             ))}
           </div>
         )}
       </div>
-      
-      {/* Spacer for mobile sticky bar */}
-      <div className="md:hidden h-32" />
     </div>
   );
 }
@@ -209,74 +169,74 @@ function getAvailableActions(
       case 'pending':
       case 'assigned':
         actions.push(
-          { type: 'calendar', label: 'Add to Calendar', icon: '📅' },
-          { type: 'reschedule', label: 'Reschedule', icon: '🔄' },
-          { type: 'cancel', label: 'Cancel', icon: '❌' },
-          { type: 'contact', label: 'Contact Support', icon: '💬' }
+          { type: 'calendar', label: 'Add to Calendar' },
+          { type: 'reschedule', label: 'Reschedule' },
+          { type: 'cancel', label: 'Cancel' },
+          { type: 'contact', label: 'Contact Support' }
         );
         break;
       
       case 'en_route':
       case 'on_site':
         actions.push(
-          { type: 'contact', label: 'Contact Partner', icon: '📞' },
-          { type: 'cancel', label: 'Cancel', icon: '❌' }
+          { type: 'contact', label: 'Contact Partner' },
+          { type: 'cancel', label: 'Cancel' }
         );
         break;
       
       case 'in_progress':
         actions.push(
-          { type: 'contact', label: 'Contact Partner', icon: '📞' }
+          { type: 'contact', label: 'Contact Partner' }
         );
         break;
       
       case 'completed':
         if (canOpenDispute(order)) {
           actions.push(
-            { type: 'rate', label: 'Rate & Tip', icon: '⭐' },
-            { type: 'dispute', label: 'Report Issue', icon: '⚠️' },
-            { type: 'rebook', label: 'Book Again', icon: '🔄' },
-            { type: 'view_receipt', label: 'View Receipt', icon: '📄' }
+            { type: 'rate', label: 'Rate & Tip' },
+            { type: 'dispute', label: 'Report Issue' },
+            { type: 'rebook', label: 'Book Again' },
+            { type: 'view_receipt', label: 'View Receipt' }
           );
         } else {
           actions.push(
-            { type: 'rebook', label: 'Book Again', icon: '🔄' },
-            { type: 'view_receipt', label: 'View Receipt', icon: '📄' }
+            { type: 'rebook', label: 'Book Again' },
+            { type: 'view_receipt', label: 'View Receipt' }
           );
         }
         break;
       
       case 'disputed':
         actions.push(
-          { type: 'contact', label: 'Contact Support', icon: '💬' }
+          { type: 'contact', label: 'Contact Support' }
         );
         break;
       
       case 'refunded':
         actions.push(
-          { type: 'rebook', label: 'Book Again', icon: '🔄' },
-          { type: 'view_receipt', label: 'View Receipt', icon: '📄' }
+          { type: 'rebook', label: 'Book Again' },
+          { type: 'view_receipt', label: 'View Receipt' }
         );
         break;
       
       case 'cleaner_no_show':
       case 'customer_no_show':
         actions.push(
-          { type: 'contact', label: 'Contact Support', icon: '💬' },
-          { type: 'rebook', label: 'Book Again', icon: '🔄' }
+          { type: 'contact', label: 'Contact Support' },
+          { type: 'rebook', label: 'Book Again' }
         );
         break;
       
       case 'canceled':
         actions.push(
-          { type: 'rebook', label: 'Book Again', icon: '🔄' }
+          { type: 'rebook', label: 'Book Again' }
         );
         break;
       
       default:
         // Fallback for any unhandled statuses
         actions.push(
-          { type: 'contact', label: 'Contact Support', icon: '💬' }
+          { type: 'contact', label: 'Contact Support' }
         );
         break;
     }
@@ -315,11 +275,75 @@ function getPrimaryButtonClass(actionType: string): string {
 function getSecondaryButtonClass(actionType: string): string {
   switch (actionType) {
     case 'cancel':
-      return 'border-2 border-red-600 text-red-600';
+      return 'bg-red-600 text-white hover:bg-red-700';
     case 'dispute':
-      return 'border-2 border-orange-600 text-orange-600';
+      return 'bg-orange-600 text-white hover:bg-orange-700';
+    case 'reschedule':
+      return 'bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50';
+    case 'contact':
+      return 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50';
     default:
-      return 'border-2 border-gray-300 text-gray-700';
+      return 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50';
+  }
+}
+
+/**
+ * Get SVG icon for button action type
+ */
+function getButtonIcon(actionType: string): JSX.Element | null {
+  const iconClass = "w-5 h-5";
+  
+  switch (actionType) {
+    case 'calendar':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    case 'reschedule':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      );
+    case 'cancel':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      );
+    case 'contact':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      );
+    case 'rate':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>
+      );
+    case 'dispute':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      );
+    case 'rebook':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      );
+    case 'view_receipt':
+      return (
+        <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      );
+    default:
+      return null;
   }
 }
 

@@ -29,35 +29,37 @@ export default function SummaryBar({
   const dateStr = new Date(dateISO).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
   const toneMap = {
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    green: 'bg-green-50 text-green-700 border-green-200',
-    gray: 'bg-gray-50 text-gray-700 border-gray-200'
+    blue: 'bg-blue-100 text-blue-800 border-blue-200',
+    indigo: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    green: 'bg-green-100 text-green-800 border-green-200',
+    gray: 'bg-gray-100 text-gray-800 border-gray-200'
   } as const;
 
   return (
-    <div className="mb-3 rounded-xl border border-gray-200 bg-white p-3 md:p-4 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="mb-4 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-blue-50 p-4 md:p-5 shadow-sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="font-semibold capitalize text-gray-900">{service.toLowerCase()} Service</span>
-            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${toneMap[tone]}`}>
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <h2 className="text-lg font-bold capitalize text-gray-900 md:text-xl">
+              {service.toLowerCase()} Service
+            </h2>
+            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold shadow-sm ${toneMap[tone]}`}>
               {statusLabel}
             </span>
           </div>
-          <div className="text-sm text-gray-600">
-            {dateStr} · {windowLabel}
+          <div className="text-sm text-gray-600 font-medium">
+            📅 {dateStr} · ⏰ {windowLabel}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-xs text-gray-500 md:text-sm">Total</div>
-            <div className="text-lg font-bold text-gray-900 md:text-xl">{money(totalCents)}</div>
+        <div className="flex items-center gap-4">
+          <div className="text-left md:text-right bg-white rounded-lg px-4 py-3 border border-gray-200 shadow-sm">
+            <div className="text-xs text-gray-500 mb-1 font-medium">Total</div>
+            <div className="text-2xl font-bold text-gray-900">{money(totalCents)}</div>
           </div>
           {showPayButton && (
             <button
               onClick={() => router.push(`/orders/${orderId}/pay`)}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow"
               aria-label="Proceed to payment"
             >
               Pay Now
