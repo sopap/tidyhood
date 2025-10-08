@@ -16,6 +16,7 @@ import { PolicyBanner, ServiceInfoBanner, PaymentBanner, DryCleanBanner } from '
 import { PriceSummary } from '@/components/ui/PriceDisplay'
 import { CleaningType, CleaningAddonKey, Frequency } from '@/lib/types'
 import { usePersistentBooking, formatPhone } from '@/hooks/usePersistentBooking'
+import { useBookingDraft, BookingDraft } from '@/hooks/useBookingDraft'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { StripePaymentCollector } from '@/components/booking/StripePaymentCollector'
@@ -61,6 +62,13 @@ function CleaningBookingForm() {
     prefillMsg,
     clearAll,
   } = usePersistentBooking()
+  
+  // Booking draft (for unauthenticated users)
+  const {
+    saveDraft,
+    restoreDraft,
+    clearDraft,
+  } = useBookingDraft('CLEANING')
   
   // Address state
   const [address, setAddress] = useState<Address | null>(null)
@@ -204,6 +212,49 @@ function CleaningBookingForm() {
     loadLastOrder()
   }, [user])
 
+  // Restore draft after login
+  useEffect(() => {
+    if (!user || !persistedLoaded) return
+    
+    const draft = restoreDraft()
+    if (draft && draft.serviceType === 'CLEANING' && draft.cleaning) {
+      // Restore shared fields
+      if (draft.phone) setPhone(formatPhone(draft.phone))
+      if (draft.address) {
+        setAddress(draft.address)
+        setIsAddressValid(true)
+        setIsAddressCollapsed(true)
+        if (draft.address.line2) setAddressLine2(draft.address.line2)
+      }
+      if (draft.specialInstructions) setSpecialInstructions(draft.specialInstructions)
+      if (draft.pickupDate) setDate(draft.pickupDate)
+      
+      // Restore pickup slot with proper typing
+      if (draft.pickupSlot) {
+        setSelectedSlot({
+          partner_id: draft.pickupSlot.partner_id,
+          partner_name: '', // Will be filled when slots are fetched
+          slot_start: draft.pickupSlot.slot_start,
+          slot_end: draft.pickupSlot.slot_end,
+          available_units: 0,
+          max_units: 0,
+          service_type: 'CLEANING'
+        })
+      }
+      
+      // Restore cleaning-specific fields
+      setBedrooms(draft.cleaning.bedrooms)
+      setBathrooms(draft.cleaning.bathrooms)
+      setCleaningType(draft.cleaning.cleaningType)
+      setAddons(draft.cleaning.addons)
+      if (draft.cleaning.frequency) setFrequency(draft.cleaning.frequency as Frequency)
+      if (draft.cleaning.firstVisitDeep !== undefined) setFirstVisitDeep(draft.cleaning.firstVisitDeep)
+      
+      // Clear draft after successful restore
+      clearDraft()
+    }
+  }, [user, persistedLoaded])
+
   // Calculate price whenever service details change
   useEffect(() => {
     const calculatePrice = async () => {
@@ -270,11 +321,40 @@ function CleaningBookingForm() {
   }, [date, address])
 
 
+  // Handle login required (save draft and redirect)
+  const handleLoginRequired = () => {
+    if (!address) {
+      setToast({ message: 'Please enter your address first', type: 'warning' })
+      return
+    }
+    
+    // Save complete form state
+    saveDraft({
+      serviceType: 'CLEANING',
+      timestamp: Date.now(),
+      phone,
+      address,
+      specialInstructions,
+      pickupDate: date,
+      pickupSlot: selectedSlot || undefined,
+      cleaning: {
+        bedrooms,
+        bathrooms,
+        cleaningType,
+        addons,
+        frequency,
+        firstVisitDeep,
+      }
+    })
+    
+    router.push('/login?returnTo=/book/cleaning')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!user) {
-      router.push('/login?returnTo=/book/cleaning')
+      handleLoginRequired()
       return
     }
 
@@ -447,6 +527,9 @@ function CleaningBookingForm() {
         orderId = order.id
       }
 
+      // Clear draft on successful booking
+      clearDraft()
+      
       // Redirect to order page
       router.push(`/orders/${orderId}`)
       
@@ -833,23 +916,33 @@ function CleaningBookingForm() {
 
             {/* Submit */}
             <div className="card-standard card-padding">
-              <button
-                type="submit"
-                disabled={
-                  !persistedLoaded || 
-                  loading || 
-                  submitting ||
-                  !address || 
-                  !isAddressValid || 
-                  !selectedSlot ||
-                  !phone?.trim() ||
-                  phone.replace(/\D/g, '').length < 10 ||
-                  (isSetupIntentFlow && !paymentMethodId)
-                }
-                className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Scheduling…' : 'Schedule Cleaning'}
-              </button>
+              {!user ? (
+                <button
+                  type="button"
+                  onClick={handleLoginRequired}
+                  className="w-full btn-primary text-lg py-4"
+                >
+                  Log In to Complete Booking
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={
+                    !persistedLoaded || 
+                    loading || 
+                    submitting ||
+                    !address || 
+                    !isAddressValid || 
+                    !selectedSlot ||
+                    !phone?.trim() ||
+                    phone.replace(/\D/g, '').length < 10 ||
+                    (isSetupIntentFlow && !paymentMethodId)
+                  }
+                  className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? 'Scheduling…' : 'Schedule Cleaning'}
+                </button>
+              )}
               
               {/* Payment messaging */}
               <PaymentBanner isSetupIntent={isSetupIntentFlow} className="mt-4" />

@@ -13,6 +13,7 @@ interface SummaryBarProps {
   showPayButton?: boolean;
   deliveryDateISO?: string;
   deliveryWindowLabel?: string;
+  preferredDeliveryDate?: string;
 }
 
 export default function SummaryBar({
@@ -25,7 +26,8 @@ export default function SummaryBar({
   totalCents,
   showPayButton,
   deliveryDateISO,
-  deliveryWindowLabel
+  deliveryWindowLabel,
+  preferredDeliveryDate
 }: SummaryBarProps) {
   const router = useRouter();
   const tone = statusTone(statusKey as any);
@@ -74,6 +76,10 @@ export default function SummaryBar({
                 {deliveryDateISO && deliveryWindowLabel ? (
                   <span className="text-green-600 font-medium">
                     Delivery: {formatDate(deliveryDateISO)} at {deliveryWindowLabel}
+                  </span>
+                ) : preferredDeliveryDate ? (
+                  <span className="text-amber-600 font-medium">
+                    Delivery: {formatDate(preferredDeliveryDate + 'T00:00:00')} (time TBD)
                   </span>
                 ) : (
                   <span className="text-amber-600 font-medium">

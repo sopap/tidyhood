@@ -46,6 +46,7 @@ interface Order {
     bathrooms?: number;
     deep?: boolean;
     addons?: string[];
+    preferredDeliveryDate?: string;
   };
   address_snapshot: {
     line1: string;
@@ -279,6 +280,7 @@ export default function OrderDetailPage() {
             showPayButton={showPayButton}
             deliveryDateISO={order.delivery_slot_start}
             deliveryWindowLabel={getDeliveryWindowLabel()}
+            preferredDeliveryDate={order.order_details?.preferredDeliveryDate}
           />
 
           {/* Progress Tracker */}
