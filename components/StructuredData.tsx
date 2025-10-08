@@ -15,7 +15,7 @@ const structuredData = {
         "postalCode": "10027",
         "addressCountry": "US"
       },
-      "telephone": "+1-212-555-0123",
+      "telephone": "+1-917-272-8434",
       "email": "support@tidyhood.com",
       "sameAs": [
         "https://www.instagram.com/tidyhoodnyc",

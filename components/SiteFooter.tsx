@@ -72,10 +72,10 @@ export default function SiteFooter() {
                 <Phone className="h-5 w-5 text-primary-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
                   <a 
-                    href="tel:+12125550123" 
+                    href="tel:+19172728434" 
                     className="text-base text-gray-300 hover:text-white transition-colors underline"
                   >
-                    +1 (212) 555-0123
+                    +1 (917) 272-8434
                   </a>
                   <div className="text-sm text-gray-400">Mon–Sun 8:00–20:00</div>
                 </div>
@@ -163,7 +163,7 @@ export default function SiteFooter() {
             name: 'TidyHood',
             description: 'Professional laundry pickup and home cleaning services in Harlem, NYC',
             url: 'https://tidyhood.nyc',
-            telephone: '+1-212-555-0123',
+            telephone: '+1-917-272-8434',
             email: 'support@tidyhood.com',
             address: {
               '@type': 'PostalAddress',
