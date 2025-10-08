@@ -48,7 +48,7 @@ export interface BookingDraft {
   
   // Shared fields
   phone: string
-  address: Address
+  address?: Address  // Optional - user may not have filled this yet
   specialInstructions?: string
   pickupDate: string
   pickupSlot?: TimeSlot

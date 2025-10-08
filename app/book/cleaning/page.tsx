@@ -323,17 +323,12 @@ function CleaningBookingForm() {
 
   // Handle login required (save draft and redirect)
   const handleLoginRequired = () => {
-    if (!address) {
-      setToast({ message: 'Please enter your address first', type: 'warning' })
-      return
-    }
-    
-    // Save complete form state
+    // Save whatever form state we have (even if incomplete)
     saveDraft({
       serviceType: 'CLEANING',
       timestamp: Date.now(),
       phone,
-      address,
+      address: address || undefined, // Convert null to undefined for proper typing
       specialInstructions,
       pickupDate: date,
       pickupSlot: selectedSlot || undefined,
@@ -347,7 +342,8 @@ function CleaningBookingForm() {
       }
     })
     
-    router.push('/login?returnTo=/book/cleaning')
+    // Redirect with restore parameter to trigger draft restoration after auth
+    router.push('/login?returnTo=/book/cleaning&restore=true')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

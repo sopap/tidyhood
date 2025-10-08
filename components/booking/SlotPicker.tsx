@@ -5,16 +5,18 @@ import useSWR from 'swr';
 import { getMinDate, formatSlotTime, getCapacityBadge } from '@/lib/slots';
 import { getSlotLabel, announceToScreenReader } from '@/lib/a11y';
 import { BookingSlot } from '@/lib/types';
+import AddressRequiredState from './AddressRequiredState';
 
 interface SlotPickerProps {
   zip: string;
   value?: { date: string; slot?: BookingSlot };
   onChange: (value: { date: string; slot?: BookingSlot }) => void;
+  onScrollToAddress?: () => void;
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
+export default function SlotPicker({ zip, value, onChange, onScrollToAddress }: SlotPickerProps) {
   const [selectedDate, setSelectedDate] = useState(value?.date || '');
   const [timePeriod, setTimePeriod] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
 
@@ -49,6 +51,19 @@ export default function SlotPicker({ zip, value, onChange }: SlotPickerProps) {
     const time = formatSlotTime(slot.slot_start, slot.slot_end);
     announceToScreenReader(`Time slot selected: ${time}`);
   };
+
+  // Show address required state if no zip code is provided
+  if (!zip) {
+    return (
+      <AddressRequiredState 
+        onEnterAddress={() => {
+          if (onScrollToAddress) {
+            onScrollToAddress();
+          }
+        }} 
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

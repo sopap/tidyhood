@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { PaymentModal } from '@/components/PaymentModal'
@@ -15,6 +15,7 @@ import { useBookingDraft, BookingDraft } from '@/hooks/useBookingDraft'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { StripePaymentCollector } from '@/components/booking/StripePaymentCollector'
+import AddressRequiredState from '@/components/booking/AddressRequiredState'
 import { isSetupIntentEnabled } from '@/lib/feature-flags'
 import { 
   findSlotClosestTo24Hours, 
@@ -49,6 +50,7 @@ type WeightTier = 'small' | 'medium' | 'large'
 
 function LaundryBookingForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   
   // Persistent booking data
@@ -70,6 +72,12 @@ function LaundryBookingForm() {
     restoreDraft,
     clearDraft,
   } = useBookingDraft('LAUNDRY')
+  
+  // Track if we've restored from draft (to prevent last order from overwriting)
+  const [hasRestoredFromDraft, setHasRestoredFromDraft] = useState(false)
+  
+  // Key to force AddressAutocomplete remount when address is restored
+  const [addressKey, setAddressKey] = useState(0)
   
   // Address state
   const [address, setAddress] = useState<Address | null>(null)
@@ -199,10 +207,103 @@ function LaundryBookingForm() {
     findEarliestAvailableDate()
   }, [address])
 
-  // Load last order for smart defaults
+  // Restore draft after login (takes priority over last order)
+  useEffect(() => {
+    // Only proceed if persistedLoaded is ready
+    if (!persistedLoaded) {
+      return
+    }
+    
+    // Check if we should restore from draft
+    const shouldRestore = searchParams.get('restore') === 'true'
+    if (!shouldRestore) {
+      return
+    }
+    
+    // Wait for user to be authenticated before restoring
+    if (!user) {
+      console.log('Waiting for user auth to complete before restoring draft...')
+      return
+    }
+    
+    const draft = restoreDraft()
+    
+    // Debug: Log what we're restoring
+    console.log('=== RESTORING DRAFT ===')
+    console.log('Draft:', draft)
+    
+    if (draft && draft.serviceType === 'LAUNDRY' && draft.laundry) {
+      // Restore shared fields
+      if (draft.phone) {
+        console.log('Restoring phone:', draft.phone)
+        setPhone(formatPhone(draft.phone))
+      }
+      if (draft.address) {
+        console.log('Restoring address:', draft.address)
+        setAddress(draft.address)
+        setIsAddressValid(true)
+        setIsAddressCollapsed(false) // Keep it expanded so user can see it was restored
+        if (draft.address.line2) setAddressLine2(draft.address.line2)
+        // Force AddressAutocomplete to remount with the restored value
+        setAddressKey(prev => prev + 1)
+      }
+      if (draft.specialInstructions) setSpecialInstructions(draft.specialInstructions)
+      if (draft.pickupDate) setDate(draft.pickupDate)
+      
+      // Restore pickup slot with proper typing
+      if (draft.pickupSlot) {
+        setSelectedSlot({
+          partner_id: draft.pickupSlot.partner_id,
+          partner_name: '', // Will be filled when slots are fetched
+          slot_start: draft.pickupSlot.slot_start,
+          slot_end: draft.pickupSlot.slot_end,
+          available_units: 0,
+          max_units: 0,
+          service_type: 'LAUNDRY'
+        })
+      }
+      
+      // Restore laundry-specific fields
+      setServiceType(draft.laundry.serviceType)
+      if (draft.laundry.weightTier) setWeightTier(draft.laundry.weightTier)
+      if (draft.laundry.estimatedPounds) setEstimatedPounds(draft.laundry.estimatedPounds)
+      setRushService(draft.laundry.rushService)
+      if (draft.laundry.deliveryDate) setDeliveryDate(draft.laundry.deliveryDate)
+      
+      // Restore delivery slot with proper typing
+      if (draft.laundry.deliverySlot) {
+        setSelectedDeliverySlot({
+          partner_id: draft.laundry.deliverySlot.partner_id,
+          partner_name: '', // Will be filled when slots are fetched
+          slot_start: draft.laundry.deliverySlot.slot_start,
+          slot_end: draft.laundry.deliverySlot.slot_end,
+          available_units: 0,
+          max_units: 0,
+          service_type: 'LAUNDRY'
+        })
+      }
+      
+      // Mark that we've restored from draft
+      setHasRestoredFromDraft(true)
+      
+      // Clear draft after successful restore
+      clearDraft()
+      
+      // Clear the restore parameter from URL
+      router.replace('/book/laundry', { scroll: false })
+      
+      // Show success message
+      setToast({
+        message: '✨ Your booking information has been restored!',
+        type: 'success'
+      })
+    }
+  }, [user, persistedLoaded, searchParams, restoreDraft, clearDraft, router])
+
+  // Load last order for smart defaults (only if we haven't restored from draft)
   useEffect(() => {
     const loadLastOrder = async () => {
-      if (!user) return
+      if (!user || hasRestoredFromDraft) return
 
       try {
         const response = await fetch('/api/orders?limit=1')
@@ -248,62 +349,7 @@ function LaundryBookingForm() {
     }
 
     loadLastOrder()
-  }, [user])
-
-  // Restore draft after login
-  useEffect(() => {
-    if (!user || !persistedLoaded) return
-    
-    const draft = restoreDraft()
-    if (draft && draft.serviceType === 'LAUNDRY' && draft.laundry) {
-      // Restore shared fields
-      if (draft.phone) setPhone(formatPhone(draft.phone))
-      if (draft.address) {
-        setAddress(draft.address)
-        setIsAddressValid(true)
-        setIsAddressCollapsed(true)
-        if (draft.address.line2) setAddressLine2(draft.address.line2)
-      }
-      if (draft.specialInstructions) setSpecialInstructions(draft.specialInstructions)
-      if (draft.pickupDate) setDate(draft.pickupDate)
-      
-      // Restore pickup slot with proper typing
-      if (draft.pickupSlot) {
-        setSelectedSlot({
-          partner_id: draft.pickupSlot.partner_id,
-          partner_name: '', // Will be filled when slots are fetched
-          slot_start: draft.pickupSlot.slot_start,
-          slot_end: draft.pickupSlot.slot_end,
-          available_units: 0,
-          max_units: 0,
-          service_type: 'LAUNDRY'
-        })
-      }
-      
-      // Restore laundry-specific fields
-      setServiceType(draft.laundry.serviceType)
-      if (draft.laundry.weightTier) setWeightTier(draft.laundry.weightTier)
-      if (draft.laundry.estimatedPounds) setEstimatedPounds(draft.laundry.estimatedPounds)
-      setRushService(draft.laundry.rushService)
-      if (draft.laundry.deliveryDate) setDeliveryDate(draft.laundry.deliveryDate)
-      
-      // Restore delivery slot with proper typing
-      if (draft.laundry.deliverySlot) {
-        setSelectedDeliverySlot({
-          partner_id: draft.laundry.deliverySlot.partner_id,
-          partner_name: '', // Will be filled when slots are fetched
-          slot_start: draft.laundry.deliverySlot.slot_start,
-          slot_end: draft.laundry.deliverySlot.slot_end,
-          available_units: 0,
-          max_units: 0,
-          service_type: 'LAUNDRY'
-        })
-      }
-      
-      // Clear draft after successful restore
-      clearDraft()
-    }
-  }, [user, persistedLoaded])
+  }, [user, hasRestoredFromDraft])
 
   // Update estimated pounds based on weight tier
   useEffect(() => {
@@ -493,17 +539,18 @@ function LaundryBookingForm() {
 
   // Handle login required (save draft and redirect)
   const handleLoginRequired = () => {
-    if (!address) {
-      setToast({ message: 'Please enter your address first', type: 'warning' })
-      return
-    }
+    // Debug: Log what we're saving
+    console.log('=== SAVING DRAFT ===')
+    console.log('Address:', address)
+    console.log('Phone:', phone)
+    console.log('Service Type:', serviceType)
     
-    // Save complete form state
-    saveDraft({
-      serviceType: 'LAUNDRY',
+    // Save whatever form state we have (even if incomplete)
+    const draftData = {
+      serviceType: 'LAUNDRY' as const,
       timestamp: Date.now(),
       phone,
-      address,
+      address: address || undefined, // Can be null - that's OK!
       specialInstructions,
       pickupDate: date,
       pickupSlot: selectedSlot || undefined,
@@ -515,9 +562,13 @@ function LaundryBookingForm() {
         deliveryDate: deliveryDate || undefined,
         deliverySlot: selectedDeliverySlot || undefined,
       }
-    })
+    }
     
-    router.push('/login?returnTo=/book/laundry')
+    console.log('Draft to save:', JSON.stringify(draftData, null, 2))
+    saveDraft(draftData)
+    
+    // Redirect with restore parameter to trigger draft restoration after auth
+    router.push('/login?returnTo=/book/laundry&restore=true')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -674,6 +725,24 @@ function LaundryBookingForm() {
     }
   }
 
+  // Scroll to address section
+  const handleScrollToAddress = () => {
+    const addressSection = document.querySelector('[data-address-section]')
+    if (addressSection) {
+      addressSection.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+      // Focus on the address input after scrolling
+      setTimeout(() => {
+        const addressInput = addressSection.querySelector('input')
+        if (addressInput) {
+          addressInput.focus()
+        }
+      }, 500)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -690,7 +759,7 @@ function LaundryBookingForm() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}
-            <div className="card-standard card-padding">
+            <div className="card-standard card-padding" data-address-section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="heading-section">📍 Pickup Address</h2>
                 {isAddressCollapsed && (
@@ -715,6 +784,7 @@ function LaundryBookingForm() {
               ) : (
                 <div className="space-y-4">
                   <AddressAutocomplete
+                    key={addressKey}
                     onAddressSelect={(addr) => {
                       setAddress(addr)
                       if (addr) {
@@ -900,8 +970,11 @@ function LaundryBookingForm() {
             <div className="card-standard card-padding">
               <h2 className="heading-section">📅 Schedule Pickup</h2>
               
-              <div className="space-y-4">
-                <div>
+              {!address ? (
+                <AddressRequiredState onEnterAddress={handleScrollToAddress} />
+              ) : (
+                <div className="space-y-4">
+                  <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Pickup Date
                   </label>
@@ -1106,7 +1179,8 @@ function LaundryBookingForm() {
                     )}
                   </div>
                 )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Payment Method Collection - Only if Setup Intent enabled */}
@@ -1277,7 +1351,7 @@ function LaundryBookingForm() {
   )
 }
 
-export default function LaundryBookingPage() {
+function LaundryBookingPageWrapper() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
@@ -1288,6 +1362,21 @@ export default function LaundryBookingPage() {
       </div>
     }>
       <LaundryBookingForm />
+    </Suspense>
+  )
+}
+
+export default function LaundryBookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LaundryBookingPageWrapper />
     </Suspense>
   )
 }
