@@ -182,8 +182,8 @@ export async function POST(request: NextRequest) {
         slot_end: endTime.toISOString(),
         max_units,
         reserved_units: 0,
-        notes: notes || null,
-        created_by: user.id
+        created_by: user.id,
+        notes: notes || null
       })
       .select()
       .single();

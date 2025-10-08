@@ -159,12 +159,54 @@ export function formatOrderDate(dateISO: string): string {
 /**
  * Get minimum delivery date based on pickup slot and service type in NY ET timezone
  * @param pickupSlotEnd - ISO string of pickup slot end time
- * @param isRush - whether rush service is selected
+ * @param isRush - whether rush service (same day) is selected
  * @returns ISO date string (YYYY-MM-DD) for minimum delivery date
  */
 export function getMinimumDeliveryDate(pickupSlotEnd: string, isRush: boolean): string {
   const pickupEnd = new Date(pickupSlotEnd);
-  const minimumHours = isRush ? 24 : 48;
+  
+  // Get the full date/time parts in NY timezone
+  const nyDateTimeStr = pickupEnd.toLocaleString('en-US', {
+    timeZone: NY_TIMEZONE,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  
+  // Parse: "MM/DD/YYYY, HH:mm:ss"
+  const [datePart, timePart] = nyDateTimeStr.split(', ');
+  const [month, day, year] = datePart.split('/');
+  const [hour] = timePart.split(':');
+  const pickupEndHourNY = parseInt(hour);
+  
+  console.log('🚀 [getMinimumDeliveryDate]', {
+    pickupSlotEnd,
+    pickupEndHourNY,
+    isRush,
+    nyDateTimeStr
+  });
+  
+  // Determine minimum hours based on service type and pickup time
+  let minimumHours: number;
+  if (isRush && pickupEndHourNY <= 11) {
+    // Same day service: if pickup ends at or before 11 AM, can deliver same day
+    // Delivery slots must be evening (6 PM or later), but we set minimum to 0
+    // to allow same-day date, then filter for evening slots elsewhere
+    minimumHours = 0; // Same day delivery allowed
+  } else if (isRush) {
+    // Same day service: if pickup after 11 AM, deliver next day (24h)
+    minimumHours = 24;
+  } else {
+    // Standard service: 48 hours
+    minimumHours = 48;
+  }
+  
+  console.log('📦 Minimum hours required:', minimumHours);
+  
   const minDelivery = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000);
   
   // Convert to NY timezone to get correct date
@@ -175,9 +217,15 @@ export function getMinimumDeliveryDate(pickupSlotEnd: string, isRush: boolean): 
     day: '2-digit'
   });
   
+  console.log('📅 Minimum delivery date (NY):', nyDateStr);
+  
   // Convert MM/DD/YYYY to YYYY-MM-DD
-  const [month, day, year] = nyDateStr.split('/');
-  return `${year}-${month}-${day}`;
+  const [minMonth, minDay, minYear] = nyDateStr.split('/');
+  const result = `${minYear}-${minMonth.padStart(2, '0')}-${minDay.padStart(2, '0')}`;
+  
+  console.log('✅ Final minimum delivery date:', result);
+  
+  return result;
 }
 
 /**

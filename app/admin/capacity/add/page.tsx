@@ -75,9 +75,51 @@ export default function AddCapacity() {
       const partner = partners.find(p => p.id === formData.partner_id);
       if (!partner) throw new Error('Partner not found');
 
-      // Combine date and time
-      const slotStart = new Date(`${formData.date}T${formData.start_time}`);
-      const slotEnd = new Date(`${formData.date}T${formData.end_time}`);
+      // CRITICAL: Create dates in ET timezone to avoid timezone conversion issues
+      // Parse the date and time strings
+      const [year, month, day] = formData.date.split('-').map(Number);
+      const [startHour, startMinute] = formData.start_time.split(':').map(Number);
+      const [endHour, endMinute] = formData.end_time.split(':').map(Number);
+      
+      // Create a date string in ET timezone format that will be correctly interpreted
+      // We use toLocaleString to format in ET, then create the ISO string
+      const slotStartET = new Date(year, month - 1, day, startHour, startMinute);
+      const slotEndET = new Date(year, month - 1, day, endHour, endMinute);
+      
+      // Convert to ET timezone string, then parse back to get the correct UTC representation
+      const slotStartETStr = slotStartET.toLocaleString('en-US', { 
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const slotEndETStr = slotEndET.toLocaleString('en-US', { 
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      // Parse back: "MM/DD/YYYY, HH:mm:ss"
+      const parseETString = (etStr: string) => {
+        const [datePart, timePart] = etStr.split(', ');
+        const [m, d, y] = datePart.split('/');
+        const [h, min, s] = timePart.split(':');
+        // Create in local time, which represents ET
+        return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s));
+      };
+      
+      const slotStart = parseETString(slotStartETStr);
+      const slotEnd = parseETString(slotEndETStr);
 
       const payload = {
         partner_id: formData.partner_id,

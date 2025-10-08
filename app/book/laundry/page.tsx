@@ -351,20 +351,21 @@ function LaundryBookingForm() {
     loadLastOrder()
   }, [user, hasRestoredFromDraft])
 
-  // Update estimated pounds based on weight tier
-  useEffect(() => {
-    const tierPounds = {
-      small: 10,
-      medium: 15,
-      large: 25
-    }
-    setEstimatedPounds(tierPounds[weightTier])
-  }, [weightTier])
-
   // Calculate price whenever service details change
   useEffect(() => {
     const calculatePrice = async () => {
       if (!address) return
+
+      // Calculate pounds directly based on weight tier to avoid race conditions
+      const tierPounds = {
+        small: 15,
+        medium: 25,
+        large: 50
+      }
+      const pounds = tierPounds[weightTier]
+      
+      // Update estimatedPounds state for display purposes
+      setEstimatedPounds(pounds)
 
       try {
         const response = await fetch('/api/price/quote', {
@@ -373,7 +374,7 @@ function LaundryBookingForm() {
           body: JSON.stringify({
             service: 'LAUNDRY',
             zip: address.zip,
-            lbs: estimatedPounds, // API expects 'lbs' not 'estimatedPounds'
+            lbs: pounds, // Use calculated pounds directly
             addons: [], // No addons for now
             rushService
           })
@@ -393,7 +394,7 @@ function LaundryBookingForm() {
     }
 
     calculatePrice()
-  }, [address, serviceType, weightTier, estimatedPounds, rushService])
+  }, [address, serviceType, weightTier, rushService])
 
   // Find earliest delivery date with available slots when pickup slot or rush service changes
   useEffect(() => {
@@ -410,13 +411,17 @@ function LaundryBookingForm() {
       console.log('Pickup ends:', selectedSlot.slot_end)
       console.log('Rush service:', rushService)
       console.log('Minimum delivery date:', minDeliveryDate)
+      console.log('Browser timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone)
       
-      const minDate = new Date(minDeliveryDate + 'T00:00:00') // Parse as local time
+      // Parse the minimum date - it's already in YYYY-MM-DD format from getMinimumDeliveryDate
+      // which uses NY timezone internally, so we just use it as-is
+      const minDateStr = minDeliveryDate
       
       // Search up to 14 days to find first date with valid slots
       for (let i = 0; i < 14; i++) {
-        const checkDate = new Date(minDate)
-        checkDate.setDate(minDate.getDate() + i)
+        // Work with date strings directly to avoid timezone conversion issues
+        const checkDate = new Date(minDateStr + 'T12:00:00') // Use noon to avoid DST issues
+        checkDate.setDate(checkDate.getDate() + i)
         const dateStr = checkDate.toISOString().split('T')[0]
         
         try {
@@ -451,8 +456,8 @@ function LaundryBookingForm() {
       
       // If no valid slots found in 14 days, set to minimum date anyway
       // The UI will show a warning that no slots meet the requirement
-      console.log('No valid slots found, using minimum date:', minDeliveryDate)
-      setDeliveryDate(minDeliveryDate)
+      console.log('No valid slots found, using minimum date:', minDateStr)
+      setDeliveryDate(minDateStr)
       setSelectedDeliverySlot(null)
     }
     
@@ -479,10 +484,6 @@ function LaundryBookingForm() {
             const closestSlot = findSlotClosestTo24Hours<TimeSlot>(slots)
             if (closestSlot) {
               setSelectedSlot(closestSlot)
-              setToast({
-                message: '✨ We pre-selected the time slot closest to 24 hours from now. You can change it if needed.',
-                type: 'info'
-              })
             }
           }
         }
@@ -520,10 +521,6 @@ function LaundryBookingForm() {
             )
             if (earliestSlot) {
               setSelectedDeliverySlot(earliestSlot)
-              setToast({
-                message: '✨ We pre-selected the earliest available delivery time slot. You can change it if needed.',
-                type: 'info'
-              })
             }
           }
         }
@@ -637,8 +634,8 @@ function LaundryBookingForm() {
             phone: phone,
             details: {
               serviceType,
-              weightTier: serviceType === 'washFold' ? weightTier : undefined,
-              estimatedPounds: serviceType === 'washFold' ? estimatedPounds : undefined,
+              weightTier: (serviceType === 'washFold' || serviceType === 'mixed') ? weightTier : undefined,
+              estimatedPounds: (serviceType === 'washFold' || serviceType === 'mixed') ? estimatedPounds : undefined,
               rushService,
               preferredDeliveryDate: deliveryDate
             }
@@ -684,8 +681,8 @@ function LaundryBookingForm() {
             },
             details: {
               serviceType,
-              weightTier: serviceType === 'washFold' ? weightTier : undefined,
-              estimatedPounds: serviceType === 'washFold' ? estimatedPounds : undefined,
+              weightTier: (serviceType === 'washFold' || serviceType === 'mixed') ? weightTier : undefined,
+              estimatedPounds: (serviceType === 'washFold' || serviceType === 'mixed') ? estimatedPounds : undefined,
               rushService,
               preferredDeliveryDate: deliveryDate
             }
@@ -872,8 +869,8 @@ function LaundryBookingForm() {
                   </div>
                 </div>
 
-                {/* Weight Tier (for Wash & Fold) */}
-                {serviceType === 'washFold' && (
+                {/* Weight Tier (for Wash & Fold and Mixed) */}
+                {(serviceType === 'washFold' || serviceType === 'mixed') && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Load Size
@@ -889,8 +886,8 @@ function LaundryBookingForm() {
                         }`}
                       >
                         <div className="font-medium">Small</div>
-                        <div className="text-xs text-gray-500 mt-1">~10 lbs</div>
-                        <div className="text-xs text-gray-400">1-2 loads</div>
+                        <div className="text-xs text-gray-500 mt-1">~15 lbs</div>
+                        <div className="text-xs text-gray-400">2-3 loads</div>
                       </button>
                       <button
                         type="button"
@@ -902,8 +899,8 @@ function LaundryBookingForm() {
                         }`}
                       >
                         <div className="font-medium">Medium</div>
-                        <div className="text-xs text-gray-500 mt-1">~15 lbs</div>
-                        <div className="text-xs text-gray-400">2-3 loads</div>
+                        <div className="text-xs text-gray-500 mt-1">~25 lbs</div>
+                        <div className="text-xs text-gray-400">3-4 loads</div>
                       </button>
                       <button
                         type="button"
@@ -915,8 +912,8 @@ function LaundryBookingForm() {
                         }`}
                       >
                         <div className="font-medium">Large</div>
-                        <div className="text-xs text-gray-500 mt-1">~25 lbs</div>
-                        <div className="text-xs text-gray-400">3-4 loads</div>
+                        <div className="text-xs text-gray-500 mt-1">~50 lbs</div>
+                        <div className="text-xs text-gray-400">6-8 loads</div>
                       </button>
                     </div>
                   </div>
@@ -930,7 +927,7 @@ function LaundryBookingForm() {
                 {/* Service Information Banner */}
                 <ServiceInfoBanner service="laundry" />
 
-                {/* Rush Service Option */}
+                {/* Same Day Service Option */}
                 <div>
                   <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-all">
                     <input
@@ -940,9 +937,9 @@ function LaundryBookingForm() {
                       className="w-6 h-6"
                     />
                     <div className="flex-1">
-                      <div className="font-medium">⚡ 24-Hour Rush Service (+25%)</div>
+                      <div className="font-medium">⚡ Same Day Service (+25%)</div>
                       <div className="text-sm text-gray-500">
-                        Same-day return if picked up before 11 AM, otherwise next-day delivery
+                        Pickup before 11 AM: delivery same day (6-8 PM or 8-10 PM). After 11 AM: next-day delivery
                       </div>
                     </div>
                   </label>
@@ -1084,7 +1081,8 @@ function LaundryBookingForm() {
                         <p className="text-sm text-green-800">
                           📅 Your laundry will be delivered on{' '}
                           <span className="font-medium">
-                            {new Date(deliveryDate).toLocaleDateString('en-US', {
+                            {new Date(deliveryDate + 'T12:00:00').toLocaleDateString('en-US', {
+                              timeZone: 'America/New_York',
                               weekday: 'long',
                               month: 'long',
                               day: 'numeric'
@@ -1103,11 +1101,31 @@ function LaundryBookingForm() {
                         {loadingDeliverySlots ? (
                           <p className="text-gray-500">Loading delivery slots...</p>
                         ) : (() => {
-                          // Filter slots to only show valid ones based on 48h/24h requirement
+                          // Filter slots to only show valid ones based on service type and pickup time
                           const validSlots = availableDeliverySlots.filter(slot => {
                             const pickupEnd = new Date(selectedSlot.slot_end)
                             const deliveryStart = new Date(slot.slot_start)
-                            const minimumHours = rushService ? 24 : 48
+                            
+                            // Check if pickup ends at or before 11 AM in NY timezone
+                            const pickupEndHourNY = parseInt(pickupEnd.toLocaleTimeString('en-US', {
+                              timeZone: 'America/New_York',
+                              hour: '2-digit',
+                              hour12: false
+                            }))
+                            
+                            // Determine minimum hours based on service type and pickup time
+                            let minimumHours: number
+                            if (rushService && pickupEndHourNY <= 11) {
+                              // Same day service: if pickup ends at or before 11 AM, can deliver same day evening
+                              minimumHours = 0
+                            } else if (rushService) {
+                              // Same day service: if pickup after 11 AM, deliver next day (24h)
+                              minimumHours = 24
+                            } else {
+                              // Standard service: 48 hours
+                              minimumHours = 48
+                            }
+                            
                             const minimumTime = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000)
                             return deliveryStart >= minimumTime
                           })
@@ -1124,13 +1142,13 @@ function LaundryBookingForm() {
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg mb-2">
-                                <p className="text-xs text-blue-700">
-                                  💡 Select your preferred delivery time (optional). If not selected, we'll schedule during business hours.
-                                  {!rushService && ' (Only showing slots at least 48 hours after pickup)'}
-                                  {rushService && ' (Only showing slots at least 24 hours after pickup)'}
-                                </p>
-                              </div>
+                      <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg mb-2">
+                        <p className="text-xs text-blue-700">
+                          💡 Select your preferred delivery time (optional). If not selected, we'll schedule during business hours.
+                          {!rushService && ' (Only showing slots at least 48 hours after pickup end time)'}
+                          {rushService && ' (Only showing slots at least 24 hours after pickup end time)'}
+                        </p>
+                      </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {validSlots.map(slot => (
                                   <label

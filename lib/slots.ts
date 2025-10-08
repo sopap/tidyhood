@@ -158,13 +158,57 @@ export function findEarliestDeliverySlot<T extends { slot_start: string }>(
   if (slots.length === 0) return null
   
   const pickupEnd = new Date(pickupSlotEnd)
-  const minimumHours = isRush ? 24 : 48
+  
+  // Get pickup end hour in NY timezone
+  const pickupEndHourNY = parseInt(pickupEnd.toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    hour12: false
+  }))
+  
+  // Determine minimum hours based on service type and pickup time
+  let minimumHours: number
+  let requireEveningSlot = false
+  
+  if (isRush && pickupEndHourNY <= 11) {
+    // Same day service: if pickup ends at or before 11 AM, can deliver same day
+    // BUT delivery must be in evening slots (6 PM or later)
+    minimumHours = 0 // Allow same-day date
+    requireEveningSlot = true // Only evening slots (18:00+)
+  } else if (isRush) {
+    // Same day service: if pickup after 11 AM, deliver next day (24h)
+    minimumHours = 24
+  } else {
+    // Standard service: 48 hours
+    minimumHours = 48
+  }
+  
   const minimumDeliveryTime = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000)
   
   // Filter slots that meet minimum time requirement
   const validSlots = slots.filter(slot => {
     const slotTime = new Date(slot.slot_start)
-    return slotTime >= minimumDeliveryTime
+    
+    // Check time requirement
+    if (slotTime < minimumDeliveryTime) {
+      return false
+    }
+    
+    // For same-day delivery, ensure slot starts at 6 PM or later (18:00 in NY timezone)
+    if (requireEveningSlot) {
+      const slotHourNY = parseInt(slotTime.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
+        hour: '2-digit',
+        hour12: false
+      }))
+      
+      // Must be 6 PM (18:00) or later
+      if (slotHourNY < 18) {
+        return false
+      }
+    }
+    
+    return true
   })
   
   if (validSlots.length === 0) return null
