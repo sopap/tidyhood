@@ -34,7 +34,7 @@ export function Header() {
             width={420}
             height={105}
             priority
-            className="h-12 md:h-[67px] lg:h-[77px] w-auto"
+            className="h-16 md:h-[67px] lg:h-[77px] w-auto"
           />
         </Link>
         <nav className="space-x-6">

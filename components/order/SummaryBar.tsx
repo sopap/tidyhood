@@ -11,6 +11,8 @@ interface SummaryBarProps {
   windowLabel: string;
   totalCents: number;
   showPayButton?: boolean;
+  deliveryDateISO?: string;
+  deliveryWindowLabel?: string;
 }
 
 export default function SummaryBar({
@@ -21,12 +23,15 @@ export default function SummaryBar({
   dateISO,
   windowLabel,
   totalCents,
-  showPayButton
+  showPayButton,
+  deliveryDateISO,
+  deliveryWindowLabel
 }: SummaryBarProps) {
   const router = useRouter();
   const tone = statusTone(statusKey as any);
   const money = (c: number) => (c / 100).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
   const dateStr = new Date(dateISO).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const deliveryDateStr = deliveryDateISO ? new Date(deliveryDateISO).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : null;
 
   const toneMap = {
     blue: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -47,8 +52,15 @@ export default function SummaryBar({
               {statusLabel}
             </span>
           </div>
-          <div className="text-sm text-gray-600 font-medium">
-            📅 {dateStr} · ⏰ {windowLabel}
+          <div className="space-y-1">
+            <div className="text-sm text-gray-600 font-medium">
+              <span className="text-blue-600">🔄</span> Pickup: {dateStr} · ⏰ {windowLabel}
+            </div>
+            {deliveryDateStr && deliveryWindowLabel && (
+              <div className="text-sm text-gray-600 font-medium">
+                <span className="text-green-600">📦</span> Delivery: {deliveryDateStr} · ⏰ {deliveryWindowLabel}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">

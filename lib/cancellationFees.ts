@@ -91,23 +91,36 @@ export function getCancellationPolicy(order: Order): CancellationPolicy {
     }
   }
   
-  // Cleaning (paid) - 24hr notice required, 15% fee
+  // Cleaning (paid) - Updated policy: Free reschedule >24h, 15% cancel fee >24h, no changes <24h
   if (order.service_type === 'CLEANING') {
     const feePercent = 0.15
-    const fee = Math.round(order.total_cents * feePercent)
+    const cancellationFee = Math.round(order.total_cents * feePercent)
     const withinNoticeWindow = hoursUntilSlot >= 24
     
+    if (!withinNoticeWindow) {
+      // Within 24 hours - no changes allowed
+      return {
+        canCancel: false,
+        canReschedule: false,
+        requiresNotice: true,
+        noticeHours: 24,
+        cancellationFee: 0,
+        rescheduleFee: 0,
+        refundAmount: 0,
+        reason: 'No changes allowed within 24 hours of service time'
+      }
+    }
+    
+    // 24+ hours notice - reschedule free, cancel with 15% fee
     return {
       canCancel: true,
       canReschedule: true,
       requiresNotice: true,
       noticeHours: 24,
-      cancellationFee: fee,
-      rescheduleFee: fee,
-      refundAmount: order.total_cents - fee,
-      reason: withinNoticeWindow
-        ? 'Free changes with 24+ hours notice (no fee will be charged)'
-        : '15% fee applies for changes within 24 hours'
+      cancellationFee: cancellationFee,
+      rescheduleFee: 0, // Free rescheduling
+      refundAmount: order.total_cents - cancellationFee,
+      reason: 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee.'
     }
   }
   
@@ -242,5 +255,5 @@ export function getPolicySummary(serviceType: 'LAUNDRY' | 'CLEANING'): string {
     return 'Free cancellation or rescheduling anytime before pickup'
   }
   
-  return 'Free changes with 24+ hours notice. 15% fee for changes within 24 hours. 85% refund on cancellation.'
+  return 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee with 24+ hours notice. No changes allowed within 24 hours of service.'
 }

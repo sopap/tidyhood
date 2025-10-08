@@ -776,10 +776,14 @@ function LaundryBookingForm() {
                   <textarea
                     value={specialInstructions}
                     onChange={(e) => setSpecialInstructions(e.target.value)}
-                    placeholder="e.g., Stain treatment preferences, access instructions..."
-                    rows={3}
-                    className="input-field"
+                    placeholder="e.g., Stain treatment preferences, fabric softener requests, access instructions..."
+                    rows={4}
+                    maxLength={500}
+                    className="textarea-field"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {specialInstructions.length}/500 characters
+                  </p>
                 </div>
               </div>
             </div>
