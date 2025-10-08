@@ -52,7 +52,7 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
                       {isCurrent && <span className="block text-xs text-gray-500 mt-1">(Current)</span>}
                     </h3>
                     <p className="text-xs text-gray-600">
-                      {step.description || getStepDescription(step.key)}
+                      {getStepDescription(step.key)}
                     </p>
                     {isCompleted && i !== idx && (
                       <div className="text-xs text-green-600 font-medium mt-1">✓ Complete</div>

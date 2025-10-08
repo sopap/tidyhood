@@ -203,15 +203,15 @@ export default function LaundryPage() {
                     </div>
                   </div>
                   
-                  {/* Step 3: Quote Sent */}
+                  {/* Step 3: Weighed & Sorted */}
                   <div className="text-center">
                     <div className="w-16 h-16 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg">
-                      💬
+                      ⚖️
                     </div>
                     <div className="bg-white rounded-lg border-2 border-amber-200 p-3 shadow-sm">
-                      <h3 className="font-bold text-sm mb-1 text-amber-700">Quote Sent</h3>
+                      <h3 className="font-bold text-sm mb-1 text-amber-700">Weighed & Sorted</h3>
                       <p className="text-xs text-gray-600">
-                        Receive exact pricing after weighing
+                        Items weighed and sorted by care type
                       </p>
                     </div>
                   </div>
@@ -269,11 +269,11 @@ export default function LaundryPage() {
               
               <div className="flex items-start space-x-4">
                 <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
-                  💬
+                  ⚖️
                 </div>
                 <div>
-                  <h3 className="font-bold text-amber-700 mb-1">Quote Sent</h3>
-                  <p className="text-sm text-gray-600">After weighing, you'll receive the exact price (usually $26-45 for most loads).</p>
+                  <h3 className="font-bold text-amber-700 mb-1">Weighed & Sorted</h3>
+                  <p className="text-sm text-gray-600">Items weighed and sorted by care type for proper treatment.</p>
                 </div>
               </div>
               
