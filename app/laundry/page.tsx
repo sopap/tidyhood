@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Header } from '@/components/Header'
+import Tooltip from '@/components/ui/Tooltip'
+import DryPriceTooltip from '@/components/dryclean/DryPriceTooltip'
 
 export const metadata: Metadata = {
   title: 'Wash & Fold Laundry Delivery in Harlem | $1.75/lb | Tidyhood',
@@ -162,38 +164,137 @@ export default function LaundryPage() {
             </div>
           </section>
 
-          {/* How It Works */}
+          {/* How It Works - Enhanced Steps Design */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-8">How Laundry Pickup Works</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
-                  1
+            <h2 className="text-3xl font-bold mb-8 text-center">How Your Laundry Journey Works</h2>
+            
+            {/* Desktop Timeline */}
+            <div className="hidden md:block">
+              <div className="relative">
+                {/* Progress Line */}
+                <div className="absolute top-8 left-0 w-full h-0.5 bg-gray-200">
+                  <div className="h-full w-full bg-primary-300"></div>
                 </div>
-                <h3 className="font-bold mb-2">Book Your Pickup</h3>
-                <p className="text-sm text-text-secondary">
-                  Choose your time slot online. We offer flexible pickup windows 8 AM - 8 PM, 7 days a week.
-                </p>
+                
+                <div className="grid grid-cols-5 gap-4 relative z-10">
+                  {/* Step 1: Pickup Scheduled */}
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg">
+                      📅
+                    </div>
+                    <div className="bg-white rounded-lg border-2 border-primary-200 p-3 shadow-sm">
+                      <h3 className="font-bold text-sm mb-1 text-primary-700">Pickup Scheduled</h3>
+                      <p className="text-xs text-gray-600">
+                        Choose your time slot online
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Step 2: Picked Up */}
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg">
+                      🧺
+                    </div>
+                    <div className="bg-white rounded-lg border-2 border-blue-200 p-3 shadow-sm">
+                      <h3 className="font-bold text-sm mb-1 text-blue-700">Picked Up</h3>
+                      <p className="text-xs text-gray-600">
+                        We collect your laundry with QR-coded bags
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Step 3: Quote Sent */}
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg">
+                      💬
+                    </div>
+                    <div className="bg-white rounded-lg border-2 border-amber-200 p-3 shadow-sm">
+                      <h3 className="font-bold text-sm mb-1 text-amber-700">Quote Sent</h3>
+                      <p className="text-xs text-gray-600">
+                        Receive exact pricing after weighing
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Step 4: Processing */}
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg">
+                      🧽
+                    </div>
+                    <div className="bg-white rounded-lg border-2 border-purple-200 p-3 shadow-sm">
+                      <h3 className="font-bold text-sm mb-1 text-purple-700">Processing</h3>
+                      <p className="text-xs text-gray-600">
+                        Professional wash, dry & fold
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Step 5: Completed */}
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 text-white shadow-lg">
+                      ✅
+                    </div>
+                    <div className="bg-white rounded-lg border-2 border-green-200 p-3 shadow-sm">
+                      <h3 className="font-bold text-sm mb-1 text-green-700">Completed</h3>
+                      <p className="text-xs text-gray-600">
+                        Fresh delivery to your door
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Mobile Steps */}
+            <div className="md:hidden space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  📅
+                </div>
+                <div>
+                  <h3 className="font-bold text-primary-700 mb-1">Pickup Scheduled</h3>
+                  <p className="text-sm text-gray-600">Choose your time slot online. We offer flexible pickup windows 8 AM - 8 PM, 7 days a week.</p>
+                </div>
               </div>
               
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
-                  2
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  🧺
                 </div>
-                <h3 className="font-bold mb-2">We Pick Up & Wash</h3>
-                <p className="text-sm text-text-secondary">
-                  Our Harlem partner arrives with QR-coded bags. We wash, dry, and fold with eco-friendly care.
-                </p>
+                <div>
+                  <h3 className="font-bold text-blue-700 mb-1">Picked Up</h3>
+                  <p className="text-sm text-gray-600">Our Harlem partner arrives with QR-coded bags and collects your laundry safely.</p>
+                </div>
               </div>
               
-              <div className="text-center">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-primary-600">
-                  3
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  💬
                 </div>
-                <h3 className="font-bold mb-2">Fresh Delivery</h3>
-                <p className="text-sm text-text-secondary">
-                  Your laundry returns clean, fresh, and perfectly folded within 48 hours (or 24 with rush).
-                </p>
+                <div>
+                  <h3 className="font-bold text-amber-700 mb-1">Quote Sent</h3>
+                  <p className="text-sm text-gray-600">After weighing, you'll receive the exact price (usually $26-45 for most loads).</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  🧽
+                </div>
+                <div>
+                  <h3 className="font-bold text-purple-700 mb-1">Processing</h3>
+                  <p className="text-sm text-gray-600">Professional wash, dry, and fold with eco-friendly detergents and careful attention.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-4">
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                  ✅
+                </div>
+                <div>
+                  <h3 className="font-bold text-green-700 mb-1">Completed</h3>
+                  <p className="text-sm text-gray-600">Fresh, clean laundry delivered back to your door within 48 hours (or 24 with rush).</p>
+                </div>
               </div>
             </div>
           </section>
@@ -222,6 +323,34 @@ export default function LaundryPage() {
               <p className="text-sm text-text-tertiary">
                 Near the border? Contact us and we'll see if we can accommodate your location.
               </p>
+            </div>
+          </section>
+
+          {/* Dry Cleaning Services Section */}
+          <section className="mb-16">
+            <h2 className="text-3xl font-bold mb-6">Need Dry Cleaning Too?</h2>
+            <div className="card bg-blue-50 border-2 border-blue-200">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-bold text-lg mb-2 text-blue-800">Professional Dry Cleaning Available</h3>
+                  <p className="text-sm text-blue-700 mb-4">
+                    We also offer professional dry cleaning services for your delicate garments, suits, dresses, and specialty items.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-blue-800">View sample pricing:</span>
+                    <Tooltip content={<DryPriceTooltip />}>
+                      <button className="text-blue-600 hover:text-blue-800 underline text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1">
+                        Dry Clean Price Guide ℹ️
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-4">
+                  <Link href="/book/laundry" className="btn-secondary btn-sm">
+                    Add to Pickup
+                  </Link>
+                </div>
+              </div>
             </div>
           </section>
 
