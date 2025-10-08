@@ -14,9 +14,30 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
     return { bg: 'bg-gray-500', border: 'border-gray-200' };
   };
 
+  const currentStepData = ORDER_STEPS[idx];
+  const isOrderStarted = idx > 0;
+
   return (
     <>
-      <h3 className="text-lg font-semibold mb-6 text-center md:text-left">Progress</h3>
+      <h3 className="text-lg font-semibold mb-4 text-center md:text-left">Progress</h3>
+      
+      {/* Current Status Description */}
+      <div className="mb-6 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl flex-shrink-0">{currentStepData.icon}</span>
+          <div>
+            <h4 className="font-bold text-blue-900 mb-1">{currentStepData.label}</h4>
+            <p className="text-sm text-blue-800 leading-relaxed">
+              {getStepDescription(currentStepData.key)}
+              {idx < ORDER_STEPS.length - 1 && (
+                <span className="block text-xs text-blue-600 mt-1">
+                  Next: {ORDER_STEPS[idx + 1]?.label}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
       
       {/* Desktop Timeline */}
       <div className="hidden md:block">
@@ -89,7 +110,7 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
                   {isCurrent && <span className="text-xs text-blue-600 ml-2">(Current)</span>}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {step.description || getStepDescription(step.key)}
+                  {getStepDescription(step.key)}
                 </p>
                 {isCompleted && i !== idx && (
                   <div className="text-xs text-green-600 font-medium mt-1">✓ Complete</div>
@@ -105,15 +126,11 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
 
 function getStepDescription(stepKey: string): string {
   const descriptions = {
-    'pending': 'Order created and waiting for pickup',
-    'pending_pickup': 'Your order is scheduled for pickup',
-    'at_facility': 'Items collected and at our facility',
-    'awaiting_payment': 'Quote sent, awaiting your approval',
-    'paid_processing': 'Payment received, processing your order',
-    'in_progress': 'Your order is being processed',
-    'out_for_delivery': 'On the way back to you',
-    'delivered': 'Order delivered to your address',
-    'completed': 'Service complete and delivered'
+    'pickup': 'Order confirmed and pickup scheduled',
+    'facility': 'Items collected and at our facility',
+    'weighing': 'Items weighed and sorted for processing',
+    'processing': 'Washing, drying, and folding your items',
+    'completed': 'Fresh laundry ready for delivery'
   };
   
   return descriptions[stepKey as keyof typeof descriptions] || 'Processing your order';

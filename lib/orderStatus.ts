@@ -1,9 +1,9 @@
-export type OrderStep = 'pickup' | 'facility' | 'quote' | 'processing' | 'completed';
+export type OrderStep = 'pickup' | 'facility' | 'weighing' | 'processing' | 'completed';
 
 export const ORDER_STEPS: { key: OrderStep; label: string; icon: string }[] = [
   { key: 'pickup',     label: 'Pickup Scheduled', icon: '📅' },
   { key: 'facility',   label: 'Picked Up',        icon: '🧺' },
-  { key: 'quote',      label: 'Quote Sent',       icon: '💬' },
+  { key: 'weighing',   label: 'Weighed & Sorted', icon: '⚖️' },
   { key: 'processing', label: 'Processing',       icon: '🧼' },
   { key: 'completed',  label: 'Completed',        icon: '✅' },
 ];
@@ -15,7 +15,7 @@ export function mapDatabaseStatus(dbStatus: string): OrderStep {
     'pending_pickup': 'pickup',
     'pending': 'pickup',
     'at_facility': 'facility',
-    'awaiting_payment': 'quote',
+    'awaiting_payment': 'weighing',
     'paid': 'processing',
     'paid_processing': 'processing',
     'completed': 'completed',
@@ -30,7 +30,7 @@ export function stepIndex(s: OrderStep) {
 export function statusTone(step: OrderStep): 'blue' | 'indigo' | 'green' | 'gray' {
   if (step === 'completed') return 'green';
   if (step === 'processing') return 'indigo';
-  if (step === 'pickup' || step === 'facility' || step === 'quote') return 'blue';
+  if (step === 'pickup' || step === 'facility' || step === 'weighing') return 'blue';
   return 'gray';
 }
 
