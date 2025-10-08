@@ -81,11 +81,18 @@ export async function POST(request: NextRequest) {
       estimated_amount: params.estimated_amount_cents
     });
     
+    // Convert snake_case to camelCase for database
+    const serviceCategoryMap: Record<string, 'washFold' | 'dryClean' | 'mixed'> = {
+      'wash_fold': 'washFold',
+      'dry_clean': 'dryClean',
+      'mixed': 'mixed',
+    };
+    
     // Execute payment authorization saga
     const order = await executePaymentAuthorizationSaga({
       user_id: user.id,
       service_type: 'LAUNDRY',
-      service_category: params.service_category,
+      service_category: serviceCategoryMap[params.service_category],
       estimated_amount_cents: params.estimated_amount_cents,
       payment_method_id: params.payment_method_id,
       slot: params.slot,
