@@ -11,6 +11,26 @@ export interface TimeSlot {
 }
 
 /**
+ * Get current time in NY ET timezone
+ */
+function getNYTime(): Date {
+  const now = new Date()
+  // Convert to NY timezone
+  const nyTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  return nyTime
+}
+
+/**
+ * Check if a slot is within 6 hours from now
+ */
+function isSlotWithin6Hours(slotStart: string): boolean {
+  const now = getNYTime()
+  const slot = new Date(slotStart)
+  const sixHoursFromNow = new Date(now.getTime() + 6 * 60 * 60 * 1000)
+  return slot <= sixHoursFromNow
+}
+
+/**
  * Get available time slots for a service type, zip, and date
  */
 export async function getAvailableSlots(
@@ -20,12 +40,14 @@ export async function getAvailableSlots(
 ): Promise<TimeSlot[]> {
   const db = getServiceClient()
   
-  // Parse date to get date range
-  const startOfDay = new Date(date)
-  startOfDay.setHours(0, 0, 0, 0)
+  // Parse date in local timezone (browser's timezone, which should be ET)
+  // date format is YYYY-MM-DD
+  const [year, month, day] = date.split('-').map(Number)
   
-  const endOfDay = new Date(date)
-  endOfDay.setHours(23, 59, 59, 999)
+  // Create Date objects at midnight and end-of-day in local time
+  // toISOString() will automatically convert to UTC for the database query
+  const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0)
+  const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999)
   
   // Get partners serving this zip
   const { data: partners, error: partnersError } = await db
@@ -54,8 +76,16 @@ export async function getAvailableSlots(
   if (slotsError) throw slotsError
   if (!slots) return []
   
-  // Filter out full slots
-  const availableSlots = slots.filter(slot => slot.reserved_units < slot.max_units)
+  // Filter out full slots and slots within 6 hours or in the past
+  const now = getNYTime()
+  const availableSlots = slots.filter(slot => {
+    const slotTime = new Date(slot.slot_start)
+    const isFull = slot.reserved_units >= slot.max_units
+    const isInPast = slotTime <= now
+    const isTooSoon = isSlotWithin6Hours(slot.slot_start)
+    
+    return !isFull && !isInPast && !isTooSoon
+  })
   
   // Consolidate slots by time window (hide partner info)
   const consolidatedMap = new Map<string, TimeSlot>()

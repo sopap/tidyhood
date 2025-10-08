@@ -65,17 +65,21 @@ export default function SummaryBar({
           <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
             <span className="font-medium">Order #{orderId.slice(0, 8)}</span>
             <span className="text-gray-400">•</span>
-            <span>{formatDate(dateISO)}</span>
-            <span className="text-gray-400">•</span>
-            <span className="font-medium">{windowLabel}</span>
+            <span>Pickup: {formatDate(dateISO)} at {windowLabel}</span>
             
-            {/* Delivery Time Slot (for laundry) */}
-            {deliveryDateISO && deliveryWindowLabel && (
+            {/* Delivery Date and Time (for laundry) */}
+            {service === 'LAUNDRY' && (
               <>
                 <span className="text-gray-400">•</span>
-                <span className="text-green-600 font-medium">
-                  Delivery: {deliveryWindowLabel}
-                </span>
+                {deliveryDateISO && deliveryWindowLabel ? (
+                  <span className="text-green-600 font-medium">
+                    Delivery: {formatDate(deliveryDateISO)} at {deliveryWindowLabel}
+                  </span>
+                ) : (
+                  <span className="text-amber-600 font-medium">
+                    Delivery: {formatDate(new Date(new Date(dateISO).getTime() + 2 * 24 * 60 * 60 * 1000).toISOString())} (estimated, time TBD)
+                  </span>
+                )}
               </>
             )}
           </div>

@@ -233,9 +233,12 @@ export function AddressAutocomplete({
         ) : manualMode ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Street Address</label>
+              <label htmlFor="manual-address-line1" className="block text-xs text-gray-600 mb-1">Street Address</label>
               <input
+                id="manual-address-line1"
+                name="address-line1"
                 type="text"
+                autoComplete="street-address"
                 value={manualAddress.line1}
                 onChange={(e) => setManualAddress({...manualAddress, line1: e.target.value})}
                 placeholder="171 W 131st St"
@@ -243,9 +246,12 @@ export function AddressAutocomplete({
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">City</label>
+              <label htmlFor="manual-address-city" className="block text-xs text-gray-600 mb-1">City</label>
               <input
+                id="manual-address-city"
+                name="address-city"
                 type="text"
+                autoComplete="address-level2"
                 value={manualAddress.city}
                 onChange={(e) => setManualAddress({...manualAddress, city: e.target.value})}
                 placeholder="New York"
@@ -253,9 +259,12 @@ export function AddressAutocomplete({
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">ZIP Code</label>
+              <label htmlFor="manual-address-zip" className="block text-xs text-gray-600 mb-1">ZIP Code</label>
               <input
+                id="manual-address-zip"
+                name="postal-code"
                 type="text"
+                autoComplete="postal-code"
                 value={manualAddress.zip}
                 onChange={(e) => setManualAddress({...manualAddress, zip: e.target.value})}
                 placeholder="10027"

@@ -181,44 +181,44 @@ export default function Home() {
                 aria-label="Wash and fold laundry service details"
               >
                 <div className="text-5xl md:text-6xl mb-4 md:mb-6 text-center" role="img" aria-label="Laundry basket">🧺</div>
-                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-center">Wash & Fold Laundry</h2>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-center">Harlem's Premium Wash & Fold Service</h2>
                 <p className="text-text-secondary mb-4 md:mb-6 text-center text-sm md:text-base">
-                  Professional care with 48-hour turnaround and same-day pickup options.
+                  Same-day pickup, 48-hour return. Professional care that fits your schedule.
                 </p>
                 
                 <div className="bg-primary-50 rounded-lg p-4 mb-4 md:mb-6 text-center">
                   <div className="text-2xl md:text-3xl font-bold text-primary-600">
                     $1.75<span className="text-base md:text-lg">/lb</span>
                   </div>
-                  <div className="text-xs md:text-sm text-text-secondary">15 lb minimum — $26.25</div>
+                  <div className="text-xs md:text-sm text-text-secondary">(minimum order $26.25)</div>
                 </div>
 
                 <ul className="space-y-2 md:space-y-3 mb-6">
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Free pickup & delivery</span>
+                    <span>Contactless pickup & delivery (FREE)</span>
                   </li>
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Eco-friendly detergents</span>
+                    <span>Real-time order tracking via QR codes</span>
                   </li>
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>QR-coded bags for tracking</span>
+                    <span>Eco-friendly, gentle on fabrics</span>
                   </li>
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Rush 24-hr service available</span>
+                    <span>24-hour rush service available</span>
                   </li>
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Tax-exempt for residential buildings</span>
+                    <span>No sales tax (residential buildings)</span>
                   </li>
                 </ul>
 
                 <div className="text-center">
                   <span className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold group-hover:bg-primary-700 transition-colors">
-                    Book Laundry →
+                    Schedule Pickup →
                   </span>
                 </div>
               </motion.div>
@@ -234,22 +234,30 @@ export default function Home() {
                 aria-label="Deep or standard home cleaning service details"
               >
                 <div className="text-5xl md:text-6xl mb-4 md:mb-6 text-center" role="img" aria-label="Sparkles">✨</div>
-                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-center">Deep or Standard Home Cleaning</h2>
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-center">Professional Home Cleaning by Harlem Experts</h2>
                 <p className="text-text-secondary mb-4 md:mb-6 text-center text-sm md:text-base">
-                  Trusted Harlem pros for spotless apartments, condos, and brownstones.
+                  Background-verified professionals delivering spotless results with 100% satisfaction guarantee.
                 </p>
                 
                 <div className="bg-primary-50 rounded-lg p-4 mb-4 md:mb-6 text-center">
                   <div className="text-2xl md:text-3xl font-bold text-primary-600">
-                    $89<span className="text-base md:text-lg">+</span>
+                    Starting at $89
                   </div>
-                  <div className="text-xs md:text-sm text-text-secondary">Studio $89 | 1BR $119 | 2BR $149</div>
+                  <div className="text-xs md:text-sm text-text-secondary">Studio $89 • 1BR $119 • 2BR $149</div>
                 </div>
 
                 <ul className="space-y-2 md:space-y-3 mb-6">
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Background-checked professionals</span>
+                    <span>100% satisfaction guarantee</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
+                    <span>Background-verified professionals</span>
+                  </li>
+                  <li className="flex items-start text-sm">
+                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
+                    <span>Before/after photos sent to you</span>
                   </li>
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
@@ -257,21 +265,13 @@ export default function Home() {
                   </li>
                   <li className="flex items-start text-sm">
                     <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Photo documentation of each visit</span>
-                  </li>
-                  <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>Flexible scheduling & secure entry options</span>
-                  </li>
-                  <li className="flex items-start text-sm">
-                    <span className="text-green-500 mr-2 mt-0.5" aria-hidden="true">✓</span>
-                    <span>100% satisfaction guarantee</span>
+                    <span>Flexible scheduling + secure key management</span>
                   </li>
                 </ul>
 
                 <div className="text-center">
                   <span className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold group-hover:bg-primary-700 transition-colors">
-                    Book Cleaning →
+                    Get Quote →
                   </span>
                 </div>
               </motion.div>

@@ -89,7 +89,7 @@ interface PolicyBannerProps {
 
 export function PolicyBanner({ 
   title = "Flexible Cancellation Policy",
-  message = "Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee with 24+ hours notice. No changes allowed within 24 hours of service.",
+  message = "Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee if within 24 hours.",
   className 
 }: PolicyBannerProps) {
   return (

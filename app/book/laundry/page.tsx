@@ -15,6 +15,11 @@ import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe } from '@stripe/stripe-js'
 import { StripePaymentCollector } from '@/components/booking/StripePaymentCollector'
 import { isSetupIntentEnabled } from '@/lib/feature-flags'
+import { 
+  findSlotClosestTo24Hours, 
+  getMinimumDeliveryDate, 
+  findEarliestDeliverySlot 
+} from '@/lib/slots'
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -74,8 +79,12 @@ function LaundryBookingForm() {
   
   // Schedule
   const [date, setDate] = useState('')
+  const [deliveryDate, setDeliveryDate] = useState('')
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null)
+  const [availableDeliverySlots, setAvailableDeliverySlots] = useState<TimeSlot[]>([])
+  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<TimeSlot | null>(null)
+  const [loadingDeliverySlots, setLoadingDeliverySlots] = useState(false)
   
   // Pricing
   const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
@@ -139,6 +148,49 @@ function LaundryBookingForm() {
     }
   }, [])
   
+  // Set default pickup date to earliest date with available slots (at least 6h away)
+  useEffect(() => {
+    const findEarliestAvailableDate = async () => {
+      if (!address) return
+      
+      const now = new Date()
+      const today = new Date(now)
+      today.setHours(0, 0, 0, 0)
+      
+      // Check today and next 7 days
+      for (let i = 0; i < 7; i++) {
+        const checkDate = new Date(today)
+        checkDate.setDate(today.getDate() + i)
+        const dateStr = checkDate.toISOString().split('T')[0]
+        
+        try {
+          const response = await fetch(
+            `/api/slots?service=LAUNDRY&zip=${address.zip}&date=${dateStr}`
+          )
+          if (response.ok) {
+            const data = await response.json()
+            const slots = data.slots || []
+            
+            // Check if any slots are available (server already filters out slots within 6h)
+            if (slots.length > 0) {
+              setDate(dateStr)
+              return
+            }
+          }
+        } catch (err) {
+          console.error('Failed to check slots for date:', dateStr, err)
+        }
+      }
+      
+      // Fallback to tomorrow if no slots found
+      const tomorrow = new Date(today)
+      tomorrow.setDate(today.getDate() + 1)
+      setDate(tomorrow.toISOString().split('T')[0])
+    }
+    
+    findEarliestAvailableDate()
+  }, [address])
+
   // Load last order for smart defaults
   useEffect(() => {
     const loadLastOrder = async () => {
@@ -234,7 +286,71 @@ function LaundryBookingForm() {
     calculatePrice()
   }, [address, serviceType, weightTier, estimatedPounds, rushService])
 
-  // Fetch slots when date changes
+  // Find earliest delivery date with available slots when pickup slot or rush service changes
+  useEffect(() => {
+    const findEarliestDeliveryDate = async () => {
+      if (!selectedSlot || !address) {
+        setDeliveryDate('') // Clear if no slot selected
+        return
+      }
+      
+      // Calculate minimum delivery date (48h for standard, 24h for rush)
+      const minDeliveryDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService)
+      
+      // CRITICAL: Log for debugging to verify correct calculation
+      console.log('Pickup ends:', selectedSlot.slot_end)
+      console.log('Rush service:', rushService)
+      console.log('Minimum delivery date:', minDeliveryDate)
+      
+      const minDate = new Date(minDeliveryDate + 'T00:00:00') // Parse as local time
+      
+      // Search up to 14 days to find first date with valid slots
+      for (let i = 0; i < 14; i++) {
+        const checkDate = new Date(minDate)
+        checkDate.setDate(minDate.getDate() + i)
+        const dateStr = checkDate.toISOString().split('T')[0]
+        
+        try {
+          const response = await fetch(
+            `/api/slots?service=LAUNDRY&zip=${address.zip}&date=${dateStr}`
+          )
+          if (response.ok) {
+            const data = await response.json()
+            const slots: TimeSlot[] = data.slots || []
+            
+            // Check if there are valid slots that meet the minimum time requirement
+            if (slots.length > 0) {
+              const validSlot = findEarliestDeliverySlot<TimeSlot>(
+                slots,
+                selectedSlot.slot_end,
+                rushService
+              )
+              
+              // Only use this date if it has at least one valid slot
+              if (validSlot) {
+                console.log('Found valid delivery date with slots:', dateStr)
+                setDeliveryDate(dateStr)
+                setSelectedDeliverySlot(null)
+                return
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to check delivery slots for date:', dateStr, err)
+        }
+      }
+      
+      // If no valid slots found in 14 days, set to minimum date anyway
+      // The UI will show a warning that no slots meet the requirement
+      console.log('No valid slots found, using minimum date:', minDeliveryDate)
+      setDeliveryDate(minDeliveryDate)
+      setSelectedDeliverySlot(null)
+    }
+    
+    findEarliestDeliveryDate()
+  }, [selectedSlot, rushService, address])
+
+  // Fetch pickup slots when date changes
   useEffect(() => {
     const fetchSlots = async () => {
       if (!date || !address) return
@@ -246,7 +362,20 @@ function LaundryBookingForm() {
         )
         if (response.ok) {
           const data = await response.json()
-          setAvailableSlots(data.slots || [])
+          const slots: TimeSlot[] = data.slots || []
+          setAvailableSlots(slots)
+          
+          // Auto-select slot closest to 24h from now only if no slot is currently selected
+          if (slots.length > 0 && !selectedSlot) {
+            const closestSlot = findSlotClosestTo24Hours<TimeSlot>(slots)
+            if (closestSlot) {
+              setSelectedSlot(closestSlot)
+              setToast({
+                message: '✨ We pre-selected the time slot closest to 24 hours from now. You can change it if needed.',
+                type: 'info'
+              })
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to fetch slots:', err)
@@ -257,6 +386,47 @@ function LaundryBookingForm() {
 
     fetchSlots()
   }, [date, address])
+
+  // Fetch delivery slots when delivery date changes
+  useEffect(() => {
+    const fetchDeliverySlots = async () => {
+      if (!deliveryDate || !address || !selectedSlot) return
+
+      try {
+        setLoadingDeliverySlots(true)
+        const response = await fetch(
+          `/api/slots?service=LAUNDRY&zip=${address.zip}&date=${deliveryDate}`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          const slots: TimeSlot[] = data.slots || []
+          setAvailableDeliverySlots(slots)
+          
+          // Auto-select earliest valid delivery slot only if no slot is currently selected
+          if (slots.length > 0 && !selectedDeliverySlot) {
+            const earliestSlot = findEarliestDeliverySlot<TimeSlot>(
+              slots,
+              selectedSlot.slot_end,
+              rushService
+            )
+            if (earliestSlot) {
+              setSelectedDeliverySlot(earliestSlot)
+              setToast({
+                message: '✨ We pre-selected the earliest available delivery time slot. You can change it if needed.',
+                type: 'info'
+              })
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch delivery slots:', err)
+      } finally {
+        setLoadingDeliverySlots(false)
+      }
+    }
+
+    fetchDeliverySlots()
+  }, [deliveryDate, address, selectedSlot, rushService])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -299,6 +469,11 @@ function LaundryBookingForm() {
               slot_start: selectedSlot.slot_start,
               slot_end: selectedSlot.slot_end,
             },
+            delivery_slot: selectedDeliverySlot ? {
+              partner_id: selectedDeliverySlot.partner_id,
+              slot_start: selectedDeliverySlot.slot_start,
+              slot_end: selectedDeliverySlot.slot_end,
+            } : undefined,
             address: {
               line1: address.line1,
               line2: addressLine2 || undefined,
@@ -311,7 +486,8 @@ function LaundryBookingForm() {
               serviceType,
               weightTier: serviceType === 'washFold' ? weightTier : undefined,
               estimatedPounds: serviceType === 'washFold' ? estimatedPounds : undefined,
-              rushService
+              rushService,
+              preferredDeliveryDate: deliveryDate
             }
           })
         })
@@ -341,6 +517,11 @@ function LaundryBookingForm() {
               slot_start: selectedSlot.slot_start,
               slot_end: selectedSlot.slot_end
             },
+            delivery_slot: selectedDeliverySlot ? {
+              partner_id: selectedDeliverySlot.partner_id,
+              slot_start: selectedDeliverySlot.slot_start,
+              slot_end: selectedDeliverySlot.slot_end,
+            } : undefined,
             address: {
               line1: address.line1,
               line2: addressLine2 || undefined,
@@ -352,7 +533,8 @@ function LaundryBookingForm() {
               serviceType,
               weightTier: serviceType === 'washFold' ? weightTier : undefined,
               estimatedPounds: serviceType === 'washFold' ? estimatedPounds : undefined,
-              rushService
+              rushService,
+              preferredDeliveryDate: deliveryDate
             }
           })
         })
@@ -641,26 +823,26 @@ function LaundryBookingForm() {
                     ) : availableSlots.length === 0 ? (
                       <p className="text-red-600">No slots available. Please select a different date.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {availableSlots.map(slot => (
                           <label
                             key={`${slot.partner_id}-${slot.slot_start}`}
-                            className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                            className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all hover:border-primary-300 ${
                               selectedSlot?.slot_start === slot.slot_start
-                                ? 'border-primary-600 bg-primary-50'
-                                : ''
+                                ? 'border-primary-600 bg-primary-50 ring-2 ring-primary-200'
+                                : 'border-gray-200'
                             }`}
                           >
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
                               <input
                                 type="radio"
                                 name="slot"
                                 checked={selectedSlot?.slot_start === slot.slot_start}
                                 onChange={() => setSelectedSlot(slot)}
-                                className="mr-3"
+                                className="flex-shrink-0"
                               />
-                              <div>
-                                <div className="font-medium">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm">
                                   {new Date(slot.slot_start).toLocaleTimeString('en-US', {
                                     hour: 'numeric',
                                     minute: '2-digit',
@@ -673,14 +855,145 @@ function LaundryBookingForm() {
                                     hour12: true
                                   })}
                                 </div>
-                                <div className="text-sm text-gray-600">{slot.partner_name}</div>
+                                <div className="text-xs text-gray-500 truncate">{slot.partner_name}</div>
                               </div>
                             </div>
-                            <span className="text-sm text-gray-500">
-                              {slot.available_units} available
+                            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                              {slot.available_units}
                             </span>
                           </label>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Delivery Date Selector */}
+                {date && selectedSlot && (
+                  <div className="border-t pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      🚚 Preferred Delivery Date
+                    </label>
+                    <input
+                      type="date"
+                      value={deliveryDate}
+                      onChange={(e) => {
+                        const newDate = e.target.value
+                        const minDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService)
+                        
+                        // Validate that the selected date meets minimum requirements
+                        if (newDate < minDate) {
+                          setToast({
+                            message: `Delivery date must be at least ${rushService ? '24' : '48'} hours after pickup. Minimum date is ${new Date(minDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+                            type: 'warning'
+                          })
+                          setDeliveryDate(minDate)
+                        } else {
+                          setDeliveryDate(newDate)
+                        }
+                        setSelectedDeliverySlot(null) // Clear slot when date changes manually
+                      }}
+                      min={getMinimumDeliveryDate(selectedSlot.slot_end, rushService)}
+                      max={new Date(new Date(selectedSlot.slot_end).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                      className="input-field"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Default is 2 days after pickup. You can choose any date between 1-7 days after pickup.
+                      {rushService && ' Rush service will override this to next-day delivery.'}
+                    </p>
+                    {deliveryDate && (
+                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">
+                          📅 Your laundry will be delivered on{' '}
+                          <span className="font-medium">
+                            {new Date(deliveryDate).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Delivery Time Slots */}
+                    {deliveryDate && address && selectedSlot && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          🕐 Available Delivery Time Slots
+                        </label>
+                        {loadingDeliverySlots ? (
+                          <p className="text-gray-500">Loading delivery slots...</p>
+                        ) : (() => {
+                          // Filter slots to only show valid ones based on 48h/24h requirement
+                          const validSlots = availableDeliverySlots.filter(slot => {
+                            const pickupEnd = new Date(selectedSlot.slot_end)
+                            const deliveryStart = new Date(slot.slot_start)
+                            const minimumHours = rushService ? 24 : 48
+                            const minimumTime = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000)
+                            return deliveryStart >= minimumTime
+                          })
+                          
+                          return validSlots.length === 0 ? (
+                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-amber-800 text-sm">
+                                ⚠️ No specific delivery time slots available for this date that meet the {rushService ? '24-hour' : '48-hour'} minimum requirement. 
+                                We'll schedule delivery during business hours and notify you with exact time.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg mb-2">
+                                <p className="text-xs text-blue-700">
+                                  💡 Select your preferred delivery time (optional). If not selected, we'll schedule during business hours.
+                                  {!rushService && ' (Only showing slots at least 48 hours after pickup)'}
+                                  {rushService && ' (Only showing slots at least 24 hours after pickup)'}
+                                </p>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {validSlots.map(slot => (
+                                  <label
+                                    key={`delivery-${slot.partner_id}-${slot.slot_start}`}
+                                    className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all hover:border-green-300 ${
+                                      selectedDeliverySlot?.slot_start === slot.slot_start
+                                        ? 'border-green-600 bg-green-50 ring-2 ring-green-200'
+                                        : 'border-gray-200'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <input
+                                        type="radio"
+                                        name="deliverySlot"
+                                        checked={selectedDeliverySlot?.slot_start === slot.slot_start}
+                                        onChange={() => setSelectedDeliverySlot(slot)}
+                                        className="flex-shrink-0"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-medium text-sm">
+                                          {new Date(slot.slot_start).toLocaleTimeString('en-US', {
+                                            hour: 'numeric',
+                                            minute: '2-digit',
+                                            hour12: true
+                                          })}{' '}
+                                          -{' '}
+                                          {new Date(slot.slot_end).toLocaleTimeString('en-US', {
+                                            hour: 'numeric',
+                                            minute: '2-digit',
+                                            hour12: true
+                                          })}
+                                        </div>
+                                        <div className="text-xs text-gray-500 truncate">{slot.partner_name}</div>
+                                      </div>
+                                    </div>
+                                    <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                                      {slot.available_units}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     )}
                   </div>

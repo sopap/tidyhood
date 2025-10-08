@@ -93,9 +93,9 @@ export default function ServicesPage() {
             {/* Laundry Service Card */}
             <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-6xl mb-6 text-center">🧺</div>
-              <h2 className="text-3xl font-bold mb-4 text-center">Laundry Service</h2>
+              <h2 className="text-3xl font-bold mb-4 text-center">Harlem's Premium Wash & Fold Service</h2>
               <p className="text-gray-600 mb-6 text-center">
-                Professional wash & fold with same-day or next-day service available
+                Same-day pickup, 48-hour return. Professional care that fits your schedule.
               </p>
 
               <div className="bg-primary-50 rounded-lg p-6 mb-6">
@@ -104,34 +104,30 @@ export default function ServicesPage() {
                   <span className="text-gray-600">/lb</span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  15 lb minimum ($26.25)
+                  (minimum order $26.25)
                 </p>
               </div>
 
               <div className="space-y-3 mb-8">
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Free pickup & delivery ($5.99 value)</span>
+                  <span className="text-gray-700">Contactless pickup & delivery (FREE)</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Eco-friendly detergents</span>
+                  <span className="text-gray-700">Real-time order tracking via QR codes</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">QR-coded bags for tracking</span>
+                  <span className="text-gray-700">Eco-friendly, gentle on fabrics</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">48-hour standard turnaround</span>
+                  <span className="text-gray-700">24-hour rush service available</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">24-hour rush available (+$10)</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Tax-exempt service</span>
+                  <span className="text-gray-700">No sales tax (residential buildings)</span>
                 </div>
               </div>
 
@@ -139,32 +135,39 @@ export default function ServicesPage() {
                 href="/book/laundry"
                 className="btn-primary w-full text-center block text-lg py-4"
               >
-                Book Laundry Service
+                Schedule Pickup
               </Link>
             </div>
 
             {/* Cleaning Service Card */}
             <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-6xl mb-6 text-center">✨</div>
-              <h2 className="text-3xl font-bold mb-4 text-center">Home Cleaning</h2>
+              <h2 className="text-3xl font-bold mb-4 text-center">Professional Home Cleaning by Harlem Experts</h2>
               <p className="text-gray-600 mb-6 text-center">
-                Professional deep or standard cleaning by background-checked cleaners
+                Background-verified professionals delivering spotless results with 100% satisfaction guarantee.
               </p>
 
               <div className="bg-primary-50 rounded-lg p-6 mb-6">
                 <div className="text-center mb-4">
-                  <span className="text-4xl font-bold text-primary-600">$89</span>
-                  <span className="text-gray-600">+</span>
+                  <span className="text-4xl font-bold text-primary-600">Starting at $89</span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  Studio from $89, 1BR $119, 2BR $149
+                  Studio $89 • 1BR $119 • 2BR $149
                 </p>
               </div>
 
               <div className="space-y-3 mb-8">
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Background-checked professionals</span>
+                  <span className="text-gray-700">100% satisfaction guarantee</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-gray-700">Background-verified professionals</span>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-gray-700">Before/after photos sent to you</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
@@ -172,19 +175,7 @@ export default function ServicesPage() {
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Photo documentation</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Flexible scheduling</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Deep clean option (1.5x price)</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">100% satisfaction guarantee</span>
+                  <span className="text-gray-700">Flexible scheduling + secure key management</span>
                 </div>
               </div>
 
@@ -192,7 +183,7 @@ export default function ServicesPage() {
                 href="/book/cleaning"
                 className="btn-primary w-full text-center block text-lg py-4"
               >
-                Book Cleaning Service
+                Get Quote
               </Link>
             </div>
           </div>

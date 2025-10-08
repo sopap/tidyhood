@@ -91,36 +91,36 @@ export function getCancellationPolicy(order: Order): CancellationPolicy {
     }
   }
   
-  // Cleaning (paid) - Updated policy: Free reschedule >24h, 15% cancel fee >24h, no changes <24h
+  // Cleaning (paid) - Updated policy: Free reschedule and cancel >24h, 15% cancel fee <24h
   if (order.service_type === 'CLEANING') {
     const feePercent = 0.15
     const cancellationFee = Math.round(order.total_cents * feePercent)
     const withinNoticeWindow = hoursUntilSlot >= 24
     
     if (!withinNoticeWindow) {
-      // Within 24 hours - no changes allowed
+      // Within 24 hours - can cancel with 15% fee, but cannot reschedule (too late)
       return {
-        canCancel: false,
+        canCancel: true,
         canReschedule: false,
         requiresNotice: true,
         noticeHours: 24,
-        cancellationFee: 0,
+        cancellationFee: cancellationFee,
         rescheduleFee: 0,
-        refundAmount: 0,
-        reason: 'No changes allowed within 24 hours of service time'
+        refundAmount: order.total_cents - cancellationFee,
+        reason: 'Cancellations within 24 hours incur a 15% fee. Rescheduling not available.'
       }
     }
     
-    // 24+ hours notice - reschedule free, cancel with 15% fee
+    // 24+ hours notice - both reschedule and cancel are free
     return {
       canCancel: true,
       canReschedule: true,
       requiresNotice: true,
       noticeHours: 24,
-      cancellationFee: cancellationFee,
+      cancellationFee: 0, // Free cancellation
       rescheduleFee: 0, // Free rescheduling
-      refundAmount: order.total_cents - cancellationFee,
-      reason: 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee.'
+      refundAmount: order.total_cents, // Full refund
+      reason: 'Free rescheduling and cancellation with 24+ hours notice.'
     }
   }
   
@@ -255,5 +255,5 @@ export function getPolicySummary(serviceType: 'LAUNDRY' | 'CLEANING'): string {
     return 'Free cancellation or rescheduling anytime before pickup'
   }
   
-  return 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee with 24+ hours notice. No changes allowed within 24 hours of service.'
+  return 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee if within 24 hours.'
 }
