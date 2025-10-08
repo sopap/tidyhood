@@ -5,13 +5,18 @@ import { ORDER_STEPS, stepIndex, OrderStep } from '@/lib/orderStatus';
 export default function ProgressTracker({ current }: { current: OrderStep }) {
   const idx = stepIndex(current);
 
-  const getStepColor = (stepIndex: number) => {
+  const getStepColor = (stepIndex: number, isCompleted: boolean, isCurrent: boolean) => {
+    // Only color circles for completed or current steps
+    if (!isCompleted && !isCurrent) {
+      return { bg: 'bg-gray-300', border: 'border-gray-200' };
+    }
+    
     if (stepIndex === 0) return { bg: 'bg-primary-500', border: 'border-primary-200' };
     if (stepIndex === 1) return { bg: 'bg-blue-500', border: 'border-blue-200' };
     if (stepIndex === 2) return { bg: 'bg-amber-500', border: 'border-amber-200' };
     if (stepIndex === 3) return { bg: 'bg-purple-500', border: 'border-purple-200' };
     if (stepIndex === 4) return { bg: 'bg-green-500', border: 'border-green-200' };
-    return { bg: 'bg-gray-500', border: 'border-gray-200' };
+    return { bg: 'bg-gray-300', border: 'border-gray-200' };
   };
 
   const currentStepData = ORDER_STEPS[idx];
@@ -54,7 +59,7 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
             {ORDER_STEPS.map((step, i) => {
               const isCompleted = i <= idx;
               const isCurrent = i === idx;
-              const { bg, border } = getStepColor(i);
+              const { bg, border } = getStepColor(i, isCompleted, isCurrent);
               
               return (
                 <div key={step.key} className="text-center">
@@ -91,7 +96,7 @@ export default function ProgressTracker({ current }: { current: OrderStep }) {
         {ORDER_STEPS.map((step, i) => {
           const isCompleted = i <= idx;
           const isCurrent = i === idx;
-          const { bg } = getStepColor(i);
+          const { bg } = getStepColor(i, isCompleted, isCurrent);
           
           return (
             <div key={step.key} className="flex items-start space-x-4">
