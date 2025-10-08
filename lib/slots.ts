@@ -2,6 +2,8 @@
  * Client-side slot and date validation utilities
  */
 
+import { getNYTime, formatTimeWindow as formatTimeWindowTZ, getMinimumDeliveryDate as getMinimumDeliveryDateTZ, isSlotWithin6Hours as isSlotWithin6HoursTZ } from './timezone';
+
 /**
  * Check if a date should be disabled in the date picker
  */
@@ -34,25 +36,10 @@ export function getMinDate(): string {
 }
 
 /**
- * Format slot time for display
+ * Format slot time for display (uses NY ET timezone)
  */
 export function formatSlotTime(startISO: string, endISO: string): string {
-  const start = new Date(startISO);
-  const end = new Date(endISO);
-  
-  const startTime = start.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-  
-  const endTime = end.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-  
-  return `${startTime} - ${endTime}`;
+  return formatTimeWindowTZ(startISO, endISO);
 }
 
 /**
@@ -95,35 +82,23 @@ export function getDefaultDeliveryDate(pickupISO: string): string {
 }
 
 /**
- * Format date for display
+ * Format date for display (uses NY ET timezone)
  */
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
     weekday: 'long',
     month: 'long',
     day: 'numeric',
-  })
+  });
 }
 
 /**
- * Get current time in NY ET timezone
- */
-export function getNYTime(): Date {
-  const now = new Date()
-  // Convert to NY timezone
-  const nyTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }))
-  return nyTime
-}
-
-/**
- * Check if a slot is within 6 hours from now
+ * Check if a slot is within 6 hours from now (uses NY ET timezone)
  */
 export function isSlotWithin6Hours(slotStart: string): boolean {
-  const now = getNYTime()
-  const slot = new Date(slotStart)
-  const sixHoursFromNow = new Date(now.getTime() + 6 * 60 * 60 * 1000)
-  return slot <= sixHoursFromNow
+  return isSlotWithin6HoursTZ(slotStart);
 }
 
 /**
@@ -163,27 +138,13 @@ export function findSlotClosestTo24Hours<T extends { slot_start: string }>(slots
 }
 
 /**
- * Calculate minimum delivery date based on pickup slot and service type
+ * Calculate minimum delivery date based on pickup slot and service type (uses NY ET timezone)
  * @param pickupSlotEnd - ISO string of pickup slot end time
  * @param isRush - whether rush service is selected
  * @returns ISO date string (YYYY-MM-DD) for minimum delivery date
  */
 export function getMinimumDeliveryDate(pickupSlotEnd: string, isRush: boolean): string {
-  const pickupEnd = new Date(pickupSlotEnd)
-  const minimumHours = isRush ? 24 : 48
-  const minDelivery = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000)
-  
-  // Convert to NY timezone to get correct date
-  const nyDateStr = minDelivery.toLocaleDateString('en-US', { 
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
-  
-  // Convert MM/DD/YYYY to YYYY-MM-DD
-  const [month, day, year] = nyDateStr.split('/')
-  return `${year}-${month}-${day}`
+  return getMinimumDeliveryDateTZ(pickupSlotEnd, isRush);
 }
 
 /**

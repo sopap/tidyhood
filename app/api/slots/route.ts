@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getAvailableSlots } from '@/lib/capacity'
+import { getAvailableSlots, ensureSlotsExist } from '@/lib/capacity'
 import { handleApiError } from '@/lib/errors'
 
 const querySchema = z.object({
@@ -19,6 +19,15 @@ export async function GET(request: NextRequest) {
       date: searchParams.get('date'),
     })
     
+    // CRITICAL: Ensure slots exist for this date (on-demand generation)
+    // This is idempotent and handles race conditions
+    await ensureSlotsExist(
+      params.service,
+      params.zip,
+      params.date
+    )
+    
+    // Fetch and return available slots
     const slots = await getAvailableSlots(
       params.service,
       params.zip,

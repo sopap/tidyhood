@@ -117,10 +117,11 @@ export function groupOrders(orders: Order[]): GroupedOrders {
 }
 
 /**
- * Formats a date for display
+ * Formats a date for display (uses NY ET timezone)
  */
 export function formatOrderDate(dateISO: string): string {
-  return new Date(dateISO).toLocaleDateString(undefined, {
+  return new Date(dateISO).toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -128,15 +129,17 @@ export function formatOrderDate(dateISO: string): string {
 }
 
 /**
- * Formats a time window for display
+ * Formats a time window for display (uses NY ET timezone)
  */
 export function formatTimeWindow(startISO: string, endISO: string): string {
   const start = new Date(startISO).toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
   const end = new Date(endISO).toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,

@@ -436,10 +436,20 @@ function LaundryBookingForm() {
       return
     }
 
+    // Validate required fields
     if (!address || !selectedSlot) {
       setToast({ message: 'Please complete all required fields', type: 'warning' })
       return
     }
+    
+    // CRITICAL: Delivery date is REQUIRED - validate it exists
+    if (!deliveryDate) {
+      setToast({ message: 'Please select a delivery date', type: 'warning' })
+      return
+    }
+    
+    // Delivery time slot is optional - if not selected, we'll coordinate manually
+    // (This allows booking even when no time slots are available)
     
     // If Setup Intent is enabled, require payment method
     if (isSetupIntentFlow && !paymentMethodId) {
@@ -920,7 +930,7 @@ function LaundryBookingForm() {
                     {deliveryDate && address && selectedSlot && (
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          🕐 Available Delivery Time Slots
+                          🕐 Delivery Time Slots <span className="text-xs font-normal text-gray-500">(Optional)</span>
                         </label>
                         {loadingDeliverySlots ? (
                           <p className="text-gray-500">Loading delivery slots...</p>
@@ -935,10 +945,13 @@ function LaundryBookingForm() {
                           })
                           
                           return validSlots.length === 0 ? (
-                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                              <p className="text-amber-800 text-sm">
-                                ⚠️ No specific delivery time slots available for this date that meet the {rushService ? '24-hour' : '48-hour'} minimum requirement. 
-                                We'll schedule delivery during business hours and notify you with exact time.
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                              <p className="text-blue-800 text-sm font-medium mb-1">
+                                ✓ You can proceed without selecting a time slot
+                              </p>
+                              <p className="text-blue-700 text-xs">
+                                Our team will schedule your delivery during business hours and contact you to confirm the exact time. 
+                                Your laundry will be delivered on your selected date.
                               </p>
                             </div>
                           ) : (

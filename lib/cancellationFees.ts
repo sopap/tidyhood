@@ -198,7 +198,7 @@ export function getFreeChangeDeadline(slotStart: string): Date {
 }
 
 /**
- * Format deadline for display
+ * Format deadline for display (uses NY ET timezone)
  */
 export function formatDeadline(deadline: Date): string {
   const now = new Date()
@@ -206,6 +206,7 @@ export function formatDeadline(deadline: Date): string {
   const isTomorrow = deadline.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString()
   
   const timeStr = deadline.toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
@@ -220,6 +221,7 @@ export function formatDeadline(deadline: Date): string {
   }
   
   const dateStr = deadline.toLocaleDateString('en-US', {
+    timeZone: 'America/New_York',
     weekday: 'short',
     month: 'short',
     day: 'numeric'
