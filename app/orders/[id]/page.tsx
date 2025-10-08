@@ -26,6 +26,8 @@ interface Order {
   partner_id: string;
   slot_start: string;
   slot_end: string;
+  delivery_slot_start?: string;
+  delivery_slot_end?: string;
   status: string;
   subtotal_cents: number;
   tax_cents: number;
@@ -174,6 +176,13 @@ export default function OrderDetailPage() {
     return `${formatTime(order.slot_start)} - ${formatTime(order.slot_end)}`;
   };
 
+  const getDeliveryWindowLabel = () => {
+    if (order.delivery_slot_start && order.delivery_slot_end) {
+      return `${formatTime(order.delivery_slot_start)} - ${formatTime(order.delivery_slot_end)}`;
+    }
+    return undefined;
+  };
+
   const getServiceTypeLabel = () => {
     if (order.service_type === 'LAUNDRY') {
       if (order.order_details.lbs) {
@@ -268,6 +277,8 @@ export default function OrderDetailPage() {
             windowLabel={getWindowLabel()}
             totalCents={order.total_cents}
             showPayButton={showPayButton}
+            deliveryDateISO={order.delivery_slot_start}
+            deliveryWindowLabel={getDeliveryWindowLabel()}
           />
 
           {/* Progress Tracker */}
@@ -335,96 +346,96 @@ export default function OrderDetailPage() {
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 md:mb-20">
-            {/* Contact Support and Add to Calendar - Always Show */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Add to Calendar Button */}
-                {shouldShowAddToCalendar(order as any) && (
+          {/* Actions Card - Professional Design */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow mb-4 md:mb-20">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">
+              Actions
+            </h2>
+            
+            <div className="space-y-3">
+              {/* Primary Action - Add to Calendar */}
+              {shouldShowAddToCalendar(order as any) && (
+                <button
+                  onClick={() => downloadCalendarEvent(order as any)}
+                  className="w-full px-6 py-3 rounded-lg font-semibold text-white shadow-sm bg-blue-600 hover:opacity-90 hover:shadow active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-2 min-h-[44px]"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Add to Calendar</span>
+                </button>
+              )}
+              
+              {/* Secondary Actions Grid */}
+              <div className="grid gap-2 grid-cols-2">
+                {/* Contact Support */}
+                <a
+                  href={`mailto:support@tidyhood.com?subject=Order Support - Order #${order.id}&body=Hi, I need help with my order #${order.id}.`}
+                  className="px-4 py-2.5 rounded-lg font-medium text-sm bg-white border-2 border-gray-300 text-gray-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-1.5 min-h-[42px]"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                  <span>Contact Support</span>
+                </a>
+
+                {/* Reschedule */}
+                {policy.canReschedule && (
                   <button
-                    onClick={() => downloadCalendarEvent(order as any)}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
+                    onClick={() => setShowRescheduleModal(true)}
+                    className="px-4 py-2.5 rounded-lg font-medium text-sm bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 hover:shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-1.5 min-h-[42px]"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Add to Calendar
+                    <span>Reschedule</span>
                   </button>
                 )}
                 
-                {/* Contact Support Button */}
-                <a
-                  href={`mailto:support@tidyhood.com?subject=Order Support - Order #${order.id}&body=Hi, I need help with my order #${order.id}.`}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg shadow-md hover:shadow-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Contact Support
-                </a>
+                {/* Cancel */}
+                {policy.canCancel && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-4 py-2.5 rounded-lg font-medium text-sm bg-red-600 text-white hover:bg-red-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-1.5 min-h-[42px]"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>Cancel</span>
+                  </button>
+                )}
               </div>
-            </div>
 
-            {/* Order Management Actions */}
-            {showActions && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Need to make changes?</h3>
-                
-                {/* Policy Warning */}
-                {policy.requiresNotice && hoursUntil < 24 && (
-                  <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
-                    <div className="flex items-start gap-2">
-                      <svg className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div className="text-sm">
-                        <p className="font-medium text-orange-900 mb-1">Less than 24 hours notice</p>
-                        <p className="text-orange-800">
-                          A {formatMoney(policy.cancellationFee || policy.rescheduleFee)} fee will apply for changes at this time.
-                        </p>
-                      </div>
+              {/* Policy Notice */}
+              {policy.requiresNotice && hoursUntil < 24 && (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="text-sm">
+                      <p className="font-medium text-orange-900 mb-1">Less than 24 hours notice</p>
+                      <p className="text-orange-800">
+                        {order.service_type === 'CLEANING' 
+                          ? 'No changes allowed within 24 hours of service time.'
+                          : `A ${formatMoney(policy.cancellationFee || policy.rescheduleFee)} fee will apply for changes at this time.`
+                        }
+                      </p>
                     </div>
                   </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {policy.canReschedule && (
-                    <button
-                      onClick={() => setShowRescheduleModal(true)}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-brand to-brand-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-brand-600 hover:to-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Reschedule Pickup
-                    </button>
-                  )}
-                  {policy.canCancel && (
-                    <button
-                      onClick={() => setShowCancelModal(true)}
-                      className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Cancel Order
-                    </button>
-                  )}
                 </div>
+              )}
 
               {/* Help text */}
-              {!policy.requiresNotice || hoursUntil >= 24 && (
-                <p className="mt-3 text-xs text-gray-500 text-center">
+              {(!policy.requiresNotice || hoursUntil >= 24) && (
+                <p className="text-xs text-gray-500 text-center">
                   {order.service_type === 'LAUNDRY' 
                     ? 'Free to reschedule or cancel anytime before pickup'
                     : 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee.'
                   }
                 </p>
               )}
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </main>
