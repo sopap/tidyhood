@@ -12,6 +12,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 /**
  * POST /api/orders/:id/pay - Process payment for an order
  * 
+ * @deprecated This endpoint is for LEGACY orders only.
+ * New laundry orders use Setup Intent and auto-charge via admin approval.
+ * 
+ * DO NOT remove - still needed for:
+ * 1. Legacy laundry orders in awaiting_payment status (no saved payment method)
+ * 2. Cleaning orders (if applicable)
+ * 3. Historical orders that were created before Setup Intent implementation
+ * 
  * For LAUNDRY orders: Payment after quote acceptance (awaiting_payment → processing)
  * For CLEANING orders: Upfront payment (scheduled → processing)
  * 
@@ -28,6 +36,11 @@ export async function POST(
     const { id: orderId } = await params
     const db = getServiceClient()
     
+    // Log legacy payment usage for monitoring
+    console.log('[LEGACY_PAYMENT] Manual payment being processed')
+    console.log('[LEGACY_PAYMENT] Order ID:', orderId)
+    console.log('[LEGACY_PAYMENT] User ID:', user.id)
+    
     // Fetch order
     const { data: order, error } = await db
       .from('orders')
@@ -39,6 +52,11 @@ export async function POST(
     if (error || !order) {
       throw new NotFoundError('Order not found')
     }
+    
+    // Additional logging for legacy payment flow
+    console.log('[LEGACY_PAYMENT] Order service type:', order.service_type)
+    console.log('[LEGACY_PAYMENT] Order status:', order.status)
+    console.log('[LEGACY_PAYMENT] Has saved payment method:', !!order.saved_payment_method_id)
     
     // Validate payment eligibility using state machine
     const targetStatus = 'paid_processing'

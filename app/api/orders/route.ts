@@ -237,6 +237,12 @@ export async function POST(request: NextRequest) {
     let units = 1 // For laundry, 1 order = 1 unit
     
     if (params.service_type === 'LAUNDRY') {
+      // CRITICAL: New laundry orders should NEVER use this endpoint
+      // They should use /api/payment/setup which guarantees payment method collection
+      console.warn('[DEPRECATED] Creating laundry order via /api/orders endpoint')
+      console.warn('[DEPRECATED] This order will NOT have a saved payment method')
+      console.warn('[DEPRECATED] User ID:', user.id, '| Idempotency Key:', idempotencyKey)
+      
       const serviceType = params.details.serviceType || 'washFold'; // Default to washFold for backward compatibility
       
       // Validate based on service type
@@ -325,7 +331,9 @@ export async function POST(request: NextRequest) {
         total_cents: pricing.total_cents,
         stripe_customer_id: profile?.stripe_customer_id || null,
         idempotency_key: idempotencyKey,
-        order_details: params.details,
+        order_details: params.service_type === 'LAUNDRY' 
+        ? { ...params.details, _deprecated_payment_flow: true, _created_via_deprecated_endpoint: new Date().toISOString() }
+        : params.details,
         address_snapshot: {
           ...params.address,
           phone: params.phone || user.phone || undefined

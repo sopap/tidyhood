@@ -109,14 +109,9 @@ function LaundryBookingForm() {
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null)
   
-  // Payment modal state (old flow)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null)
-  
-  // Setup Intent state (new flow)
+  // Setup Intent state
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
-  const [isSetupIntentFlow, setIsSetupIntentFlow] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   // Hydrate form from persisted data on mount
@@ -134,14 +129,6 @@ function LaundryBookingForm() {
     }
   }, [persistedLoaded, persistedPhone, persistedAddress])
 
-  // Check feature flag for Setup Intent
-  useEffect(() => {
-    const checkFeatureFlag = async () => {
-      const enabled = await isSetupIntentEnabled()
-      setIsSetupIntentFlow(enabled)
-    }
-    checkFeatureFlag()
-  }, [])
   
   // Handle 3DS redirect return
   useEffect(() => {
@@ -591,8 +578,8 @@ function LaundryBookingForm() {
     // Delivery time slot is optional - if not selected, we'll coordinate manually
     // (This allows booking even when no time slots are available)
     
-    // If Setup Intent is enabled, require payment method
-    if (isSetupIntentFlow && !paymentMethodId) {
+    // ALWAYS require payment method for new orders
+    if (!paymentMethodId) {
       setToast({ message: 'Please provide a payment method', type: 'warning' })
       return
     }
@@ -601,12 +588,8 @@ function LaundryBookingForm() {
       setLoading(true)
       setSubmitting(true)
 
-      let orderId: string
-
-      if (isSetupIntentFlow && paymentMethodId) {
-        // NEW FLOW: Use Setup Intent saga
-        
-        const setupResponse = await fetch('/api/payment/setup', {
+      // ONLY Setup Intent flow - all new orders use saved payment methods
+      const setupResponse = await fetch('/api/payment/setup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -648,55 +631,7 @@ function LaundryBookingForm() {
         }
 
         const setupResult = await setupResponse.json()
-        orderId = setupResult.order_id
-      } else {
-        // OLD FLOW: Deferred payment (existing code)
-        
-        const idempotencyKey = `laundry-${Date.now()}-${Math.random()}`
-
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Idempotency-Key': idempotencyKey
-          },
-          body: JSON.stringify({
-            service_type: 'LAUNDRY',
-            slot: {
-              partner_id: selectedSlot.partner_id,
-              slot_start: selectedSlot.slot_start,
-              slot_end: selectedSlot.slot_end
-            },
-            delivery_slot: selectedDeliverySlot ? {
-              partner_id: selectedDeliverySlot.partner_id,
-              slot_start: selectedDeliverySlot.slot_start,
-              slot_end: selectedDeliverySlot.slot_end,
-            } : undefined,
-            address: {
-              line1: address.line1,
-              line2: addressLine2 || undefined,
-              city: address.city,
-              zip: address.zip,
-              notes: specialInstructions || undefined
-            },
-            details: {
-              serviceType,
-              weightTier: (serviceType === 'washFold' || serviceType === 'mixed') ? weightTier : undefined,
-              estimatedPounds: (serviceType === 'washFold' || serviceType === 'mixed') ? estimatedPounds : undefined,
-              rushService,
-              preferredDeliveryDate: deliveryDate
-            }
-          })
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Failed to create order')
-        }
-
-        const order = await response.json()
-        orderId = order.id
-      }
+        const orderId = setupResult.order_id
 
       // Clear draft on successful booking
       clearDraft()
@@ -716,11 +651,6 @@ function LaundryBookingForm() {
     }
   }
 
-  const handlePaymentSuccess = () => {
-    if (createdOrderId) {
-      router.push(`/orders/${createdOrderId}`)
-    }
-  }
 
   // Scroll to address section
   const handleScrollToAddress = () => {
@@ -1201,8 +1131,8 @@ function LaundryBookingForm() {
               )}
             </div>
 
-            {/* Payment Method Collection - Only if Setup Intent enabled */}
-            {isSetupIntentFlow && address && selectedSlot && pricing.total > 0 && (
+            {/* Payment Method Collection - REQUIRED for all new laundry orders */}
+            {address && selectedSlot && pricing.total > 0 && (
               <div className="card-standard card-padding">
                 <h2 className="heading-section">💳 Payment Method</h2>
                 
@@ -1323,7 +1253,7 @@ function LaundryBookingForm() {
                     !selectedSlot ||
                     !phone?.trim() ||
                     phone.replace(/\D/g, '').length < 10 ||
-                    (isSetupIntentFlow && !paymentMethodId)
+                    !paymentMethodId
                   }
                   className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1332,7 +1262,7 @@ function LaundryBookingForm() {
               )}
               
               {/* Payment messaging */}
-              <PaymentBanner isSetupIntent={isSetupIntentFlow} className="mt-4" />
+              <PaymentBanner isSetupIntent={true} className="mt-4" />
             </div>
             
             {/* Accessibility: Prefill announcement */}
@@ -1343,16 +1273,6 @@ function LaundryBookingForm() {
             )}
           </form>
 
-          {/* Payment Modal */}
-          {createdOrderId && (
-            <PaymentModal
-              isOpen={showPaymentModal}
-              onClose={() => setShowPaymentModal(false)}
-              orderId={createdOrderId}
-              amount={Math.round(pricing.total * 100)}
-              onSuccess={handlePaymentSuccess}
-            />
-          )}
         </div>
       </main>
 

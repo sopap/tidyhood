@@ -40,6 +40,9 @@ interface Order {
   partner_notes?: string;
   intake_photos_json?: string[];
   outtake_photos_json?: string[];
+  saved_payment_method_id?: string;
+  stripe_customer_id?: string;
+  pending_admin_approval?: boolean;
   order_details: {
     lbs?: number;
     bedrooms?: number;
@@ -72,6 +75,36 @@ export default function OrderDetailPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // Helper functions for payment method detection
+  const shouldShowLegacyPayButton = (order: Order) => {
+    return (
+      order.service_type === 'LAUNDRY' &&
+      order.status === 'awaiting_payment' &&
+      !order.saved_payment_method_id && // Legacy orders only
+      !order.paid_at
+    );
+  };
+
+  const shouldShowPaymentMethodInfo = (order: Order) => {
+    return (
+      order.service_type === 'LAUNDRY' &&
+      !!order.saved_payment_method_id && // Setup Intent orders
+      (order.status === 'pending_admin_approval' || 
+       order.status === 'at_facility' ||
+       order.status === 'pending_pickup')
+    );
+  };
+
+  const getPaymentMethodMessage = (order: Order) => {
+    if (order.status === 'pending_admin_approval') {
+      return "Your laundry has been weighed. We'll charge your card once admin approves the final quote.";
+    } else if (order.status === 'at_facility') {
+      return "Your laundry is being processed. You'll be charged once the quote is finalized.";
+    } else {
+      return "Your laundry will be picked up soon. You'll be charged after weighing.";
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -235,9 +268,10 @@ export default function OrderDetailPage() {
     return undefined;
   };
 
-  const showPayButton = order.status.toLowerCase() === 'awaiting_payment';
   const currentStep = mapDatabaseStatus(order.status);
   const statusLabel = getStatusLabel(order.status);
+  const showPayButton = shouldShowLegacyPayButton(order);
+  const showPaymentInfo = shouldShowPaymentMethodInfo(order);
   
   // Calculate cancellation policy
   const policy = getCancellationPolicy(order as any);
@@ -336,6 +370,36 @@ export default function OrderDetailPage() {
               note={getPricingNote()}
             />
           </div>
+
+          {/* Payment Method Status Info */}
+          {showPaymentInfo && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">💳</span>
+                <div>
+                  <p className="font-medium text-blue-900 mb-1">Payment method saved</p>
+                  <p className="text-sm text-blue-700">
+                    {getPaymentMethodMessage(order)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Legacy Payment Warning */}
+          {showPayButton && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <p className="font-medium text-amber-900 mb-1">Legacy order - Manual payment required</p>
+                  <p className="text-sm text-amber-800">
+                    This order requires manual payment. Please click "Pay Now" to complete your payment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Add-ons (if any) */}
           {order.order_details.addons && order.order_details.addons.length > 0 && (

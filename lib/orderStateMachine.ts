@@ -202,6 +202,29 @@ const TRANSITIONS: TransitionRule[] = [
     service: 'LAUNDRY',
     condition: (order: any) => !!order.auth_payment_intent_id && !!order.paid_at
   },
+  // Admin direct quote with auto-charge: at_facility → paid_processing
+  {
+    from: 'at_facility',
+    to: 'paid_processing',
+    service: 'LAUNDRY',
+    condition: (order: any) => (
+      // Admin created quote with immediate auto-charge
+      !!order.saved_payment_method_id &&
+      !!order.quote_cents &&
+      !!order.paid_at
+    )
+  },
+  // Legacy orders without payment method: at_facility → awaiting_payment
+  {
+    from: 'at_facility',
+    to: 'awaiting_payment',
+    service: 'LAUNDRY',
+    condition: (order: any) => (
+      // Legacy order without payment method
+      !order.saved_payment_method_id &&
+      !!order.quote_cents
+    )
+  },
   // Payment failed handling
   { 
     from: 'pending_pickup', 
@@ -405,4 +428,72 @@ export function mapLegacyStatus(legacyStatus: string): OrderStatus {
   };
   
   return (mapping[legacyStatus] || legacyStatus.toLowerCase()) as OrderStatus;
+}
+
+/**
+ * Check if an order can be auto-charged based on actor role
+ * Used to determine charge vs approval flow
+ * 
+ * @param order - The order to check
+ * @param actorRole - The role of the actor (admin, partner, or user)
+ * @returns True if the order can be auto-charged
+ */
+export function canAutoCharge(order: any, actorRole: 'admin' | 'partner' | 'user'): boolean {
+  // Must have payment method saved
+  if (!order.saved_payment_method_id || !order.stripe_customer_id) {
+    return false;
+  }
+  
+  // Must be a laundry order
+  if (order.service_type !== 'LAUNDRY') {
+    return false;
+  }
+  
+  // Role-based authorization:
+  // - Admin: Can always auto-charge (trusted)
+  // - Partner: Cannot auto-charge (must go through approval)
+  // - User: Cannot auto-charge themselves
+  return actorRole === 'admin';
+}
+
+/**
+ * Determine if order is using legacy payment flow
+ * Legacy orders: No saved payment method, require manual payment
+ * 
+ * @param order - The order to check
+ * @returns True if this is a legacy payment flow order
+ */
+export function isLegacyPaymentFlow(order: any): boolean {
+  return (
+    order.service_type === 'LAUNDRY' &&
+    !order.saved_payment_method_id &&
+    !order.paid_at
+  );
+}
+
+/**
+ * Get appropriate next status after quote submission
+ * Determines whether order should go to awaiting_payment or pending_admin_approval
+ * 
+ * @param order - The order being quoted
+ * @param actorRole - The role of the actor submitting the quote
+ * @returns The appropriate next status
+ */
+export function getPostQuoteStatus(order: any, actorRole: 'admin' | 'partner'): OrderStatus {
+  // Legacy orders without payment method
+  if (isLegacyPaymentFlow(order)) {
+    return 'awaiting_payment'; // Customer must pay manually
+  }
+  
+  // Admin can auto-charge immediately
+  if (actorRole === 'admin') {
+    return 'paid_processing'; // Will auto-charge in same transaction
+  }
+  
+  // Partner quotes need admin approval
+  if (actorRole === 'partner') {
+    return 'pending_admin_approval' as OrderStatus; // Waits for admin to approve & charge
+  }
+  
+  return 'pending_admin_approval' as OrderStatus; // Default to requiring approval
 }

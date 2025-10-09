@@ -84,16 +84,15 @@ export function canUsePaymentAuthorization(userId: string): boolean {
 /**
  * Check if Setup Intent flow is enabled (client-side compatible)
  * 
- * This is a simpler version that works on both client and server.
- * For server-side with user-specific rollout, use canUsePaymentAuthorization instead.
+ * @deprecated Setup Intent is now the ONLY payment flow for laundry orders.
+ * This function always returns true and will be removed in a future version.
  * 
- * @returns True if Setup Intent should be used
+ * @returns Always returns true
  */
 export async function isSetupIntentEnabled(): Promise<boolean> {
-  // Check if the feature flag is enabled via environment variable
-  // This uses NEXT_PUBLIC_ prefix so it's available on client side
-  const enabled = process.env.NEXT_PUBLIC_SETUP_INTENT_ENABLED === 'true';
-  return enabled;
+  // Setup Intent is now the only flow for laundry orders
+  // This function kept for backward compatibility but always returns true
+  return true;
 }
 
 /**
