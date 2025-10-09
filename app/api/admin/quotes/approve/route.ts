@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         off_session: true, // Allow charging without customer being present
         metadata: { 
           order_id: order_id,
-          admin_email: user.email,
+          admin_email: user.email || 'unknown',
           reason: 'partner_quote_approved'
         }
       })
