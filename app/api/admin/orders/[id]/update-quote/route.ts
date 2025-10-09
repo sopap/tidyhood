@@ -194,7 +194,7 @@ export async function POST(
           },
           metadata: { 
             order_id: orderId,
-            admin_email: user.email,
+            admin_email: user.email || 'unknown',
             reason: 'admin_quote_update'
           }
         })
