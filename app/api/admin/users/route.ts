@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     // Base query
     let query = db
       .from('profiles')
-      .select('id, full_name, phone, role, created_at', { count: 'exact' });
+      .select('id, full_name, phone, email, role, created_at', { count: 'exact' });
 
     // Apply search filter
     if (search) {
@@ -63,32 +63,34 @@ export async function GET(request: Request) {
     // Get order counts and LTV for each user
     const userIds = profiles?.map(p => p.id) || [];
     
-    // Fetch emails from auth.users
-    const { data: authUsers } = await db
-      .from('auth.users')
-      .select('id, email')
-      .in('id', userIds);
-    
+    // Fetch orders - fetch quote_cents for accurate revenue calculations
     const { data: orderStats } = await db
       .from('orders')
-      .select('user_id, total_cents, status')
+      .select('user_id, total_cents, quote_cents, status')
       .in('user_id', userIds);
-
-    // Create email lookup map
-    const emailMap = new Map(authUsers?.map(u => [u.id, u.email]) || []);
 
     // Calculate stats per user
     const usersWithStats = profiles?.map(profile => {
       const userOrders = orderStats?.filter(o => o.user_id === profile.id) || [];
       const orderCount = userOrders.length;
+      
+      // Use quote_cents (final quoted amount) if available, otherwise fall back to total_cents (estimate)
       const lifetimeValue = userOrders
-        .filter(o => o.status === 'delivered')
-        .reduce((sum, o) => sum + (o.total_cents || 0), 0) / 100;
+        .filter(o => o.status === 'delivered' || o.status === 'completed')
+        .reduce((sum, o) => {
+          const actualAmount = o.quote_cents || o.total_cents || 0;
+          return sum + actualAmount;
+        }, 0) / 100;
+
+      // Use profile data directly - email is stored in profiles table
+      const fullName = profile.full_name 
+        || profile.email?.split('@')[0] 
+        || 'Unknown';
 
       return {
         id: profile.id,
-        name: profile.full_name || 'Unknown',
-        email: emailMap.get(profile.id) || 'N/A',
+        name: fullName,
+        email: profile.email || 'N/A',
         phone: profile.phone || 'N/A',
         role: profile.role,
         order_count: orderCount,

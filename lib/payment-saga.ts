@@ -342,6 +342,28 @@ export class PaymentAuthorizationSaga {
    * Step 4: Finalize order with payment method details
    */
   private async finalizeOrder(orderId: string, setupResult: SetupResult) {
+    // Get order to retrieve user_id
+    const { data: order } = await this.db
+      .from('orders')
+      .select('user_id')
+      .eq('id', orderId)
+      .single();
+    
+    if (!order) {
+      throw new Error('Order not found during finalization');
+    }
+    
+    // Get stripe_customer_id from user profile
+    const { data: profile } = await this.db
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', order.user_id)
+      .single();
+    
+    if (!profile?.stripe_customer_id) {
+      throw new Error('Stripe customer ID not found in profile');
+    }
+    
     const { data: finalOrder, error } = await this.db
       .from('orders')
       .update({

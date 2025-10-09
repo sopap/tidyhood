@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
     // CLEANING: pay upfront → starts as pending, moves to paid_processing after payment
     const initialStatus = params.service_type === 'LAUNDRY' ? 'pending_pickup' : 'pending'
     
-    const orderData = {
+    const orderData: any = {
         user_id: user.id,
         service_type: params.service_type,
         partner_id: params.slot.partner_id,
@@ -323,6 +323,11 @@ export async function POST(request: NextRequest) {
           phone: params.phone || user.phone || undefined
         },
       }
+    
+    // Set cleaning_status for cleaning orders
+    if (params.service_type === 'CLEANING') {
+      orderData.cleaning_status = 'scheduled'
+    }
     console.log('[POST /api/orders] Order data:', JSON.stringify(orderData, null, 2))
     
     const { data: order, error: orderError } = await db

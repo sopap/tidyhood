@@ -33,25 +33,35 @@ export async function GET(
       );
     }
 
-    // Fetch email from auth.users
-    const { data: authUser } = await db
-      .from('auth.users')
-      .select('email')
-      .eq('id', userId)
-      .single();
+    // Fetch email from auth using admin API
+    const { data: { user: authUser }, error: authError } = await db.auth.admin.getUserById(userId);
+    
+    if (authError) {
+      console.error('Auth user fetch error:', authError);
+    }
 
     // Fetch all orders for statistics
-    const { data: orders } = await db
+    const { data: orders, error: ordersError } = await db
       .from('orders')
-      .select('id, order_id, service_type, status, total_cents, created_at, slot_start')
+      .select('id, service_type, status, total_cents, quote_cents, created_at, slot_start')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
+    
+    if (ordersError) {
+      console.error('Orders fetch error:', ordersError);
+    }
 
-    // Calculate statistics
+    // Calculate statistics - count completed/delivered orders for revenue
+    // Use quote_cents (final quoted amount) if available, otherwise fall back to total_cents (estimate)
     const totalOrders = orders?.length || 0;
-    const deliveredOrders = orders?.filter(o => o.status === 'delivered') || [];
-    const lifetimeValue = deliveredOrders.reduce((sum, o) => sum + (o.total_cents || 0), 0) / 100;
-    const avgOrderValue = deliveredOrders.length > 0 ? lifetimeValue / deliveredOrders.length : 0;
+    const completedOrders = orders?.filter(o => 
+      o.status === 'delivered' || o.status === 'completed'
+    ) || [];
+    const lifetimeValue = completedOrders.reduce((sum, o) => {
+      const actualAmount = o.quote_cents || o.total_cents || 0;
+      return sum + actualAmount;
+    }, 0) / 100;
+    const avgOrderValue = completedOrders.length > 0 ? lifetimeValue / completedOrders.length : 0;
     
     // Get last order date
     const lastOrder = orders && orders.length > 0 ? orders[0].created_at : null;
@@ -68,10 +78,9 @@ export async function GET(
     // Get recent orders (5 most recent)
     const recentOrders = orders?.slice(0, 5).map(order => ({
       id: order.id,
-      order_id: order.order_id,
       service_type: order.service_type,
       status: order.status,
-      total_cents: order.total_cents,
+      total_cents: order.quote_cents || order.total_cents,
       created_at: order.created_at,
       slot_start: order.slot_start
     })) || [];
@@ -86,9 +95,9 @@ export async function GET(
     return NextResponse.json({
       user: {
         id: profile.id,
-        name: profile.full_name || 'Unknown',
+        name: profile.full_name || authUser?.user_metadata?.full_name || 'Unknown',
         email: authUser?.email || 'N/A',
-        phone: profile.phone || 'N/A',
+        phone: profile.phone || authUser?.user_metadata?.phone || 'N/A',
         role: profile.role,
         created_at: profile.created_at
       },

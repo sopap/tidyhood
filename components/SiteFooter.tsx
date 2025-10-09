@@ -2,11 +2,17 @@
 
 import Link from 'next/link'
 import { Phone, Mail, MapPin, Facebook, Twitter, Instagram } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export default function SiteFooter() {
-  const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
-  const zipsDisplay = allowedZips.join(', ')
+  const [zipsDisplay, setZipsDisplay] = useState('10026, 10027, 10030')
   const currentYear = new Date().getFullYear()
+
+  useEffect(() => {
+    // Load zip codes on client side to avoid hydration mismatch
+    const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+    setZipsDisplay(allowedZips.join(', '))
+  }, [])
 
   return (
     <footer className="bg-gray-900 text-white" role="contentinfo">
@@ -65,7 +71,7 @@ export default function SiteFooter() {
                 <MapPin className="h-5 w-5 text-primary-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="text-base text-gray-300">
                   <strong className="text-white">Service Area:</strong> Harlem, NYC<br />
-                  <span className="text-sm text-gray-400">ZIPs: {zipsDisplay}</span>
+                  <span className="text-sm text-gray-400" suppressHydrationWarning>ZIPs: {zipsDisplay}</span>
                 </div>
               </li>
               <li className="flex items-start gap-2">
@@ -156,6 +162,7 @@ export default function SiteFooter() {
       {/* Structured Data for SEO */}
       <script
         type="application/ld+json"
+        suppressHydrationWarning
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -169,7 +176,7 @@ export default function SiteFooter() {
               '@type': 'PostalAddress',
               addressLocality: 'Harlem',
               addressRegion: 'NY',
-              postalCode: allowedZips[0],
+              postalCode: zipsDisplay.split(',')[0]?.trim() || '10026',
               addressCountry: 'US'
             },
             areaServed: {

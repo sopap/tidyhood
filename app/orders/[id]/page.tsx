@@ -55,6 +55,9 @@ interface Order {
     zip: string;
     notes?: string;
   };
+  customer?: {
+    phone: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -293,6 +296,7 @@ export default function OrderDetailPage() {
             <ServiceAddressCard
               serviceType={getServiceTypeLabel()}
               addressLines={getAddressLines()}
+              phone={order.customer?.phone}
             />
           </div>
 

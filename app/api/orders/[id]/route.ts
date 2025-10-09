@@ -12,12 +12,13 @@ export async function GET(
     const { id: orderId } = await params
     const db = getServiceClient()
     
-    // Fetch order
+    // Fetch order with customer phone from profiles
     const { data: order, error } = await db
       .from('orders')
       .select(`
         *,
         partner:partners(name, contact_phone),
+        customer:profiles!orders_user_id_fkey(phone),
         bags(*),
         cleaning_checklist(*)
       `)

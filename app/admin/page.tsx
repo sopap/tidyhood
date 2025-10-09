@@ -1,7 +1,5 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { getServiceClient } from '@/lib/db'
 
 interface Metrics {
   orders: {
@@ -30,51 +28,114 @@ interface Metrics {
   }
 }
 
-export default function AdminDashboard() {
-  const [metrics, setMetrics] = useState<Metrics | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+async function getMetrics(): Promise<Metrics | null> {
+  try {
+    const db = getServiceClient()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
 
-  useEffect(() => {
-    async function fetchMetrics() {
-      try {
-        const res = await fetch('/api/admin/metrics')
-        if (!res.ok) throw new Error('Failed to fetch metrics')
-        const data = await res.json()
-        setMetrics(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load metrics')
-      } finally {
-        setLoading(false)
+    // Get today's orders
+    const { data: todayOrders } = await db
+      .from('orders')
+      .select('id, total_cents, status')
+      .gte('created_at', today.toISOString())
+    
+    // Get yesterday's orders
+    const { data: yesterdayOrders } = await db
+      .from('orders')
+      .select('id, total_cents')
+      .gte('created_at', yesterday.toISOString())
+      .lt('created_at', today.toISOString())
+
+    // Get active partners count
+    const { count: partnersCount } = await db
+      .from('partners')
+      .select('*', { count: 'exact', head: true })
+      .eq('active', true)
+
+    // Calculate metrics
+    const todayOrderCount = todayOrders?.length || 0
+    const yesterdayOrderCount = yesterdayOrders?.length || 0
+    
+    const todayGMV = todayOrders?.reduce((sum, order) => 
+      sum + (order.total_cents || 0), 0) || 0
+    const yesterdayGMV = yesterdayOrders?.reduce((sum, order) => 
+      sum + (order.total_cents || 0), 0) || 0
+
+    // Calculate SLA (simplified - orders delivered vs late)
+    const completedToday = todayOrders?.filter(o => 
+      ['DELIVERED', 'CLEANED'].includes(o.status)
+    ).length || 0
+    
+    const slaToday = todayOrderCount > 0 ? completedToday / todayOrderCount : 1
+
+    // Get pending orders count
+    const { count: pendingCount } = await db
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['PENDING', 'PAID', 'RECEIVED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY'])
+
+    // Get user statistics
+    const { data: allUsers } = await db
+      .from('profiles')
+      .select('id, role, created_at')
+
+    const totalUsers = allUsers?.length || 0
+    const customers = allUsers?.filter(u => u.role === 'customer' || !u.role).length || 0
+    const partners = allUsers?.filter(u => u.role === 'partner').length || 0
+    
+    // Calculate new users this month
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+    
+    const newThisMonth = allUsers?.filter(u => 
+      new Date(u.created_at) >= startOfMonth
+    ).length || 0
+
+    return {
+      orders: {
+        today: todayOrderCount,
+        yesterday: yesterdayOrderCount,
+        change: todayOrderCount - yesterdayOrderCount,
+        pending: pendingCount || 0
+      },
+      gmv: {
+        today: todayGMV / 100, // Convert to dollars
+        yesterday: yesterdayGMV / 100,
+        change: (todayGMV - yesterdayGMV) / 100
+      },
+      sla: {
+        today: slaToday,
+        yesterday: 0.98 // Placeholder
+      },
+      partners: {
+        active: partnersCount || 0
+      },
+      users: {
+        total: totalUsers,
+        customers: customers,
+        partners: partners,
+        newThisMonth: newThisMonth
       }
     }
-
-    fetchMetrics()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchMetrics, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+  } catch (error) {
+    console.error('[AdminDashboard] Error fetching metrics:', error)
+    return null
   }
+}
 
-  if (error || !metrics) {
+export default async function AdminDashboard() {
+  const metrics = await getMetrics()
+
+  if (!metrics) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">{error || 'Failed to load dashboard'}</p>
+        <p className="text-red-600">Failed to load dashboard metrics</p>
+        <p className="text-sm text-gray-500 mt-2">Please try refreshing the page</p>
       </div>
     )
   }

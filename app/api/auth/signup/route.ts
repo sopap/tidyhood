@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .insert({
         id: authData.user.id,
+        email: email,
         full_name: fullName,
         phone,
         role: userRole,

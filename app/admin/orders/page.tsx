@@ -25,13 +25,16 @@ function formatStatus(status: string): string {
 
 interface Order {
   id: string
+  user_id?: string
   service_type: string
   status: string
-  total_amount_cents: number
+  total_cents: number
   created_at: string
   scheduled_date?: string
   profiles?: {
-    email: string
+    id: string
+    full_name?: string
+    email?: string
     phone?: string
   }
   partners?: {
@@ -208,9 +211,14 @@ export default function AdminOrders() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       <div>
-                        <div className="font-medium">{order.profiles?.email}</div>
+                        <div className="font-medium">
+                          {order.profiles?.full_name || order.profiles?.email || (order.profiles?.id ? `Customer ${order.profiles.id.substring(0, 8)}...` : 'N/A')}
+                        </div>
                         {order.profiles?.phone && (
                           <div className="text-xs text-gray-500">{order.profiles.phone}</div>
+                        )}
+                        {!order.profiles?.phone && order.profiles?.email && (
+                          <div className="text-xs text-gray-500">{order.profiles.email}</div>
                         )}
                       </div>
                     </td>
@@ -223,7 +231,7 @@ export default function AdminOrders() {
                       </StatusBadge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${((order.total_amount_cents || 0) / 100).toFixed(2)}
+                      ${((order.total_cents || 0) / 100).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {new Date(order.created_at).toLocaleDateString()}

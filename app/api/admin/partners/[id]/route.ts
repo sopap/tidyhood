@@ -32,19 +32,27 @@ export async function GET(
     // Get order statistics
     const { data: orderStats, error: statsError } = await db
       .from('orders')
-      .select('status, subtotal_cents')
+      .select('status, total_cents, quote_cents')
       .eq('partner_id', id);
 
     if (statsError) throw statsError;
 
-    // Calculate stats
+    // Calculate stats - only count completed/delivered orders for revenue
+    // Use quote_cents (final quoted amount) if available, otherwise fall back to total_cents (estimate)
+    const completedOrders = orderStats?.filter(o => 
+      o.status === 'completed' || o.status === 'delivered'
+    ) || [];
+    
     const stats = {
       total_orders: orderStats?.length || 0,
-      completed_orders: orderStats?.filter(o => o.status === 'completed').length || 0,
+      completed_orders: completedOrders.length,
       in_progress: orderStats?.filter(o => 
-        ['pending_quote', 'quote_sent', 'scheduled', 'in_progress'].includes(o.status)
+        ['pending_pickup', 'picked_up', 'at_facility', 'quote_sent', 'awaiting_payment', 'paid_processing', 'in_progress', 'out_for_delivery'].includes(o.status)
       ).length || 0,
-      total_revenue_cents: orderStats?.reduce((sum, o) => sum + (o.subtotal_cents || 0), 0) || 0,
+      total_revenue_cents: completedOrders.reduce((sum, o) => {
+        const actualAmount = o.quote_cents || o.total_cents || 0;
+        return sum + actualAmount;
+      }, 0),
     };
 
     return NextResponse.json({ 

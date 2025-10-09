@@ -1,23 +1,35 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import StatusBadge, { StatusTone } from '@/components/orders/StatusBadge'
+import UpdateQuoteModal from '@/components/admin/UpdateQuoteModal'
 
 interface Order {
   id: string
   service_type: string
   status: string
-  total_amount_cents: number
+  subtotal_cents: number
+  tax_cents: number
+  delivery_cents: number
+  total_cents: number
   quote_cents?: number
   created_at: string
   updated_at: string
-  scheduled_date?: string
   slot_start?: string
   slot_end?: string
-  estimated_weight_lbs?: number
-  actual_weight_lbs?: number
+  delivery_slot_start?: string
+  delivery_slot_end?: string
+  order_details?: {
+    serviceType?: 'washFold' | 'dryClean' | 'mixed'
+    weightTier?: 'small' | 'medium' | 'large'
+    lbs?: number
+    bedrooms?: number
+    bathrooms?: number
+    deep?: boolean
+    addons?: string[]
+  }
   address_snapshot?: any
   profiles?: {
     id: string
@@ -28,7 +40,7 @@ interface Order {
   partners?: {
     id: string
     name: string
-    email: string
+    contact_email: string
   }
   payment_intent_id?: string
   notes?: string
@@ -65,8 +77,8 @@ function formatStatus(status: string): string {
   ).join(' ')
 }
 
-export default function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+export default function AdminOrderDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const router = useRouter()
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +86,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
   const [actionLoading, setActionLoading] = useState(false)
   const [newStatus, setNewStatus] = useState('')
   const [internalNote, setInternalNote] = useState('')
+  const [showUpdateQuoteModal, setShowUpdateQuoteModal] = useState(false)
 
   useEffect(() => {
     fetchOrder()
@@ -89,9 +102,9 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
       }
 
       const data = await response.json()
-      if (data.orders && data.orders.length > 0) {
-        setOrder(data.orders[0])
-        setNewStatus(data.orders[0].status)
+      if (data.order) {
+        setOrder(data.order)
+        setNewStatus(data.order.status)
       } else {
         setError('Order not found')
       }
@@ -111,7 +124,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
       const response = await fetch(`/api/admin/orders/${id}/force-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ newStatus: newStatus })
       })
 
       if (!response.ok) {
@@ -254,21 +267,41 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   <p className="font-medium">{new Date(order.created_at).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Scheduled Date</p>
-                  <p className="font-medium">
-                    {order.scheduled_date 
-                      ? new Date(order.scheduled_date).toLocaleDateString()
-                      : 'Not scheduled'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Time Slot</p>
+                  <p className="text-sm text-gray-500">Pickup Time Slot</p>
                   <p className="font-medium">
                     {order.slot_start && order.slot_end
-                      ? `${order.slot_start} - ${order.slot_end}`
+                      ? `${new Date(order.slot_start).toLocaleString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          hour: 'numeric', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })} - ${new Date(order.slot_end).toLocaleString('en-US', { 
+                          hour: 'numeric', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })}`
                       : 'Not specified'}
                   </p>
                 </div>
+                {order.delivery_slot_start && order.delivery_slot_end && (
+                  <div>
+                    <p className="text-sm text-gray-500">Delivery Time Slot</p>
+                    <p className="font-medium">
+                      {`${new Date(order.delivery_slot_start).toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true 
+                      })} - ${new Date(order.delivery_slot_end).toLocaleString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true 
+                      })}`}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 border-t border-gray-200">
@@ -276,40 +309,128 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   <div>
                     <p className="text-sm text-gray-500">Estimated Amount</p>
                     <p className="text-lg font-semibold text-gray-900">
-                      ${((order.total_amount_cents || 0) / 100).toFixed(2)}
+                      ${((order.total_cents || 0) / 100).toFixed(2)}
                     </p>
                   </div>
-                  {order.quote_cents && (
-                    <div>
-                      <p className="text-sm text-gray-500">Final Quote</p>
-                      <p className="text-lg font-semibold text-blue-600">
-                        ${(order.quote_cents / 100).toFixed(2)}
-                      </p>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-500">Final Quote</p>
+                        <p className="text-lg font-semibold text-blue-600">
+                          {order.quote_cents 
+                            ? `$${(order.quote_cents / 100).toFixed(2)}`
+                            : 'Not set'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowUpdateQuoteModal(true)}
+                        disabled={actionLoading}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+                      >
+                        {order.quote_cents ? 'Update' : 'Set Quote'}
+                      </button>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {(order.estimated_weight_lbs || order.actual_weight_lbs) && (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    {order.estimated_weight_lbs && (
-                      <div>
-                        <p className="text-sm text-gray-500">Estimated Weight</p>
-                        <p className="font-medium">{order.estimated_weight_lbs} lbs</p>
-                      </div>
-                    )}
-                    {order.actual_weight_lbs && (
-                      <div>
-                        <p className="text-sm text-gray-500">Actual Weight</p>
-                        <p className="font-medium">{order.actual_weight_lbs} lbs</p>
-                      </div>
-                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
+
+          {/* Service Details */}
+          {order.order_details && (
+            <div className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900">Service Details</h2>
+              </div>
+              <div className="p-6 space-y-4">
+                {order.service_type === 'LAUNDRY' && (
+                  <>
+                    {order.order_details.serviceType && (
+                      <div>
+                        <p className="text-sm text-gray-500">Service Type</p>
+                        <p className="font-medium">
+                          {order.order_details.serviceType === 'washFold' && 'Wash & Fold'}
+                          {order.order_details.serviceType === 'dryClean' && 'Dry Clean'}
+                          {order.order_details.serviceType === 'mixed' && 'Mixed (Wash & Fold + Dry Clean)'}
+                        </p>
+                      </div>
+                    )}
+                    {order.order_details.lbs && (
+                      <div>
+                        <p className="text-sm text-gray-500">Weight</p>
+                        <p className="font-medium">{order.order_details.lbs} lbs</p>
+                      </div>
+                    )}
+                    {order.order_details.weightTier && (
+                      <div>
+                        <p className="text-sm text-gray-500">Size</p>
+                        <p className="font-medium capitalize">{order.order_details.weightTier}</p>
+                      </div>
+                    )}
+                    {order.order_details.addons && order.order_details.addons.length > 0 && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-2">Add-ons</p>
+                        <div className="flex flex-wrap gap-2">
+                          {order.order_details.addons.map((addon, idx) => (
+                            <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {addon}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Check if it's same day (rush service) */}
+                    {order.slot_start && order.delivery_slot_start && (
+                      (() => {
+                        const pickupDate = new Date(order.slot_start).toDateString()
+                        const deliveryDate = new Date(order.delivery_slot_start).toDateString()
+                        return pickupDate === deliveryDate && (
+                          <div>
+                            <p className="text-sm text-gray-500">Rush Service</p>
+                            <p className="font-medium text-orange-600">Same Day Delivery</p>
+                          </div>
+                        )
+                      })()
+                    )}
+                  </>
+                )}
+                {order.service_type === 'CLEANING' && (
+                  <>
+                    {order.order_details.bedrooms !== undefined && (
+                      <div>
+                        <p className="text-sm text-gray-500">Bedrooms</p>
+                        <p className="font-medium">{order.order_details.bedrooms}</p>
+                      </div>
+                    )}
+                    {order.order_details.bathrooms !== undefined && (
+                      <div>
+                        <p className="text-sm text-gray-500">Bathrooms</p>
+                        <p className="font-medium">{order.order_details.bathrooms}</p>
+                      </div>
+                    )}
+                    {order.order_details.deep !== undefined && (
+                      <div>
+                        <p className="text-sm text-gray-500">Cleaning Type</p>
+                        <p className="font-medium">{order.order_details.deep ? 'Deep Clean' : 'Standard Clean'}</p>
+                      </div>
+                    )}
+                    {order.order_details.addons && order.order_details.addons.length > 0 && (
+                      <div>
+                        <p className="text-sm text-gray-500 mb-2">Add-ons</p>
+                        <div className="flex flex-wrap gap-2">
+                          {order.order_details.addons.map((addon, idx) => (
+                            <span key={idx} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {addon}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Customer Information */}
           <div className="bg-white rounded-lg shadow">
@@ -322,12 +443,11 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 <p className="font-medium">{order.profiles?.full_name || 'Not provided'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="font-medium">
-                  <a href={`mailto:${order.profiles?.email}`} className="text-blue-600 hover:text-blue-700">
-                    {order.profiles?.email}
-                  </a>
+                <p className="text-sm text-gray-500">User ID</p>
+                <p className="font-medium text-xs text-gray-600 font-mono">
+                  {order.profiles?.id || 'Not available'}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">Contact customer via phone</p>
               </div>
               {order.profiles?.phone && (
                 <div>
@@ -366,10 +486,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 <p className="text-gray-600">
                   {order.address_snapshot.city}, {order.address_snapshot.state} {order.address_snapshot.zip}
                 </p>
-                {order.address_snapshot.instructions && (
+                {(order.address_snapshot.notes || order.address_snapshot.instructions) && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-sm text-gray-500 mb-1">Instructions:</p>
-                    <p className="text-sm">{order.address_snapshot.instructions}</p>
+                    <p className="text-sm font-medium text-gray-700 mb-1">📝 Cleaning Notes & Special Instructions:</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap bg-amber-50 p-3 rounded-lg border border-amber-100">
+                      {order.address_snapshot.notes || order.address_snapshot.instructions}
+                    </p>
                   </div>
                 )}
               </div>
@@ -384,11 +506,13 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
               </div>
               <div className="p-6">
                 <p className="font-medium">{order.partners.name}</p>
-                <p className="text-sm text-gray-600">
-                  <a href={`mailto:${order.partners.email}`} className="text-blue-600 hover:text-blue-700">
-                    {order.partners.email}
-                  </a>
-                </p>
+                {order.partners.contact_email && (
+                  <p className="text-sm text-gray-600">
+                    <a href={`mailto:${order.partners.contact_email}`} className="text-blue-600 hover:text-blue-700">
+                      {order.partners.contact_email}
+                    </a>
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -493,6 +617,17 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       </div>
+
+      {/* Update Quote Modal */}
+      <UpdateQuoteModal
+        order={order}
+        isOpen={showUpdateQuoteModal}
+        onClose={() => setShowUpdateQuoteModal(false)}
+        onSuccess={() => {
+          setShowUpdateQuoteModal(false)
+          fetchOrder()
+        }}
+      />
     </div>
   )
 }

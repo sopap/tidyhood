@@ -32,10 +32,10 @@ export async function POST(
     const body = await request.json()
     const { actual_weight_lbs, notes } = submitQuoteSchema.parse(body)
     
-    // Get order
+    // Get order with user profile (need stripe_customer_id)
     const { data: order, error: orderError } = await db
       .from('orders')
-      .select('*, profiles!orders_user_id_fkey(phone)')
+      .select('*, profiles!orders_user_id_fkey(phone, stripe_customer_id)')
       .eq('id', orderId)
       .single()
     
@@ -86,13 +86,16 @@ export async function POST(
       addons
     })
     
-    // Update order with actual weight and quote
+    // Update order with actual weight and quote - Set pending admin approval
+    // CRITICAL: Copy stripe_customer_id from profile to order for auto-charge to work
     const updates = {
       actual_weight_lbs,
       quote_cents: pricing.total_cents,
       quoted_at: new Date().toISOString(),
-      status: 'awaiting_payment',
-      partner_notes: notes || order.partner_notes
+      status: 'pending_admin_approval',
+      pending_admin_approval: true,
+      partner_notes: notes || order.partner_notes,
+      stripe_customer_id: order.profiles?.stripe_customer_id || order.stripe_customer_id
     }
     
     const { data: updatedOrder, error: updateError } = await db
@@ -121,20 +124,8 @@ export async function POST(
       }
     })
     
-    // Send SMS with payment link to customer
-    const customerPhone = order.profiles?.phone
-    if (customerPhone) {
-      const paymentUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://tidyhood.vercel.app'}/orders/${orderId}/pay`
-      const amount = `$${(pricing.total_cents / 100).toFixed(2)}`
-      
-      await sendSMS({
-        to: customerPhone,
-        message: `Tidyhood: Your laundry quote is ready! ${actual_weight_lbs} lbs = ${amount}. Pay now: ${paymentUrl}`
-      }).catch(err => {
-        console.error('Failed to send quote SMS:', err)
-        // Don't throw - SMS failure shouldn't block quote submission
-      })
-    }
+    // No longer send SMS payment link - admin will approve and auto-charge instead
+    // Customer will receive receipt SMS after admin approves and charges
     
     return NextResponse.json({
       success: true,

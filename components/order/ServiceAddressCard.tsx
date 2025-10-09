@@ -1,11 +1,13 @@
 export default function ServiceAddressCard({ 
   serviceType, 
   weightLabel, 
-  addressLines 
+  addressLines,
+  phone
 }: {
   serviceType: string;
   weightLabel?: string;
   addressLines: string[];
+  phone?: string;
 }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5 md:p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -33,6 +35,16 @@ export default function ServiceAddressCard({
               <div key={i} className={i === 0 ? 'font-semibold text-gray-900' : ''}>{l}</div>
             ))}
           </address>
+          {phone && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-sm">
+                <span>📱</span>
+                <a href={`tel:${phone}`} className="text-brand hover:text-brand-700 font-medium">
+                  {phone}
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

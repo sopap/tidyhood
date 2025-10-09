@@ -27,17 +27,33 @@ interface Stats {
   total_revenue_cents: number;
 }
 
-export default function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+interface Order {
+  id: string;
+  service_type: string;
+  status: string;
+  total_cents: number;
+  created_at: string;
+  slot_start: string;
+  profiles?: {
+    full_name?: string;
+    phone?: string;
+  };
+}
+
+export default function PartnerDetail({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const [partner, setPartner] = useState<Partner | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     fetchPartner();
+    fetchRecentOrders();
   }, [id]);
 
   async function fetchPartner() {
@@ -58,6 +74,21 @@ export default function PartnerDetail({ params }: { params: Promise<{ id: string
       setError(err instanceof Error ? err.message : 'Failed to load partner');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchRecentOrders() {
+    setLoadingOrders(true);
+    try {
+      const res = await fetch(`/api/admin/orders?partner=${id}&limit=10`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data.orders || []);
+      }
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    } finally {
+      setLoadingOrders(false);
     }
   }
 
@@ -296,6 +327,104 @@ export default function PartnerDetail({ params }: { params: Promise<{ id: string
         </div>
       </div>
 
+      {/* Recent Orders */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+          <Link
+            href={`/admin/orders?partner=${partner.id}`}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            View All →
+          </Link>
+        </div>
+        <div className="p-6">
+          {loadingOrders ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-sm text-gray-500 mt-2">Loading orders...</p>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No orders found for this partner</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm text-gray-500 border-b">
+                    <th className="pb-3 font-medium">Order ID</th>
+                    <th className="pb-3 font-medium">Customer</th>
+                    <th className="pb-3 font-medium">Service</th>
+                    <th className="pb-3 font-medium">Date</th>
+                    <th className="pb-3 font-medium">Status</th>
+                    <th className="pb-3 font-medium text-right">Amount</th>
+                    <th className="pb-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="border-b last:border-b-0 hover:bg-gray-50 transition">
+                      <td className="py-3">
+                        <span className="font-mono text-sm text-gray-600">
+                          {order.id.substring(0, 8)}...
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-sm">
+                          <p className="font-medium text-gray-900">
+                            {order.profiles?.full_name || 'Unknown'}
+                          </p>
+                          {order.profiles?.phone && (
+                            <p className="text-gray-500 text-xs">{order.profiles.phone}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span className="text-sm text-gray-700">{order.service_type}</span>
+                      </td>
+                      <td className="py-3">
+                        <span className="text-sm text-gray-700">
+                          {new Date(order.slot_start).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          order.status === 'cancelled' || order.status === 'canceled' ? 'bg-gray-100 text-gray-800' :
+                          order.status.includes('progress') || order.status.includes('processing') ? 'bg-blue-100 text-blue-800' :
+                          order.status.includes('pending') ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {order.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className="text-sm font-medium text-gray-900">
+                          ${(order.total_cents / 100).toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="bg-gray-50 rounded-lg p-6">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
@@ -304,7 +433,7 @@ export default function PartnerDetail({ params }: { params: Promise<{ id: string
             href={`/admin/orders?partner=${partner.id}`}
             className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm"
           >
-            View Orders
+            View All Orders
           </Link>
           <Link
             href={`/admin/capacity?partner=${partner.id}`}

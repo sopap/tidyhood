@@ -332,6 +332,16 @@ export function CleaningOrderView({
                 <p className="font-medium">{order.address_snapshot.line1}</p>
                 {order.address_snapshot.line2 && <p className="text-gray-600">{order.address_snapshot.line2}</p>}
                 <p className="text-gray-600">{order.address_snapshot.city}, {order.address_snapshot.zip}</p>
+                {(order as any).customer?.phone && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span>📱</span>
+                      <a href={`tel:${(order as any).customer.phone}`} className="text-blue-600 hover:text-blue-700 font-medium">
+                        {(order as any).customer.phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
                 {order.address_snapshot.notes && (
                   <div className="mt-3 pt-3 border-t border-gray-200 bg-amber-50 rounded-lg p-3">
                     <p className="text-xs font-medium text-amber-900 mb-1">Access Notes</p>

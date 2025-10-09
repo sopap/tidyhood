@@ -18,8 +18,8 @@ interface Partner {
   max_minutes_per_slot?: number;
 }
 
-export default function EditPartner({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function EditPartner({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

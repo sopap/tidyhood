@@ -1,8 +1,5 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { env } from '@/lib/env';
 
 interface UserData {
   user: {
@@ -39,32 +36,32 @@ interface UserData {
   }>;
 }
 
-export default function UserDetailPage() {
-  const params = useParams();
-  const userId = params.id as string;
-  
-  const [data, setData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchUserDetail();
-  }, [userId]);
-
-  async function fetchUserDetail() {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`);
-      if (!response.ok) throw new Error('Failed to fetch user');
-      
-      const result = await response.json();
-      setData(result);
-      setError('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load user');
-    } finally {
-      setLoading(false);
+async function getUserDetail(userId: string): Promise<UserData | null> {
+  try {
+    const baseUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/admin/users/${userId}`, {
+      cache: 'no-store',
+    });
+    
+    if (!response.ok) {
+      console.error('[UserDetail] Failed to fetch user:', response.status);
+      return null;
     }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('[UserDetail] Error fetching user:', error);
+    return null;
   }
+}
+
+export default async function UserDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const { id: userId } = await params;
+  const data = await getUserDetail(userId);
 
   function getStatusColor(status: string) {
     switch (status) {
@@ -87,31 +84,11 @@ export default function UserDetailPage() {
     ).join(' ');
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-red-900 mb-2">Error Loading User</h3>
-        <p className="text-red-700">{error || 'User not found'}</p>
+        <p className="text-red-700">User not found</p>
         <Link
           href="/admin/users"
           className="mt-4 inline-block text-red-600 hover:text-red-700 font-medium"
