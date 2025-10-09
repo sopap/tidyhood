@@ -9,7 +9,6 @@ import {
   getStatusSection,
   validateTransition,
   getProgress,
-  mapLegacyStatus,
   TERMINAL_STATUSES,
   CANCELLABLE_STATUSES,
   type OrderStatus,
@@ -301,19 +300,6 @@ describe('orderStateMachine', () => {
     it('returns 0 for canceled orders', () => {
       expect(getProgress('canceled', 'LAUNDRY')).toBe(0);
       expect(getProgress('canceled', 'CLEANING')).toBe(0);
-    });
-  });
-
-  describe('mapLegacyStatus', () => {
-    it('maps legacy statuses to current statuses', () => {
-      expect(mapLegacyStatus('PENDING')).toBe('pending');
-      expect(mapLegacyStatus('PAID')).toBe('paid_processing');
-      expect(mapLegacyStatus('DELIVERED')).toBe('delivered');
-    });
-
-    it('returns lowercase version for unmapped statuses', () => {
-      expect(mapLegacyStatus('pending_pickup')).toBe('pending_pickup');
-      expect(mapLegacyStatus('at_facility')).toBe('at_facility');
     });
   });
 

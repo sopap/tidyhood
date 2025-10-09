@@ -117,10 +117,21 @@ export async function POST(
       ? `${order.partner_notes}\n\n${adminNote}`
       : adminNote
     
-    // If quote changed and order was awaiting payment, keep it in that status
-    // Otherwise, update to awaiting_payment if not already paid
+    // Status logic:
+    // - For orders WITH payment method: Don't change status yet, let auto-charge handle it
+    // - For orders WITHOUT payment method (legacy): Set to awaiting_payment for manual payment
+    // - For already paid orders: Don't change status
+    const hasPaymentMethod = !!(order.saved_payment_method_id && order.stripe_customer_id)
+    
     if (order.status !== 'completed' && order.status !== 'delivered' && order.status !== 'paid_processing') {
-      updates.status = 'awaiting_payment'
+      if (!hasPaymentMethod) {
+        // Legacy order without payment method - requires manual payment
+        updates.status = 'awaiting_payment'
+        console.log('[ADMIN_QUOTE_UPDATE] Setting status to awaiting_payment (legacy order, no payment method)')
+      } else {
+        // Order has payment method - will attempt auto-charge, don't change status yet
+        console.log('[ADMIN_QUOTE_UPDATE] Order has payment method, will attempt auto-charge')
+      }
     }
     
     // Update order

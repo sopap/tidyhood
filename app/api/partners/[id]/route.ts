@@ -58,14 +58,24 @@ export async function GET(
     const review_count = scorecard.review_count || 0;
     
     // Return only public information (with defaults for missing fields)
-    return NextResponse.json({
-      id: partner.id,
-      name: partner.name,
-      photo_url: null, // Photo feature not yet implemented in DB
-      rating: rating,
-      review_count: review_count,
-      phone: partner.contact_phone, // Map contact_phone to phone for consistency
-    });
+    // Add cache control headers to prevent stale data
+    return NextResponse.json(
+      {
+        id: partner.id,
+        name: partner.name,
+        photo_url: null, // Photo feature not yet implemented in DB
+        rating: rating,
+        review_count: review_count,
+        phone: partner.contact_phone, // Map contact_phone to phone for consistency
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
     
   } catch (error) {
     console.error('Partner API error:', error);
