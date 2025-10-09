@@ -370,6 +370,7 @@ export class PaymentAuthorizationSaga {
         status: 'pending_pickup',
         setup_intent_id: setupResult.setup_intent_id,
         saved_payment_method_id: setupResult.payment_method_id,
+        stripe_customer_id: profile.stripe_customer_id,
         payment_method_saved_at: new Date().toISOString(),
         card_validated: getCardValidationAmount() > 0,
         updated_at: new Date().toISOString()

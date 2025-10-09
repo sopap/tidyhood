@@ -295,6 +295,13 @@ export async function POST(request: NextRequest) {
       throw new ConflictError('Selected time slot is no longer available', 'SLOT_FULL')
     }
     
+    // Fetch user profile to get stripe_customer_id
+    const { data: profile } = await db
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single()
+    
     // Create order
     console.log('[POST /api/orders] Creating order in database...')
     
@@ -316,6 +323,7 @@ export async function POST(request: NextRequest) {
         tax_cents: pricing.tax_cents,
         delivery_cents: pricing.delivery_cents,
         total_cents: pricing.total_cents,
+        stripe_customer_id: profile?.stripe_customer_id || null,
         idempotency_key: idempotencyKey,
         order_details: params.details,
         address_snapshot: {

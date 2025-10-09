@@ -18,6 +18,33 @@ export interface SendSMSParams {
 }
 
 /**
+ * Normalize phone number to E.164 format
+ * Adds '+' prefix if missing for valid US numbers
+ */
+function normalizePhoneNumber(phone: string): string {
+  if (!phone) {
+    throw new Error(`Invalid phone number: empty or null`)
+  }
+  
+  // Already has '+' prefix
+  if (phone.startsWith('+')) {
+    return phone
+  }
+  
+  // US number without '+' (11 digits starting with 1)
+  if (/^1\d{10}$/.test(phone)) {
+    return `+${phone}`
+  }
+  
+  // 10-digit US number (add +1 prefix)
+  if (/^\d{10}$/.test(phone)) {
+    return `+1${phone}`
+  }
+  
+  throw new Error(`Invalid phone number format: ${phone}`)
+}
+
+/**
  * Send SMS notification
  * In development, logs to console
  * In production, sends via Twilio
@@ -25,14 +52,17 @@ export interface SendSMSParams {
 export async function sendSMS(params: SendSMSParams): Promise<void> {
   const { to, message } = params
   
-  // Validate phone number format
-  if (!to || !to.startsWith('+')) {
-    console.warn('Invalid phone number format:', to)
-    return
+  // Normalize phone number
+  let normalizedPhone: string
+  try {
+    normalizedPhone = normalizePhoneNumber(to)
+  } catch (error) {
+    console.error('Invalid phone number format:', to, error)
+    throw error
   }
   
   if (isDev) {
-    console.log('📱 [SMS] TO:', to)
+    console.log('📱 [SMS] TO:', normalizedPhone)
     console.log('📱 [SMS] MESSAGE:', message)
     return
   }
@@ -45,7 +75,7 @@ export async function sendSMS(params: SendSMSParams): Promise<void> {
   try {
     await twilioClient.messages.create({
       body: message,
-      to,
+      to: normalizedPhone,
       from: FROM_PHONE,
     })
   } catch (error) {
