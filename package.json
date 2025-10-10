@@ -14,6 +14,7 @@
     "supabase:seed": "psql $DATABASE_URL -f supabase/seed/seed.sql"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
     "@googlemaps/js-api-loader": "^2.0.1",
     "@sentry/nextjs": "^10.17.0",
     "@stripe/react-stripe-js": "^5.0.0",
