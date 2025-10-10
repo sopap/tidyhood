@@ -101,7 +101,7 @@ export async function executeAction(
 
         // Send weight confirmation
         const confirmation = responses.weightConfirmed(weight, serviceType);
-        await sendSMS(partnerPhone, confirmation);
+        await sendSMS({ to: partnerPhone, message: confirmation });
 
         // Send quote
         return responses.quoteReady(quoteCents, weight);
@@ -214,5 +214,5 @@ export async function sendAgentMessage(
       return;
   }
 
-  await sendSMS(partnerPhone, message);
+  await sendSMS({ to: partnerPhone, message });
 }
