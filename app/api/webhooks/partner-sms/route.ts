@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const conversation = await getOrCreateConversation(from);
     
     if (!conversation) {
-      await sendSMS(from, responses.error());
+      await sendSMS({ to: from, message: responses.error() });
       return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
         headers: { 'Content-Type': 'text/xml' },
       });
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const responseMessage = await executeAction(intent, conversation, from);
     
     // Send response via SMS
-    await sendSMS(from, responseMessage);
+    await sendSMS({ to: from, message: responseMessage });
     
     // Return empty TwiML (we already sent SMS via API)
     return new NextResponse(
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       const formData = await request.formData();
       const from = formData.get('From') as string;
       if (from) {
-        await sendSMS(from, responses.error());
+        await sendSMS({ to: from, message: responses.error() });
       }
     } catch (smsError) {
       console.error('Failed to send error SMS:', smsError);
