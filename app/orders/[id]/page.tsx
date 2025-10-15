@@ -13,7 +13,8 @@ import OrderDetailsSkeleton from '@/components/order/OrderDetailsSkeleton';
 import CancelModal from '@/components/order/CancelModal';
 import RescheduleModal from '@/components/order/RescheduleModal';
 import { CleaningOrderView } from '@/components/cleaning/CleaningOrderView';
-import { mapDatabaseStatus, getStatusLabel } from '@/lib/orderStatus';
+import { mapDatabaseStatus } from '@/lib/orderStatus';
+import { getStatusLabel, OrderStatus } from '@/lib/orderStateMachine';
 import { getCancellationPolicy, getHoursUntilSlot, formatMoney } from '@/lib/cancellationFees';
 import { isFeatureEnabled } from '@/lib/features';
 import { mapToCleaningStatus } from '@/types/cleaningOrders';
@@ -42,6 +43,9 @@ interface Order {
   outtake_photos_json?: string[];
   saved_payment_method_id?: string;
   stripe_customer_id?: string;
+  stripe_receipt_url?: string;
+  stripe_receipt_number?: string;
+  stripe_charge_id?: string;
   pending_admin_approval?: boolean;
   order_details: {
     lbs?: number;
@@ -269,7 +273,7 @@ export default function OrderDetailPage() {
   };
 
   const currentStep = mapDatabaseStatus(order.status);
-  const statusLabel = getStatusLabel(order.status);
+  const statusLabel = getStatusLabel(order.status as OrderStatus, order.service_type);
   const showPayButton = shouldShowLegacyPayButton(order);
   const showPaymentInfo = shouldShowPaymentMethodInfo(order);
   
@@ -434,6 +438,22 @@ export default function OrderDetailPage() {
                   </svg>
                   <span>Add to Calendar</span>
                 </button>
+              )}
+              
+              {/* View Receipt */}
+              {order.stripe_receipt_url && (
+                <a
+                  href={order.stripe_receipt_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full px-6 py-3 rounded-lg font-semibold text-white shadow-sm bg-green-600 hover:opacity-90 hover:shadow active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2 min-h-[44px]"
+                  aria-label="View payment receipt in new window"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>View Receipt</span>
+                </a>
               )}
               
               {/* Secondary Actions Grid */}

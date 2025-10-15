@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import StatusBadge, { StatusTone } from '@/components/orders/StatusBadge'
-import { OrderStatus, STATUS_LABELS, STATUS_COLORS } from '@/lib/orderStateMachine'
+import { OrderStatus, STATUS_LABELS, STATUS_COLORS, getStatusLabel } from '@/lib/orderStateMachine'
 
 function getStatusTone(status: string): StatusTone {
   const color = STATUS_COLORS[status as OrderStatus]
@@ -19,8 +19,8 @@ function getStatusTone(status: string): StatusTone {
   return toneMap[color] || 'gray'
 }
 
-function formatStatus(status: string): string {
-  return STATUS_LABELS[status as OrderStatus] || status
+function formatStatus(status: string, serviceType: string): string {
+  return getStatusLabel(status as OrderStatus, serviceType)
 }
 
 interface Order {
@@ -227,7 +227,7 @@ export default function AdminOrders() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge tone={getStatusTone(order.status)}>
-                        {formatStatus(order.status)}
+                        {formatStatus(order.status, order.service_type)}
                       </StatusBadge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

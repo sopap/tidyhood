@@ -268,6 +268,11 @@ export interface Order {
   completed_at?: string;
   payment_intent_id?: string; // Stripe payment intent ID
   
+  // Stripe receipt information
+  stripe_charge_id?: string;
+  stripe_receipt_url?: string;
+  stripe_receipt_number?: string;
+  
   // Additional details
   actual_weight_lbs?: number;
   partner_notes?: string;

@@ -215,14 +215,48 @@ async function handlePaymentSucceeded(
     return
   }
 
+  // Extract receipt data from charge object
+  // Note: charges may not be expanded by default, so we fetch it if needed
+  const charges = (paymentIntent as any).charges
+  let charge = charges?.data?.[0]
+  
+  // If charge not expanded, fetch it from Stripe
+  if (!charge && paymentIntent.latest_charge) {
+    try {
+      charge = await stripe.charges.retrieve(paymentIntent.latest_charge as string);
+      logger.info({ orderId: order.id }, 'Fetched charge data from Stripe API')
+    } catch (err) {
+      logger.error({ err, orderId: order.id }, 'Failed to fetch charge from Stripe')
+    }
+  }
+  
+  const updateData: any = {
+    status: 'paid_processing',
+    paid_at: new Date().toISOString(),
+    payment_method: paymentIntent.payment_method_types[0],
+  }
+
+  // Add receipt data if charge exists
+  if (charge) {
+    updateData.stripe_charge_id = charge.id
+    updateData.stripe_receipt_url = charge.receipt_url
+    updateData.stripe_receipt_number = charge.receipt_number
+    logger.info(
+      { 
+        orderId: order.id, 
+        chargeId: charge.id,
+        hasReceiptUrl: !!charge.receipt_url 
+      }, 
+      'Receipt data captured'
+    )
+  } else {
+    logger.warn({ orderId: order.id }, 'No charge data available for receipt')
+  }
+
   // Update order status to paid
   await db
     .from('orders')
-    .update({
-      status: 'paid_processing',
-      paid_at: new Date().toISOString(),
-      payment_method: paymentIntent.payment_method_types[0],
-    })
+    .update(updateData)
     .eq('id', order.id)
 
   // Create order event

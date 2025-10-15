@@ -93,7 +93,10 @@ export function CleaningActions({
           break;
         
         case 'view_receipt':
-          router.push(`/orders/${order.id}/receipt`);
+          // Open Stripe receipt in new tab if available
+          if ((order as any).stripe_receipt_url) {
+            window.open((order as any).stripe_receipt_url, '_blank', 'noopener,noreferrer');
+          }
           break;
         
         default:
