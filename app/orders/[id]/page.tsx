@@ -249,6 +249,12 @@ export default function OrderDetailPage() {
   };
 
   const getPricingRows = () => {
+    // If we have a quote, don't show breakdown since it would be misleading
+    // (original estimate breakdown doesn't match final quote)
+    if (order.quote_cents && order.quote_cents !== order.total_cents) {
+      return [];
+    }
+    
     const rows = [
       { label: 'Subtotal', amountCents: order.subtotal_cents }
     ];
