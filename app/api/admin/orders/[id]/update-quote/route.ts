@@ -214,20 +214,34 @@ export async function POST(
         let receiptData: any = {}
         if (paymentIntent.latest_charge) {
           try {
-            const charge = await stripe.charges.retrieve(
-              paymentIntent.latest_charge as string
-            )
+            // latest_charge could be either a string ID or an expanded Charge object
+            const chargeId = typeof paymentIntent.latest_charge === 'string' 
+              ? paymentIntent.latest_charge 
+              : paymentIntent.latest_charge.id
+            
+            const charge = await stripe.charges.retrieve(chargeId, {
+              expand: ['receipt_url']
+            })
+            
+            console.log('[ADMIN_QUOTE_UPDATE] Retrieved charge:', {
+              id: charge.id,
+              has_receipt_url: !!charge.receipt_url,
+              receipt_url: charge.receipt_url,
+              receipt_number: charge.receipt_number
+            })
             
             receiptData = {
               stripe_charge_id: charge.id,
-              stripe_receipt_url: charge.receipt_url,
-              stripe_receipt_number: charge.receipt_number
+              stripe_receipt_url: charge.receipt_url || null,
+              stripe_receipt_number: charge.receipt_number || null
             }
             
             console.log('[ADMIN_QUOTE_UPDATE] Captured receipt data:', receiptData)
           } catch (chargeError) {
             console.error('[ADMIN_QUOTE_UPDATE] Failed to retrieve charge for receipt:', chargeError)
           }
+        } else {
+          console.warn('[ADMIN_QUOTE_UPDATE] No latest_charge on payment intent')
         }
         
         // Update order as paid with receipt data
