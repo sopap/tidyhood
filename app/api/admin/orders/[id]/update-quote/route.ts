@@ -210,12 +210,33 @@ export async function POST(
           }
         })
         
-        // Update order as paid
+        // Capture receipt data from payment intent
+        let receiptData: any = {}
+        if (paymentIntent.latest_charge) {
+          try {
+            const charge = await stripe.charges.retrieve(
+              paymentIntent.latest_charge as string
+            )
+            
+            receiptData = {
+              stripe_charge_id: charge.id,
+              stripe_receipt_url: charge.receipt_url,
+              stripe_receipt_number: charge.receipt_number
+            }
+            
+            console.log('[ADMIN_QUOTE_UPDATE] Captured receipt data:', receiptData)
+          } catch (chargeError) {
+            console.error('[ADMIN_QUOTE_UPDATE] Failed to retrieve charge for receipt:', chargeError)
+          }
+        }
+        
+        // Update order as paid with receipt data
         await db.from('orders').update({
           status: 'paid_processing',
           payment_intent_id: paymentIntent.id,
           paid_at: new Date().toISOString(),
-          auto_charged_at: new Date().toISOString()
+          auto_charged_at: new Date().toISOString(),
+          ...receiptData
         }).eq('id', orderId)
         
         autoChargeSuccess = true
