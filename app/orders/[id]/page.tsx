@@ -272,6 +272,10 @@ export default function OrderDetailPage() {
     return undefined;
   };
 
+  // Use quote if available, otherwise use estimate
+  const displayAmount = order.quote_cents || order.total_cents;
+  const isQuoted = !!order.quote_cents;
+  
   const currentStep = mapDatabaseStatus(order.status);
   const statusLabel = getStatusLabel(order.status as OrderStatus, order.service_type);
   const showPayButton = shouldShowLegacyPayButton(order);
@@ -317,7 +321,7 @@ export default function OrderDetailPage() {
             statusKey={currentStep}
             dateISO={order.slot_start}
             windowLabel={getWindowLabel()}
-            totalCents={order.total_cents}
+            totalCents={displayAmount}
             showPayButton={showPayButton}
             deliveryDateISO={order.delivery_slot_start}
             deliveryWindowLabel={getDeliveryWindowLabel()}
@@ -366,11 +370,32 @@ export default function OrderDetailPage() {
             </div>
           )}
 
+          {/* Quote Ready Banner */}
+          {order.quote_cents && order.quote_cents !== order.total_cents && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">💰</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900 mb-1">Final Quote Ready</h3>
+                  <p className="text-sm text-blue-700">
+                    Your final quote has been prepared: <span className="font-semibold">${(order.quote_cents / 100).toFixed(2)}</span>
+                    {order.quoted_at && ` (Updated ${new Date(order.quoted_at).toLocaleDateString()})`}
+                  </p>
+                  {Math.abs((order.quote_cents - order.total_cents) / order.total_cents) > 0.1 && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      ℹ️ Final amount differs from initial estimate by {Math.abs(Math.round(((order.quote_cents - order.total_cents) / order.total_cents) * 100))}%
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Pricing Card */}
           <div className="mb-4">
             <PricingCard
               rows={getPricingRows()}
-              totalCents={order.total_cents}
+              totalCents={displayAmount}
               note={getPricingNote()}
             />
           </div>
