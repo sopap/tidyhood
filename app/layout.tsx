@@ -36,12 +36,21 @@ export const metadata: Metadata = {
     siteName: 'Tidyhood',
     locale: 'en_US',
     type: 'website',
+    images: [
+      {
+        url: '/logo.png',
+        width: 1200,
+        height: 630,
+        alt: 'Tidyhood - Laundry & Cleaning Services in Harlem',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
     description: 'Professional wash & fold and home cleaning in Harlem',
     creator: '@tidyhood',
+    images: ['/logo.png'],
   },
   robots: {
     index: true,
