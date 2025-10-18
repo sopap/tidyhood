@@ -46,35 +46,55 @@ export default function Home() {
   const { user } = useAuth()
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [pricing, setPricing] = useState({
+    laundryPerLb: '$2.15',
+    laundryMinOrder: '$15.00',
+    cleaningStudio: '$89',
+  })
 
   // Get ZIP codes from environment variable
   const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
   const zipsDisplay = allowedZips.join(', ')
 
-  // Fetch user's last order for "Book Again" prompt
+  // Fetch user's last order and pricing
   useEffect(() => {
-    const fetchLastOrder = async () => {
-      if (!user) {
-        setLoading(false)
-        return
-      }
-
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/orders?limit=1')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.orders && data.orders.length > 0) {
-            setLastOrder(data.orders[0])
+        // Fetch pricing from database
+        const pricingRes = await fetch('/api/admin/settings/pricing')
+        if (pricingRes.ok) {
+          const pricingData = await pricingRes.json()
+          const rules = pricingData.rules || []
+          
+          const perLbRule = rules.find((r: any) => r.unit_key === 'LND_WF_PERLB')
+          const minRule = rules.find((r: any) => r.unit_key === 'LND_WF_MIN_LBS')
+          const studioRule = rules.find((r: any) => r.unit_key === 'CLN_STD_STUDIO')
+          
+          setPricing({
+            laundryPerLb: perLbRule ? `$${(perLbRule.unit_price_cents / 100).toFixed(2)}` : '$2.15',
+            laundryMinOrder: minRule ? `$${(minRule.unit_price_cents / 100).toFixed(2)}` : '$15.00',
+            cleaningStudio: studioRule ? `$${Math.floor(studioRule.unit_price_cents / 100)}` : '$89',
+          })
+        }
+
+        // Fetch last order if user is logged in
+        if (user) {
+          const response = await fetch('/api/orders?limit=1')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.orders && data.orders.length > 0) {
+              setLastOrder(data.orders[0])
+            }
           }
         }
       } catch (err) {
-        console.error('Failed to fetch last order:', err)
+        console.error('Failed to fetch data:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchLastOrder()
+    fetchData()
   }, [user])
 
   return (
@@ -188,9 +208,9 @@ export default function Home() {
                 
                 <div className="bg-primary-50 rounded-lg p-4 mb-4 md:mb-6 text-center">
                   <div className="text-2xl md:text-3xl font-bold text-primary-600">
-                    $1.75<span className="text-base md:text-lg">/lb</span>
+                    {pricing.laundryPerLb}<span className="text-base md:text-lg">/lb</span>
                   </div>
-                  <div className="text-xs md:text-sm text-text-secondary">(minimum order $26.25)</div>
+                  <div className="text-xs md:text-sm text-text-secondary">(minimum order {pricing.laundryMinOrder})</div>
                 </div>
 
                 <ul className="space-y-2 md:space-y-3 mb-6">
@@ -241,9 +261,9 @@ export default function Home() {
                 
                 <div className="bg-primary-50 rounded-lg p-4 mb-4 md:mb-6 text-center">
                   <div className="text-2xl md:text-3xl font-bold text-primary-600">
-                    Starting at $89
+                    Starting at {pricing.cleaningStudio}
                   </div>
-                  <div className="text-xs md:text-sm text-text-secondary">Studio $89 • 1BR $119 • 2BR $149</div>
+                  <div className="text-xs md:text-sm text-text-secondary">Studio {pricing.cleaningStudio} • 1BR $119 • 2BR $149</div>
                 </div>
 
                 <ul className="space-y-2 md:space-y-3 mb-6">
