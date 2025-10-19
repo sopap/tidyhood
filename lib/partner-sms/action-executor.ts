@@ -19,7 +19,7 @@ export async function executeAction(
 
   try {
     switch (intent.type) {
-      case 'CONFIRM_PICKUP': {
+      case 'confirm': {
         // Update conversation state
         await updateConversationState(
           conversation.id,
@@ -31,7 +31,7 @@ export async function executeAction(
         return responses.pickupConfirmed(pickupTime);
       }
 
-      case 'RESCHEDULE': {
+      case 'reschedule': {
         // Mark as needing reschedule, direct to portal
         await updateConversationState(
           conversation.id,
@@ -42,7 +42,7 @@ export async function executeAction(
         return responses.pickupRescheduled();
       }
 
-      case 'PICKED_UP': {
+      case 'picked_up': {
         if (!conversation.order_id) {
           return responses.notFound();
         }
@@ -67,7 +67,7 @@ export async function executeAction(
         return responses.requestWeight(shortId);
       }
 
-      case 'WEIGHT': {
+      case 'weight': {
         if (!intent.value || typeof intent.value !== 'number') {
           return 'Please reply with just the weight number (e.g. "18")';
         }
@@ -107,39 +107,7 @@ export async function executeAction(
         return responses.quoteReady(quoteCents, weight);
       }
 
-      case 'CONFIRM_QUOTE': {
-        if (!conversation.order_id) {
-          return responses.notFound();
-        }
-
-        const { quoted_weight, quote_cents } = conversation.context;
-        
-        if (!quoted_weight || !quote_cents) {
-          return 'No quote found. Please collect weight first.';
-        }
-
-        // Submit quote for admin approval
-        await db
-          .from('orders')
-          .update({
-            partner_quote_cents: quote_cents,
-            actual_weight: quoted_weight,
-            status: 'awaiting_quote_approval',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', conversation.order_id);
-
-        // Update conversation
-        await updateConversationState(
-          conversation.id,
-          'idle', // Back to idle, waiting for admin approval
-          { quote_submitted_at: new Date().toISOString() }
-        );
-
-        return responses.quoteSubmitted();
-      }
-
-      case 'CONFIRM_DELIVERY': {
+      case 'delivered': {
         if (!conversation.order_id) {
           return responses.notFound();
         }
@@ -163,21 +131,11 @@ export async function executeAction(
         return responses.deliveryConfirmed(deliveryTime);
       }
 
-      case 'SUGGEST_TIME': {
-        // Store suggested time for admin to review
-        await updateConversationState(
-          conversation.id,
-          'idle',
-          { 
-            suggested_delivery_time: intent.value,
-            suggested_at: new Date().toISOString()
-          }
-        );
-
-        return responses.deliveryTimeReceived(intent.value as string);
+      case 'help': {
+        return responses.unknown();
       }
 
-      case 'UNKNOWN':
+      case 'unknown':
       default: {
         return responses.unknown();
       }
