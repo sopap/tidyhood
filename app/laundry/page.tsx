@@ -295,7 +295,7 @@ export default async function LaundryPage() {
                 We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup service covers:
               </p>
               <div className="grid md:grid-cols-3 gap-4 mb-4">
-                {allowedZips.slice(0, 3).map(zip => (
+                {allowedZips.map(zip => (
                   <div key={zip} className="flex items-center">
                     <span className="text-primary-600 mr-2">📍</span>
                     <span className="font-semibold">ZIP {zip}</span>

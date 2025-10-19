@@ -230,7 +230,7 @@ export default async function CleaningPage() {
                 We serve all of Harlem, from historic brownstones to modern high-rises. Our professional cleaners cover:
               </p>
               <div className="grid md:grid-cols-3 gap-4 mb-4">
-                {allowedZips.slice(0, 3).map(zip => (
+                {allowedZips.map(zip => (
                   <div key={zip} className="flex items-center">
                     <span className="text-primary-600 mr-2">📍</span>
                     <span className="font-semibold">ZIP {zip}</span>
