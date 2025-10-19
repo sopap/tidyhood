@@ -3,84 +3,72 @@ import Link from 'next/link'
 import { Header } from '@/components/Header'
 import Tooltip from '@/components/ui/Tooltip'
 import DryPriceTooltip from '@/components/dryclean/DryPriceTooltip'
+import { getLaundryDisplayPricing } from '@/lib/display-pricing'
 
-export const metadata: Metadata = {
-  title: 'Wash & Fold Laundry Delivery in Harlem | $1.75/lb | Tidyhood',
-  description: 'Professional wash & fold with free pickup & delivery in Harlem. Same-day options and QR-tracked bags. Book your laundry pickup now.',
-  alternates: {
-    canonical: 'https://tidyhood.nyc/laundry',
-  },
-  openGraph: {
-    title: 'Wash & Fold Laundry Delivery in Harlem | $1.75/lb | Tidyhood',
-    description: 'Professional wash & fold with free pickup & delivery in Harlem. Same-day options and QR-tracked bags.',
-    url: 'https://tidyhood.nyc/laundry',
-    siteName: 'Tidyhood',
-    locale: 'en_US',
-    type: 'website',
-  },
-}
+// Get allowed ZIP codes from environment variable
+const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
 
-const laundryStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "Service",
-  "serviceType": "Laundry Service",
-  "provider": {
-    "@type": "LocalBusiness",
-    "name": "Tidyhood",
-    "image": "https://tidyhood.nyc/static/og-laundry.jpg",
-    "@id": "https://tidyhood.nyc/#org",
-  },
-  "areaServed": [
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Harlem",
-        "addressRegion": "NY",
-        "postalCode": "10026"
-      }
+export async function generateMetadata(): Promise<Metadata> {
+  const pricing = await getLaundryDisplayPricing()
+  
+  return {
+    title: `Wash & Fold Laundry Delivery in Harlem | ${pricing.perLbPriceFormatted}/lb | Tidyhood`,
+    description: 'Professional wash & fold with free pickup & delivery in Harlem. Same-day options and QR-tracked bags. Book your laundry pickup now.',
+    alternates: {
+      canonical: 'https://tidyhood.nyc/laundry',
     },
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Harlem",
-        "addressRegion": "NY",
-        "postalCode": "10027"
-      }
+    openGraph: {
+      title: `Wash & Fold Laundry Delivery in Harlem | ${pricing.perLbPriceFormatted}/lb | Tidyhood`,
+      description: 'Professional wash & fold with free pickup & delivery in Harlem. Same-day options and QR-tracked bags.',
+      url: 'https://tidyhood.nyc/laundry',
+      siteName: 'Tidyhood',
+      locale: 'en_US',
+      type: 'website',
     },
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Harlem",
-        "addressRegion": "NY",
-        "postalCode": "10030"
-      }
-    }
-  ],
-  "offers": {
-    "@type": "Offer",
-    "price": "1.75",
-    "priceCurrency": "USD",
-    "priceSpecification": {
-      "@type": "UnitPriceSpecification",
-      "price": "1.75",
-      "priceCurrency": "USD",
-      "unitText": "per pound",
-      "referenceQuantity": {
-        "@type": "QuantitativeValue",
-        "value": "1",
-        "unitCode": "LBR"
-      }
-    }
   }
 }
 
-export default function LaundryPage() {
+export default async function LaundryPage() {
+  const pricing = await getLaundryDisplayPricing()
+  
+  const laundryStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "Laundry Service",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "Tidyhood",
+      "image": "https://tidyhood.nyc/static/og-laundry.jpg",
+      "@id": "https://tidyhood.nyc/#org",
+    },
+    "areaServed": allowedZips.map(zip => ({
+      "@type": "City",
+      "name": "Harlem",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Harlem",
+        "addressRegion": "NY",
+        "postalCode": zip
+      }
+    })),
+    "offers": {
+      "@type": "Offer",
+      "price": pricing.perLbPrice.toFixed(2),
+      "priceCurrency": "USD",
+      "priceSpecification": {
+        "@type": "UnitPriceSpecification",
+        "price": pricing.perLbPrice.toFixed(2),
+        "priceCurrency": "USD",
+        "unitText": "per pound",
+        "referenceQuantity": {
+          "@type": "QuantitativeValue",
+          "value": "1",
+          "unitCode": "LBR"
+        }
+      }
+    }
+  }
+
   return (
     <>
       <script
@@ -111,9 +99,9 @@ export default function LaundryPage() {
             <div className="card bg-primary-50 border-2 border-primary-200 mb-6">
               <div className="text-center">
                 <div className="text-5xl font-bold text-primary-600 mb-2">
-                  $1.75<span className="text-2xl">/lb</span>
+                  {pricing.perLbPriceFormatted}<span className="text-2xl">/lb</span>
                 </div>
-                <p className="text-text-secondary">15 lb minimum ($26.25)</p>
+                <p className="text-text-secondary">{pricing.minWeightLbs} lbs minimum ({pricing.minOrderPriceFormatted})</p>
               </div>
             </div>
             
@@ -123,7 +111,7 @@ export default function LaundryPage() {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span>$1.75/lb base rate</span>
+                    <span>{pricing.perLbPriceFormatted}/lb base rate</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -145,7 +133,7 @@ export default function LaundryPage() {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span>$1.75/lb + $10 rush fee</span>
+                    <span>{pricing.perLbPriceFormatted}/lb + $10 rush fee</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -307,18 +295,12 @@ export default function LaundryPage() {
                 We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup service covers:
               </p>
               <div className="grid md:grid-cols-3 gap-4 mb-4">
-                <div className="flex items-center">
-                  <span className="text-primary-600 mr-2">📍</span>
-                  <span className="font-semibold">ZIP 10026</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-primary-600 mr-2">📍</span>
-                  <span className="font-semibold">ZIP 10027</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-primary-600 mr-2">📍</span>
-                  <span className="font-semibold">ZIP 10030</span>
-                </div>
+                {allowedZips.slice(0, 3).map(zip => (
+                  <div key={zip} className="flex items-center">
+                    <span className="text-primary-600 mr-2">📍</span>
+                    <span className="font-semibold">ZIP {zip}</span>
+                  </div>
+                ))}
               </div>
               <p className="text-sm text-text-tertiary">
                 Near the border? Contact us and we'll see if we can accommodate your location.
@@ -412,7 +394,7 @@ export default function LaundryPage() {
               </details>
               
               <details className="card-compact cursor-pointer">
-                <summary className="font-semibold">What's included in the $1.75/lb price?</summary>
+                <summary className="font-semibold">What's included in the {pricing.perLbPriceFormatted}/lb price?</summary>
                 <p className="mt-3 text-sm text-text-secondary">
                   Everything! Wash, dry, fold, eco-friendly detergent, free pickup & delivery, and QR tracking. The only extra cost is if you need rush 24-hour service ($10 fee).
                 </p>

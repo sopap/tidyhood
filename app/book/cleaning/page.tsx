@@ -573,9 +573,6 @@ function CleaningBookingForm() {
                 <span className="text-gray-700"><strong>Simple reschedule</strong> if plans change</span>
               </li>
             </ul>
-            <p className="text-sm text-gray-600 mb-2">
-              <strong>Policy:</strong> See cancellation terms below.
-            </p>
             <p className="text-sm text-gray-600">
               <strong>Service areas:</strong> See all ZIPs on our <Link href="/service-areas" className="text-primary-600 hover:text-primary-700 underline">Service Areas page</Link>.
             </p>

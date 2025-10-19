@@ -55,7 +55,7 @@ export default function TermsPage() {
                 <strong>3.2 Payment:</strong> Payment is required at the time of booking via credit card or other accepted payment methods. We use Stripe for secure payment processing.
               </p>
               <p className="text-gray-700 mb-4">
-                <strong>3.3 Pricing:</strong> Prices are displayed on our website and are subject to change. Laundry services are priced per pound with a 15 lb minimum. Cleaning services are priced by unit size.
+                <strong>3.3 Pricing:</strong> Prices are displayed on our website and are subject to change. Laundry services are priced per pound with a 15 lbs minimum. Cleaning services are priced by unit size.
               </p>
               <p className="text-gray-700 mb-4">
                 <strong>3.4 First Order Cap:</strong> First-time customers are subject to a spending cap of $120 per order for security purposes.

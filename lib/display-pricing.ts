@@ -17,8 +17,8 @@ export async function getLaundryDisplayPricing() {
       .eq('active', true)
       .single()
     
-    // Fetch minimum order (stored as unit_price_cents for minimum charge)
-    const { data: minRule } = await db
+    // Fetch minimum weight in lbs
+    const { data: minWeightRule } = await db
       .from('pricing_rules')
       .select('unit_price_cents')
       .eq('unit_key', 'LND_WF_MIN_LBS')
@@ -27,11 +27,13 @@ export async function getLaundryDisplayPricing() {
       .single()
     
     const perLbCents = perLbRule?.unit_price_cents || 215 // Default to $2.15
-    const minOrderCents = minRule?.unit_price_cents || 1500 // Default to $15
+    const minWeightLbs = (minWeightRule?.unit_price_cents || 1500) / 100 // Weight stored as cents for consistency (15 lbs = 1500)
+    const minOrderCents = Math.ceil(minWeightLbs * perLbCents) // Calculate minimum order price from weight
     
     return {
       perLbPrice: perLbCents / 100,
       perLbPriceFormatted: `$${(perLbCents / 100).toFixed(2)}`,
+      minWeightLbs: minWeightLbs,
       minOrderPrice: minOrderCents / 100,
       minOrderPriceFormatted: `$${(minOrderCents / 100).toFixed(2)}`,
     }
@@ -41,8 +43,9 @@ export async function getLaundryDisplayPricing() {
     return {
       perLbPrice: 2.15,
       perLbPriceFormatted: '$2.15',
-      minOrderPrice: 15.00,
-      minOrderPriceFormatted: '$15.00',
+      minWeightLbs: 15,
+      minOrderPrice: 32.25,
+      minOrderPriceFormatted: '$32.25',
     }
   }
 }

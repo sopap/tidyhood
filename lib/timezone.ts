@@ -3,7 +3,64 @@
  * across admin, partner, and user interfaces
  */
 
+import { getServiceClient } from './db'
+
 export const NY_TIMEZONE = 'America/New_York';
+
+// Cache to avoid repeated DB calls for delivery policies
+let policyCache: Record<string, any> = {}
+let cacheExpiry = 0
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Get delivery policy from database with caching
+ */
+async function getDeliveryPolicy(serviceType: 'LAUNDRY' | 'CLEANING') {
+  const now = Date.now()
+  
+  // Return cached if still valid
+  if (policyCache[serviceType] && now < cacheExpiry) {
+    return policyCache[serviceType]
+  }
+  
+  try {
+    const db = getServiceClient()
+    const { data, error } = await db
+      .from('delivery_time_policies')
+      .select('*')
+      .eq('service_type', serviceType)
+      .eq('active', true)
+      .single()
+    
+    if (error || !data) {
+      console.warn(`Using fallback delivery policy for ${serviceType}`, error)
+      return getFallbackPolicy()
+    }
+    
+    // Cache the result
+    policyCache[serviceType] = data
+    cacheExpiry = now + CACHE_TTL
+    
+    return data
+  } catch (err) {
+    console.error('Error fetching delivery policy:', err)
+    return getFallbackPolicy()
+  }
+}
+
+/**
+ * Fallback policy values (match current hardcoded logic)
+ */
+function getFallbackPolicy() {
+  return {
+    standard_minimum_hours: 48,
+    rush_enabled: true,
+    rush_early_pickup_hours: 0,
+    rush_late_pickup_hours: 24,
+    rush_cutoff_hour: 11,
+    same_day_earliest_hour: 18
+  }
+}
 
 /**
  * Get current time in NY ET timezone
@@ -160,9 +217,15 @@ export function formatOrderDate(dateISO: string): string {
  * Get minimum delivery date based on pickup slot and service type in NY ET timezone
  * @param pickupSlotEnd - ISO string of pickup slot end time
  * @param isRush - whether rush service (same day) is selected
+ * @param serviceType - LAUNDRY or CLEANING service type
  * @returns ISO date string (YYYY-MM-DD) for minimum delivery date
  */
-export function getMinimumDeliveryDate(pickupSlotEnd: string, isRush: boolean): string {
+export async function getMinimumDeliveryDate(
+  pickupSlotEnd: string,
+  isRush: boolean,
+  serviceType: 'LAUNDRY' | 'CLEANING' = 'LAUNDRY'
+): Promise<string> {
+  const policy = await getDeliveryPolicy(serviceType);
   const pickupEnd = new Date(pickupSlotEnd);
   
   // Get the full date/time parts in NY timezone
@@ -187,22 +250,24 @@ export function getMinimumDeliveryDate(pickupSlotEnd: string, isRush: boolean): 
     pickupSlotEnd,
     pickupEndHourNY,
     isRush,
-    nyDateTimeStr
+    serviceType,
+    nyDateTimeStr,
+    policy
   });
   
   // Determine minimum hours based on service type and pickup time
   let minimumHours: number;
-  if (isRush && pickupEndHourNY <= 11) {
-    // Same day service: if pickup ends at or before 11 AM, can deliver same day
-    // Delivery slots must be evening (6 PM or later), but we set minimum to 0
-    // to allow same-day date, then filter for evening slots elsewhere
-    minimumHours = 0; // Same day delivery allowed
+  if (isRush && pickupEndHourNY <= policy.rush_cutoff_hour) {
+    // Same day service: if pickup ends at or before cutoff hour, can deliver same day
+    // Delivery slots must be evening (policy.same_day_earliest_hour or later), 
+    // but we set minimum to 0 to allow same-day date, then filter for evening slots elsewhere
+    minimumHours = policy.rush_early_pickup_hours; // Typically 0 for same day
   } else if (isRush) {
-    // Same day service: if pickup after 11 AM, deliver next day (24h)
-    minimumHours = 24;
+    // Same day service: if pickup after cutoff hour, deliver next day
+    minimumHours = policy.rush_late_pickup_hours; // Typically 24h
   } else {
-    // Standard service: 48 hours
-    minimumHours = 48;
+    // Standard service
+    minimumHours = policy.standard_minimum_hours; // Typically 48h
   }
   
   console.log('📦 Minimum hours required:', minimumHours);

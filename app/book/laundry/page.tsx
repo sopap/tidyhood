@@ -102,12 +102,45 @@ function LaundryBookingForm() {
   const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<TimeSlot | null>(null)
   const [loadingDeliverySlots, setLoadingDeliverySlots] = useState(false)
   
+  // Delivery policy
+  const [deliveryPolicy, setDeliveryPolicy] = useState<{
+    standard_minimum_hours: number
+    rush_enabled: boolean
+    rush_cutoff_hour: number
+    rush_early_pickup_hours: number
+    rush_late_pickup_hours: number
+  } | null>(null)
+  
   // Pricing
   const [pricing, setPricing] = useState({ subtotal: 0, tax: 0, total: 0 })
   const [loading, setLoading] = useState(false)
   
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null)
+  
+  // Fetch delivery policy on mount
+  useEffect(() => {
+    const fetchPolicy = async () => {
+      try {
+        const response = await fetch('/api/admin/settings/delivery-policies/LAUNDRY')
+        if (response.ok) {
+          const data = await response.json()
+          setDeliveryPolicy(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch delivery policy:', err)
+        // Use fallback
+        setDeliveryPolicy({
+          standard_minimum_hours: 48,
+          rush_enabled: true,
+          rush_cutoff_hour: 11,
+          rush_early_pickup_hours: 0,
+          rush_late_pickup_hours: 24
+        })
+      }
+    }
+    fetchPolicy()
+  }, [])
   
   // Setup Intent state
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null)
@@ -386,13 +419,13 @@ function LaundryBookingForm() {
   // Find earliest delivery date with available slots when pickup slot or rush service changes
   useEffect(() => {
     const findEarliestDeliveryDate = async () => {
-      if (!selectedSlot || !address) {
-        setDeliveryDate('') // Clear if no slot selected
+      if (!selectedSlot || !address || !deliveryPolicy) {
+        setDeliveryDate('') // Clear if no slot selected or policy not loaded
         return
       }
       
-      // Calculate minimum delivery date (48h for standard, 24h for rush)
-      const minDeliveryDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService)
+      // Calculate minimum delivery date using the fetched policy
+      const minDeliveryDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService, 'LAUNDRY', deliveryPolicy)
       
       // CRITICAL: Log for debugging to verify correct calculation
       console.log('Pickup ends:', selectedSlot.slot_end)
@@ -404,52 +437,16 @@ function LaundryBookingForm() {
       // which uses NY timezone internally, so we just use it as-is
       const minDateStr = minDeliveryDate
       
-      // Search up to 14 days to find first date with valid slots
-      for (let i = 0; i < 14; i++) {
-        // Work with date strings directly to avoid timezone conversion issues
-        const checkDate = new Date(minDateStr + 'T12:00:00') // Use noon to avoid DST issues
-        checkDate.setDate(checkDate.getDate() + i)
-        const dateStr = checkDate.toISOString().split('T')[0]
-        
-        try {
-          const response = await fetch(
-            `/api/slots?service=LAUNDRY&zip=${address.zip}&date=${dateStr}`
-          )
-          if (response.ok) {
-            const data = await response.json()
-            const slots: TimeSlot[] = data.slots || []
-            
-            // Check if there are valid slots that meet the minimum time requirement
-            if (slots.length > 0) {
-              const validSlot = findEarliestDeliverySlot<TimeSlot>(
-                slots,
-                selectedSlot.slot_end,
-                rushService
-              )
-              
-              // Only use this date if it has at least one valid slot
-              if (validSlot) {
-                console.log('Found valid delivery date with slots:', dateStr)
-                setDeliveryDate(dateStr)
-                setSelectedDeliverySlot(null)
-                return
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Failed to check delivery slots for date:', dateStr, err)
-        }
-      }
-      
-      // If no valid slots found in 14 days, set to minimum date anyway
-      // The UI will show a warning that no slots meet the requirement
-      console.log('No valid slots found, using minimum date:', minDateStr)
+      // Simply set to the minimum date - don't search for slots
+      // The slot filtering will happen when displaying delivery time slots
+      // This allows users to select the minimum date even if no specific time slots meet the requirement
+      console.log('Setting delivery date to minimum:', minDateStr)
       setDeliveryDate(minDateStr)
       setSelectedDeliverySlot(null)
     }
     
     findEarliestDeliveryDate()
-  }, [selectedSlot, rushService, address])
+  }, [selectedSlot, rushService, address, deliveryPolicy])
 
   // Fetch pickup slots when date changes
   useEffect(() => {
@@ -685,7 +682,9 @@ function LaundryBookingForm() {
             <ul className="space-y-2 mb-4">
               <li className="flex items-start">
                 <span className="text-green-600 mr-2 mt-0.5">✓</span>
-                <span className="text-gray-700"><strong>Typical turnaround:</strong> 24–48 hours</span>
+                <span className="text-gray-700">
+                  <strong>Typical turnaround:</strong> {deliveryPolicy ? `${Math.round(deliveryPolicy.standard_minimum_hours / 24)} days` : '24–48 hours'}
+                </span>
               </li>
               <li className="flex items-start">
                 <span className="text-green-600 mr-2 mt-0.5">✓</span>
@@ -698,9 +697,6 @@ function LaundryBookingForm() {
             </ul>
             <p className="text-sm text-gray-600">
               <strong>Service areas:</strong> See all ZIPs on our <Link href="/service-areas" className="text-primary-600 hover:text-primary-700 underline">Service Areas page</Link>.
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              <strong>Policy:</strong> See cancellation terms below.
             </p>
           </div>
 
@@ -1007,12 +1003,15 @@ function LaundryBookingForm() {
                       value={deliveryDate}
                       onChange={(e) => {
                         const newDate = e.target.value
-                        const minDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService)
+                        if (!deliveryPolicy) return
+                        
+                        const minDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService, 'LAUNDRY', deliveryPolicy)
                         
                         // Validate that the selected date meets minimum requirements
                         if (newDate < minDate) {
+                          const hours = rushService ? deliveryPolicy.rush_late_pickup_hours : deliveryPolicy.standard_minimum_hours
                           setToast({
-                            message: `Delivery date must be at least ${rushService ? '24' : '48'} hours after pickup. Minimum date is ${new Date(minDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
+                            message: `Delivery date must be at least ${hours} hours after pickup. Minimum date is ${new Date(minDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`,
                             type: 'warning'
                           })
                           setDeliveryDate(minDate)
@@ -1021,7 +1020,7 @@ function LaundryBookingForm() {
                         }
                         setSelectedDeliverySlot(null) // Clear slot when date changes manually
                       }}
-                      min={getMinimumDeliveryDate(selectedSlot.slot_end, rushService)}
+                      min={deliveryPolicy ? getMinimumDeliveryDate(selectedSlot.slot_end, rushService, 'LAUNDRY', deliveryPolicy) : ''}
                       max={new Date(new Date(selectedSlot.slot_end).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                       className="input-field"
                     />
@@ -1054,29 +1053,33 @@ function LaundryBookingForm() {
                         {loadingDeliverySlots ? (
                           <p className="text-gray-500">Loading delivery slots...</p>
                         ) : (() => {
-                          // Filter slots to only show valid ones based on service type and pickup time
+                          // Filter slots to only show valid ones based on minimum time requirement
+                          // The minimum delivery DATE is enforced by the date picker,
+                          // but within that date, only show slots that meet the time requirement
                           const validSlots = availableDeliverySlots.filter(slot => {
+                            if (!deliveryPolicy) return false
+                            
                             const pickupEnd = new Date(selectedSlot.slot_end)
                             const deliveryStart = new Date(slot.slot_start)
                             
-                            // Check if pickup ends at or before 11 AM in NY timezone
+                            // Check if pickup ends at or before cutoff hour in NY timezone
                             const pickupEndHourNY = parseInt(pickupEnd.toLocaleTimeString('en-US', {
                               timeZone: 'America/New_York',
                               hour: '2-digit',
                               hour12: false
                             }))
                             
-                            // Determine minimum hours based on service type and pickup time
+                            // Determine minimum hours based on service type and pickup time using policy
                             let minimumHours: number
-                            if (rushService && pickupEndHourNY <= 11) {
-                              // Same day service: if pickup ends at or before 11 AM, can deliver same day evening
-                              minimumHours = 0
+                            if (rushService && pickupEndHourNY <= deliveryPolicy.rush_cutoff_hour) {
+                              // Same day service: if pickup ends at or before cutoff hour, can deliver same day evening
+                              minimumHours = deliveryPolicy.rush_early_pickup_hours
                             } else if (rushService) {
-                              // Same day service: if pickup after 11 AM, deliver next day (24h)
-                              minimumHours = 24
+                              // Same day service: if pickup after cutoff hour, deliver next day
+                              minimumHours = deliveryPolicy.rush_late_pickup_hours
                             } else {
-                              // Standard service: 48 hours
-                              minimumHours = 48
+                              // Standard service: use policy setting (26h)
+                              minimumHours = deliveryPolicy.standard_minimum_hours
                             }
                             
                             const minimumTime = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000)
@@ -1098,8 +1101,8 @@ function LaundryBookingForm() {
                       <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg mb-2">
                         <p className="text-xs text-blue-700">
                           💡 Select your preferred delivery time (optional). If not selected, we'll schedule during business hours.
-                          {!rushService && ' (Only showing slots at least 48 hours after pickup end time)'}
-                          {rushService && ' (Only showing slots at least 24 hours after pickup end time)'}
+                          {deliveryPolicy && !rushService && ` (Only showing slots at least ${deliveryPolicy.standard_minimum_hours} hours after pickup end time)`}
+                          {deliveryPolicy && rushService && ` (Only showing slots at least ${deliveryPolicy.rush_late_pickup_hours} hours after pickup end time)`}
                         </p>
                       </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

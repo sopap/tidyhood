@@ -185,7 +185,7 @@ describe('Pricing Module', () => {
         expect(result.items[0].quantity).toBe(20);
       });
 
-      it('should enforce 15 lb minimum', async () => {
+      it('should enforce 15 lbs minimum', async () => {
         const params: LaundryQuoteParams = {
           zip: '10027',
           lbs: 10, // Below minimum

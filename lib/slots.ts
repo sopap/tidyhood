@@ -139,12 +139,90 @@ export function findSlotClosestTo24Hours<T extends { slot_start: string }>(slots
 
 /**
  * Calculate minimum delivery date based on pickup slot and service type (uses NY ET timezone)
+ * CLIENT-SIDE VERSION: Accepts policy as parameter instead of fetching from database
  * @param pickupSlotEnd - ISO string of pickup slot end time
  * @param isRush - whether rush service is selected
+ * @param serviceType - LAUNDRY or CLEANING service type
+ * @param policy - Optional delivery policy object (if not provided, uses fallback of 48h)
  * @returns ISO date string (YYYY-MM-DD) for minimum delivery date
  */
-export function getMinimumDeliveryDate(pickupSlotEnd: string, isRush: boolean): string {
-  return getMinimumDeliveryDateTZ(pickupSlotEnd, isRush);
+export function getMinimumDeliveryDate(
+  pickupSlotEnd: string,
+  isRush: boolean,
+  serviceType: 'LAUNDRY' | 'CLEANING' = 'LAUNDRY',
+  policy?: { standard_minimum_hours: number; rush_cutoff_hour: number; rush_early_pickup_hours: number; rush_late_pickup_hours: number }
+): string {
+  // Use provided policy or fallback to 48h standard
+  const deliveryPolicy = policy || {
+    standard_minimum_hours: 48,
+    rush_cutoff_hour: 11,
+    rush_early_pickup_hours: 0,
+    rush_late_pickup_hours: 24
+  };
+  
+  const pickupEnd = new Date(pickupSlotEnd);
+  
+  // Get the full date/time parts in NY timezone
+  const nyDateTimeStr = pickupEnd.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  
+  // Parse: "MM/DD/YYYY, HH:mm:ss"
+  const [datePart, timePart] = nyDateTimeStr.split(', ');
+  const [month, day, year] = datePart.split('/');
+  const [hour] = timePart.split(':');
+  const pickupEndHourNY = parseInt(hour);
+  
+  console.log('🚀 [getMinimumDeliveryDate - CLIENT]', {
+    pickupSlotEnd,
+    pickupEndHourNY,
+    isRush,
+    serviceType,
+    nyDateTimeStr,
+    policy: deliveryPolicy
+  });
+  
+  // Determine minimum hours based on service type and pickup time
+  let minimumHours: number;
+  if (isRush && pickupEndHourNY <= deliveryPolicy.rush_cutoff_hour) {
+    // Same day service: if pickup ends at or before cutoff hour, can deliver same day
+    minimumHours = deliveryPolicy.rush_early_pickup_hours; // Typically 0 for same day
+  } else if (isRush) {
+    // Same day service: if pickup after cutoff hour, deliver next day
+    minimumHours = deliveryPolicy.rush_late_pickup_hours; // Typically 24h
+  } else {
+    // Standard service
+    minimumHours = deliveryPolicy.standard_minimum_hours; // Your 26h setting
+  }
+  
+  console.log('📦 Minimum hours required:', minimumHours);
+  
+  const minDelivery = new Date(pickupEnd.getTime() + minimumHours * 60 * 60 * 1000);
+  
+  // Convert to NY timezone to get correct date
+  const nyDateStr = minDelivery.toLocaleDateString('en-US', { 
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  console.log('📅 Minimum delivery date (NY):', nyDateStr);
+  
+  // Convert MM/DD/YYYY to YYYY-MM-DD
+  const [minMonth, minDay, minYear] = nyDateStr.split('/');
+  const result = `${minYear}-${minMonth.padStart(2, '0')}-${minDay.padStart(2, '0')}`;
+  
+  console.log('✅ Final minimum delivery date:', result);
+  
+  return result;
 }
 
 /**

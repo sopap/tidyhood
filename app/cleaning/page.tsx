@@ -1,74 +1,62 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Header } from '@/components/Header'
+import { getCleaningDisplayPricing } from '@/lib/display-pricing'
 
-export const metadata: Metadata = {
-  title: 'House Cleaning Service in Harlem | Deep Cleaning from $89 | Tidyhood',
-  description: 'Trusted Harlem cleaners for apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
-  alternates: {
-    canonical: 'https://tidyhood.nyc/cleaning',
-  },
-  openGraph: {
-    title: 'House Cleaning Service in Harlem | Deep Cleaning from $89 | Tidyhood',
+// Get allowed ZIP codes from environment variable
+const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+
+export async function generateMetadata(): Promise<Metadata> {
+  const pricing = await getCleaningDisplayPricing()
+  
+  return {
+    title: `House Cleaning Service in Harlem | Deep Cleaning from ${pricing.studioPriceFormatted} | Tidyhood`,
     description: 'Trusted Harlem cleaners for apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
-    url: 'https://tidyhood.nyc/cleaning',
-    siteName: 'Tidyhood',
-    locale: 'en_US',
-    type: 'website',
-  },
-}
-
-const cleaningStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "Service",
-  "serviceType": "House Cleaning",
-  "provider": {
-    "@type": "LocalBusiness",
-    "name": "Tidyhood",
-    "image": "https://tidyhood.nyc/static/og-cleaning.jpg",
-    "@id": "https://tidyhood.nyc/#org",
-  },
-  "areaServed": [
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Harlem",
-        "addressRegion": "NY",
-        "postalCode": "10026"
-      }
+    alternates: {
+      canonical: 'https://tidyhood.nyc/cleaning',
     },
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Harlem",
-        "addressRegion": "NY",
-        "postalCode": "10027"
-      }
+    openGraph: {
+      title: `House Cleaning Service in Harlem | Deep Cleaning from ${pricing.studioPriceFormatted} | Tidyhood`,
+      description: 'Trusted Harlem cleaners for apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
+      url: 'https://tidyhood.nyc/cleaning',
+      siteName: 'Tidyhood',
+      locale: 'en_US',
+      type: 'website',
     },
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Harlem",
-        "addressRegion": "NY",
-        "postalCode": "10030"
-      }
-    }
-  ],
-  "offers": {
-    "@type": "AggregateOffer",
-    "lowPrice": "89",
-    "highPrice": "219",
-    "priceCurrency": "USD"
   }
 }
 
-export default function CleaningPage() {
+export default async function CleaningPage() {
+  const pricing = await getCleaningDisplayPricing()
+  
+  const cleaningStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "House Cleaning",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "Tidyhood",
+      "image": "https://tidyhood.nyc/static/og-cleaning.jpg",
+      "@id": "https://tidyhood.nyc/#org",
+    },
+    "areaServed": allowedZips.map(zip => ({
+      "@type": "City",
+      "name": "Harlem",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Harlem",
+        "addressRegion": "NY",
+        "postalCode": zip
+      }
+    })),
+    "offers": {
+      "@type": "AggregateOffer",
+      "lowPrice": pricing.studioPrice.toString(),
+      "highPrice": (pricing.twoBrPrice * 1.75).toFixed(0),
+      "priceCurrency": "USD"
+    }
+  }
+
   return (
     <>
       <script
@@ -100,19 +88,19 @@ export default function CleaningPage() {
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="card-compact text-center">
                 <div className="font-bold text-lg mb-2">Studio</div>
-                <div className="text-4xl font-bold text-primary-600 mb-2">$89</div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">{pricing.studioPriceFormatted}</div>
                 <p className="text-sm text-text-secondary">Perfect for smaller spaces</p>
               </div>
               
               <div className="card-compact text-center border-2 border-primary-300">
                 <div className="font-bold text-lg mb-2">1 Bedroom</div>
-                <div className="text-4xl font-bold text-primary-600 mb-2">$119</div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">{pricing.oneBrPriceFormatted}</div>
                 <p className="text-sm text-text-secondary">Most popular</p>
               </div>
               
               <div className="card-compact text-center">
                 <div className="font-bold text-lg mb-2">2 Bedroom</div>
-                <div className="text-4xl font-bold text-primary-600 mb-2">$149</div>
+                <div className="text-4xl font-bold text-primary-600 mb-2">{pricing.twoBrPriceFormatted}</div>
                 <p className="text-sm text-text-secondary">Great value</p>
               </div>
             </div>
@@ -122,11 +110,11 @@ export default function CleaningPage() {
               <ul className="space-y-2 text-sm">
                 <li className="flex justify-between">
                   <span>3 Bedroom</span>
-                  <span className="font-semibold">$179</span>
+                  <span className="font-semibold">${Math.round(pricing.twoBrPrice * 1.2)}</span>
                 </li>
                 <li className="flex justify-between">
                   <span>4 Bedroom</span>
-                  <span className="font-semibold">$219</span>
+                  <span className="font-semibold">${Math.round(pricing.twoBrPrice * 1.47)}</span>
                 </li>
                 <li className="flex justify-between">
                   <span>Deep Clean (any size)</span>
@@ -242,18 +230,12 @@ export default function CleaningPage() {
                 We serve all of Harlem, from historic brownstones to modern high-rises. Our professional cleaners cover:
               </p>
               <div className="grid md:grid-cols-3 gap-4 mb-4">
-                <div className="flex items-center">
-                  <span className="text-primary-600 mr-2">📍</span>
-                  <span className="font-semibold">ZIP 10026</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-primary-600 mr-2">📍</span>
-                  <span className="font-semibold">ZIP 10027</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-primary-600 mr-2">📍</span>
-                  <span className="font-semibold">ZIP 10030</span>
-                </div>
+                {allowedZips.slice(0, 3).map(zip => (
+                  <div key={zip} className="flex items-center">
+                    <span className="text-primary-600 mr-2">📍</span>
+                    <span className="font-semibold">ZIP {zip}</span>
+                  </div>
+                ))}
               </div>
               <p className="text-sm text-text-tertiary">
                 Covering Central Harlem, South Harlem, Morningside Heights, and surrounding neighborhoods.

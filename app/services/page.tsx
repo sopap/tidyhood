@@ -104,7 +104,7 @@ export default function ServicesPage() {
                   <span className="text-gray-600">/lb</span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  (15 lb minimum)
+                  (15 lbs minimum)
                 </p>
               </div>
 

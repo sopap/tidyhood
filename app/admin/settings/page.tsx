@@ -39,16 +39,33 @@ interface CancellationPolicy {
   updated_at: string
 }
 
+interface DeliveryTimePolicy {
+  id: string
+  service_type: string
+  standard_minimum_hours: number
+  rush_enabled: boolean
+  rush_early_pickup_hours: number
+  rush_late_pickup_hours: number
+  rush_cutoff_hour: number
+  same_day_earliest_hour: number
+  active: boolean
+  notes: string | null
+  updated_at: string
+}
+
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'pricing' | 'policies' | 'history'>('pricing')
+  const [activeTab, setActiveTab] = useState<'pricing' | 'policies' | 'delivery' | 'history'>('pricing')
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([])
   const [policies, setPolicies] = useState<CancellationPolicy[]>([])
+  const [deliveryPolicies, setDeliveryPolicies] = useState<DeliveryTimePolicy[]>([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [editingRule, setEditingRule] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<Record<string, number>>({})
   const [editingPolicy, setEditingPolicy] = useState<string | null>(null)
   const [policyFormValues, setPolicyFormValues] = useState<Partial<CancellationPolicy>>({})
+  const [editingDeliveryPolicy, setEditingDeliveryPolicy] = useState<string | null>(null)
+  const [deliveryFormValues, setDeliveryFormValues] = useState<Partial<DeliveryTimePolicy>>({})
 
   useEffect(() => {
     loadData()
@@ -59,22 +76,27 @@ export default function AdminSettingsPage() {
     try {
       // Add timestamp to prevent caching
       const timestamp = Date.now()
-      const [pricingRes, policiesRes] = await Promise.all([
+      const [pricingRes, policiesRes, deliveryRes] = await Promise.all([
         fetch(`/api/admin/settings/pricing?t=${timestamp}`, {
           cache: 'no-store'
         }),
         fetch(`/api/admin/settings/policies?t=${timestamp}`, {
           cache: 'no-store'
+        }),
+        fetch(`/api/admin/settings/delivery-policies?t=${timestamp}`, {
+          cache: 'no-store'
         })
       ])
 
-      const [pricingData, policiesData] = await Promise.all([
+      const [pricingData, policiesData, deliveryData] = await Promise.all([
         pricingRes.json(),
-        policiesRes.json()
+        policiesRes.json(),
+        deliveryRes.json()
       ])
 
       if (pricingData.rules) setPricingRules(pricingData.rules)
       if (policiesData.policies) setPolicies(policiesData.policies)
+      if (deliveryData.policies) setDeliveryPolicies(deliveryData.policies)
     } catch (error) {
       console.error('Error loading settings:', error)
       showToast('Failed to load settings', 'error')
@@ -133,6 +155,56 @@ export default function AdminSettingsPage() {
       console.error('Error updating policy:', error)
       showToast(
         error instanceof Error ? error.message : 'Failed to update policy',
+        'error'
+      )
+    }
+  }
+
+  function startEditingDeliveryPolicy(policy: DeliveryTimePolicy) {
+    setEditingDeliveryPolicy(policy.id)
+    setDeliveryFormValues({
+      standard_minimum_hours: policy.standard_minimum_hours,
+      rush_enabled: policy.rush_enabled,
+      rush_early_pickup_hours: policy.rush_early_pickup_hours,
+      rush_late_pickup_hours: policy.rush_late_pickup_hours,
+      rush_cutoff_hour: policy.rush_cutoff_hour,
+      same_day_earliest_hour: policy.same_day_earliest_hour,
+      notes: policy.notes || ''
+    })
+  }
+
+  function cancelEditingDeliveryPolicy() {
+    setEditingDeliveryPolicy(null)
+    setDeliveryFormValues({})
+  }
+
+  async function updateDeliveryPolicy(policy: DeliveryTimePolicy) {
+    try {
+      const res = await fetch(`/api/admin/settings/delivery-policies/${policy.service_type}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...deliveryFormValues,
+          change_reason: 'Updated via admin settings'
+        })
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Update failed')
+      }
+
+      const data = await res.json()
+      showToast(data.message || 'Delivery policy updated successfully', 'success')
+      
+      await loadData()
+      
+      setEditingDeliveryPolicy(null)
+      setDeliveryFormValues({})
+    } catch (error) {
+      console.error('Error updating delivery policy:', error)
+      showToast(
+        error instanceof Error ? error.message : 'Failed to update delivery policy',
         'error'
       )
     }
@@ -394,6 +466,16 @@ export default function AdminSettingsPage() {
             }`}
           >
             Cancellation Policies
+          </button>
+          <button
+            onClick={() => setActiveTab('delivery')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'delivery'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Delivery Time Policies
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -1013,6 +1095,334 @@ export default function AdminSettingsPage() {
                     <div className="pt-2 border-t border-gray-200">
                       <button 
                         onClick={() => startEditingPolicy(policy)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <span>✏️</span>
+                        Edit Policy
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Delivery Time Policies Tab */}
+      {activeTab === 'delivery' && (
+        <div className="space-y-6">
+          {/* Important Notice */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">Controls Earliest Available Delivery Dates</h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  These settings determine how far in advance customers must book laundry services and enable rush/same-day options. (Cleaning services do not use delivery time policies)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {deliveryPolicies.filter(p => p.service_type === 'LAUNDRY').map((policy) => (
+            <div key={policy.id} className="bg-white rounded-lg shadow">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {policy.service_type === 'LAUNDRY' ? '💼 Laundry' : '🏠 Cleaning'} Delivery Time Policy
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Controls earliest available pickup/delivery slots for {policy.service_type.toLowerCase()} bookings
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                    policy.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {policy.active ? '🟢 ACTIVE' : '⚪ INACTIVE'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="px-6 py-4 space-y-4">
+                {editingDeliveryPolicy === policy.id ? (
+                  // Edit Mode
+                  <div className="space-y-6">
+                    {/* Standard Service */}
+                    <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <span>📅</span> Standard Service Timing
+                      </h4>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Minimum Lead Time (hours)
+                          <span className="text-gray-500 ml-1">(24-168)</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="24"
+                          max="168"
+                          step="1"
+                          value={deliveryFormValues.standard_minimum_hours || 48}
+                          onChange={(e) => setDeliveryFormValues({
+                            ...deliveryFormValues,
+                            standard_minimum_hours: parseInt(e.target.value) || 48
+                          })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Minimum hours from booking to earliest available slot (e.g., 48 = 2 days)
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Rush Service */}
+                    <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <span>⚡</span> Rush Service Configuration
+                      </h4>
+                      
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`rush-enabled-${policy.id}`}
+                          checked={deliveryFormValues.rush_enabled ?? policy.rush_enabled}
+                          onChange={(e) => setDeliveryFormValues({
+                            ...deliveryFormValues,
+                            rush_enabled: e.target.checked
+                          })}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`rush-enabled-${policy.id}`} className="ml-2 text-sm font-medium text-gray-700">
+                          Enable Rush/Same-Day Service
+                        </label>
+                      </div>
+
+                      {(deliveryFormValues.rush_enabled ?? policy.rush_enabled) && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Rush Cutoff Hour (NY timezone)
+                              <span className="text-gray-500 ml-1">(0-23)</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="23"
+                              step="1"
+                              value={deliveryFormValues.rush_cutoff_hour ?? 11}
+                              onChange={(e) => setDeliveryFormValues({
+                                ...deliveryFormValues,
+                                rush_cutoff_hour: parseInt(e.target.value)
+                              })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Hour determining early vs late rush (e.g., 11 = 11 AM cutoff)
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Early Rush Lead Time (hours)
+                              <span className="text-gray-500 ml-1">(0-48)</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="48"
+                              step="1"
+                              value={deliveryFormValues.rush_early_pickup_hours ?? 0}
+                              onChange={(e) => setDeliveryFormValues({
+                                ...deliveryFormValues,
+                                rush_early_pickup_hours: parseInt(e.target.value)
+                              })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Hours from booking to earliest slot if pickup ends before cutoff (0 = same-day)
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Late Rush Lead Time (hours)
+                              <span className="text-gray-500 ml-1">(0-48)</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="48"
+                              step="1"
+                              value={deliveryFormValues.rush_late_pickup_hours ?? 24}
+                              onChange={(e) => setDeliveryFormValues({
+                                ...deliveryFormValues,
+                                rush_late_pickup_hours: parseInt(e.target.value)
+                              })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Hours from booking to earliest slot if pickup ends after cutoff (24 = next day)
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Same-Day Earliest Delivery Hour
+                              <span className="text-gray-500 ml-1">(0-23)</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="23"
+                              step="1"
+                              value={deliveryFormValues.same_day_earliest_hour ?? 18}
+                              onChange={(e) => setDeliveryFormValues({
+                                ...deliveryFormValues,
+                                same_day_earliest_hour: parseInt(e.target.value)
+                              })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Earliest hour for same-day delivery slots (e.g., 18 = 6 PM)
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Policy Notes (optional)
+                      </label>
+                      <textarea
+                        value={deliveryFormValues.notes || ''}
+                        onChange={(e) => setDeliveryFormValues({
+                          ...deliveryFormValues,
+                          notes: e.target.value
+                        })}
+                        rows={3}
+                        placeholder="Add any additional context or notes about this policy..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => updateDeliveryPolicy(policy)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <span>💾</span>
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={cancelEditingDeliveryPolicy}
+                        className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // View Mode
+                  <>
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Standard Service Display */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
+                          <span>📅</span> Standard Service
+                        </h4>
+                        <div className="space-y-3 pl-6">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              Minimum Lead Time
+                            </label>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              {policy.standard_minimum_hours} hours
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {policy.standard_minimum_hours >= 24 
+                                ? `${(policy.standard_minimum_hours / 24).toFixed(1)} days`
+                                : `${policy.standard_minimum_hours} hours`} in advance
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rush Service Display */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
+                          <span>⚡</span> Rush Service
+                        </h4>
+                        <div className="space-y-3 pl-6">
+                          <div className="flex items-center gap-2">
+                            {policy.rush_enabled ? (
+                              <span className="text-green-600 flex items-center gap-1 text-sm font-medium">
+                                ✓ Rush Enabled
+                              </span>
+                            ) : (
+                              <span className="text-gray-600 flex items-center gap-1 text-sm">
+                                ✗ Rush Disabled
+                              </span>
+                            )}
+                          </div>
+                          
+                          {policy.rush_enabled && (
+                            <>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  Rush Cutoff
+                                </label>
+                                <p className="text-lg font-bold text-gray-900 mt-1">
+                                  {policy.rush_cutoff_hour}:00 {policy.rush_cutoff_hour >= 12 ? 'PM' : 'AM'}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  Early/Late Rush
+                                </label>
+                                <p className="text-sm text-gray-900 mt-1">
+                                  {policy.rush_early_pickup_hours}h / {policy.rush_late_pickup_hours}h
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  Same-Day Delivery From
+                                </label>
+                                <p className="text-lg font-bold text-gray-900 mt-1">
+                                  {policy.same_day_earliest_hour}:00 {policy.same_day_earliest_hour >= 12 ? 'PM' : 'AM'}
+                                </p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {policy.notes && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-gray-700 font-medium mb-1">📝 Policy Notes:</p>
+                        <p className="text-sm text-blue-900">{policy.notes}</p>
+                      </div>
+                    )}
+                    
+                    {policy.updated_at && (
+                      <p className="text-xs text-gray-400">
+                        Last updated: {new Date(policy.updated_at).toLocaleString()}
+                      </p>
+                    )}
+                    
+                    <div className="pt-2 border-t border-gray-200">
+                      <button 
+                        onClick={() => startEditingDeliveryPolicy(policy)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
                       >
                         <span>✏️</span>
