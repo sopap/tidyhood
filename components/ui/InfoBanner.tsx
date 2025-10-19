@@ -1,4 +1,7 @@
+'use client'
+
 import React from 'react';
+import { useCancellationPolicy } from '@/lib/useCancellationPolicy';
 
 export type BannerType = 'info' | 'success' | 'warning' | 'error';
 
@@ -82,21 +85,63 @@ export function InfoBanner({
  */
 
 interface PolicyBannerProps {
+  serviceType: 'LAUNDRY' | 'CLEANING';
   title?: string;
-  message?: string;
   className?: string;
 }
 
 export function PolicyBanner({ 
+  serviceType,
   title = "Flexible Cancellation Policy",
-  message = "Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee if within 24 hours.",
   className 
 }: PolicyBannerProps) {
+  const { policy, loading, error } = useCancellationPolicy(serviceType);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <InfoBanner
+        type="info"
+        title={title}
+        message="Loading policy information..."
+        className={className}
+      />
+    );
+  }
+
+  // Show error state
+  if (error || !policy) {
+    return (
+      <InfoBanner
+        type="info"
+        title={title}
+        message="Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee if within 24 hours."
+        className={className}
+      />
+    );
+  }
+
+  // Format the dynamic message based on the policy
+  const feePercent = Math.round(policy.cancellation_fee_percent * 100);
+  const noticeHours = policy.notice_hours;
+  
+  let message = '';
+  
+  if (policy.allow_rescheduling) {
+    message = `Free rescheduling with ${noticeHours}+ hours notice. `;
+  }
+  
+  if (policy.allow_cancellation) {
+    message += `Cancellations incur a ${feePercent}% fee if within ${noticeHours} hours.`;
+  } else {
+    message += `Cancellations not permitted within ${noticeHours} hours.`;
+  }
+
   return (
     <InfoBanner
       type="info"
       title={title}
-      message={message}
+      message={message.trim()}
       className={className}
     />
   );

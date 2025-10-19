@@ -142,7 +142,7 @@ function PartnerLoginForm() {
               </div>
 
               <div className="text-sm">
-                <a href="mailto:support@tidyhood.com" className="font-medium text-blue-600 hover:text-blue-500">
+                <a href="mailto:support@tidyhood.nyc" className="font-medium text-blue-600 hover:text-blue-500">
                   Need help?
                 </a>
               </div>
@@ -183,13 +183,13 @@ function PartnerLoginForm() {
             <div className="mt-6 space-y-2 text-center text-sm">
               <p className="text-gray-600">
                 First time logging in?{' '}
-                <a href="mailto:support@tidyhood.com" className="font-medium text-blue-600 hover:text-blue-500">
+                <a href="mailto:support@tidyhood.nyc" className="font-medium text-blue-600 hover:text-blue-500">
                   Contact support
                 </a>
               </p>
               <p className="text-gray-600">
                 Forgot password?{' '}
-                <a href="mailto:support@tidyhood.com?subject=Partner Portal Password Reset" className="font-medium text-blue-600 hover:text-blue-500">
+                <a href="mailto:support@tidyhood.nyc?subject=Partner Portal Password Reset" className="font-medium text-blue-600 hover:text-blue-500">
                   Request reset
                 </a>
               </p>

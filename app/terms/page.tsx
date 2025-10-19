@@ -64,14 +64,25 @@ export default function TermsPage() {
 
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Cancellation and Refund Policy</h2>
+              
               <p className="text-gray-700 mb-4">
-                <strong>4.1 Cancellation:</strong> You may cancel your order up to 24 hours before the scheduled service time for a full refund. Cancellations made less than 24 hours in advance will incur a 50% cancellation fee.
+                <strong>Rescheduling:</strong> Free when requested with advance notice (typically 24+ hours before the scheduled start).
               </p>
+              
               <p className="text-gray-700 mb-4">
-                <strong>4.2 Refunds:</strong> Refunds will be processed within 5-7 business days to the original payment method.
+                <strong>Cancellations:</strong> Our cancellation policy varies by service type and timing. Current cancellation fees and notice requirements are displayed during the booking process and on service pages. Please review the cancellation policy shown at checkout before confirming your booking.
               </p>
+              
               <p className="text-gray-700 mb-4">
-                <strong>4.3 Service Issues:</strong> If you are unsatisfied with the service quality, please contact us within 24 hours of service completion. We will investigate and may offer a re-service, partial refund, or full refund at our discretion.
+                <strong>Refunds:</strong> Refunds will be processed within 5-7 business days to the original payment method.
+              </p>
+              
+              <p className="text-gray-700 mb-4">
+                <strong>Service Quality:</strong> If you are unsatisfied with the service quality, please contact us within 24 hours of service completion. We will investigate and may offer a re-service, partial refund, or full refund at our discretion.
+              </p>
+              
+              <p className="text-gray-700">
+                For specific cancellation terms and current fees, please refer to the cancellation policy displayed on our <Link href="/book/laundry" className="text-primary-600 hover:text-primary-700">laundry booking</Link> or <Link href="/book/cleaning" className="text-primary-600 hover:text-primary-700">cleaning booking</Link> pages. For any questions, contact <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700">support@tidyhood.nyc</a>.
               </p>
             </section>
 
@@ -128,8 +139,9 @@ export default function TermsPage() {
                 For questions about these Terms of Service, please contact us:
               </p>
               <ul className="list-none text-gray-700 mb-4">
-                <li>Email: support@tidyhood.com</li>
-                <li>Address: Harlem, New York, NY</li>
+                <li>Email: <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700">support@tidyhood.nyc</a></li>
+                <li>Website: <a href="https://tidyhood.nyc" className="text-primary-600 hover:text-primary-700">tidyhood.nyc</a></li>
+                <li>Service Area: Harlem, New York, NY (ZIPs: 10025, 10026, 10027, 10029, 10030, 10031, 10032, 10035, 10037, 10039, 10128)</li>
               </ul>
             </section>
           </div>
@@ -149,7 +161,7 @@ export default function TermsPage() {
             <Link href="/privacy" className="text-gray-400 hover:text-white">
               Privacy
             </Link>
-            <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white">
+            <a href="mailto:support@tidyhood.nyc" className="text-gray-400 hover:text-white">
               Contact
             </a>
           </div>

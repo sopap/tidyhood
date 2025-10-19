@@ -301,7 +301,7 @@ export default function WaitlistPage() {
             {' · '}
             <Link href="/services" className="hover:text-primary-600">Services</Link>
             {' · '}
-            <a href="mailto:support@tidyhood.com" className="hover:text-primary-600">Contact</a>
+            <a href="mailto:support@tidyhood.nyc" className="hover:text-primary-600">Contact</a>
           </p>
         </div>
       </footer>

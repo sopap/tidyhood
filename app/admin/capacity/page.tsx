@@ -280,11 +280,34 @@ export default function CapacityList() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {slot.reserved_units} / {slot.max_units} {slot.service_type === 'LAUNDRY' ? 'orders' : 'min'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {slot.utilization_percent}% utilized
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium text-gray-900">
+                            {slot.reserved_units} of {slot.max_units} booked
+                          </span>
+                          <span className={`text-xs font-medium ${
+                            slot.utilization_percent === 0 ? 'text-green-600' :
+                            slot.utilization_percent < 50 ? 'text-yellow-600' :
+                            slot.utilization_percent < 100 ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {slot.utilization_percent}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              slot.utilization_percent === 0 ? 'bg-green-500' :
+                              slot.utilization_percent < 50 ? 'bg-yellow-500' :
+                              slot.utilization_percent < 100 ? 'bg-orange-500' :
+                              'bg-red-500'
+                            }`}
+                            style={{ width: `${slot.utilization_percent}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {slot.available_units} {slot.service_type === 'LAUNDRY' ? 'slots' : 'min'} available
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

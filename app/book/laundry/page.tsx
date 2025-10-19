@@ -676,13 +676,36 @@ function LaundryBookingForm() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Book Laundry Service</h1>
-            <p className="text-gray-600">Schedule your laundry pickup and delivery</p>
+          {/* SEO Content Section */}
+          <div className="mb-8 card-standard card-padding">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Book Laundry Pickup in Harlem</h1>
+            <p className="text-gray-700 mb-4">
+              Schedule a same-day or next-day wash & fold pickup in Harlem. We weigh your bag after pickup and confirm your total before cleaning. Expect neatly folded clothing, separated bag for delicates, and clear delivery windows.
+            </p>
+            <ul className="space-y-2 mb-4">
+              <li className="flex items-start">
+                <span className="text-green-600 mr-2 mt-0.5">✓</span>
+                <span className="text-gray-700"><strong>Typical turnaround:</strong> 24–48 hours</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 mr-2 mt-0.5">✓</span>
+                <span className="text-gray-700"><strong>Transparent pricing</strong> with 15-lb minimum</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 mr-2 mt-0.5">✓</span>
+                <span className="text-gray-700"><strong>Add dry cleaning</strong> on request</span>
+              </li>
+            </ul>
+            <p className="text-sm text-gray-600">
+              <strong>Service areas:</strong> See all ZIPs on our <Link href="/service-areas" className="text-primary-600 hover:text-primary-700 underline">Service Areas page</Link>.
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              <strong>Policy:</strong> See cancellation terms below.
+            </p>
           </div>
 
           {/* Cancellation Policy Banner */}
-          <PolicyBanner />
+          <PolicyBanner serviceType="LAUNDRY" />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}

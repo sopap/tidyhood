@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
-import { getMinDate, formatSlotTime, getCapacityBadge } from '@/lib/slots';
-import { getSlotLabel, announceToScreenReader } from '@/lib/a11y';
+import { getMinDate, formatSlotTime } from '@/lib/slots';
+import { announceToScreenReader } from '@/lib/a11y';
 import { BookingSlot } from '@/lib/types';
 import AddressRequiredState from './AddressRequiredState';
 
@@ -129,8 +129,13 @@ export default function SlotPicker({ zip, value, onChange, onScrollToAddress }: 
           )}
 
           {!isLoading && !error && slots.length === 0 && (
-            <div role="status" className="text-sm text-red-600">
-              No slots available for this date. Please select a different date.
+            <div role="status" className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-900 mb-1">
+                No time slots available
+              </p>
+              <p className="text-xs text-gray-600">
+                All slots are booked for this date. Please try another date.
+              </p>
             </div>
           )}
 
@@ -139,49 +144,26 @@ export default function SlotPicker({ zip, value, onChange, onScrollToAddress }: 
               {slots.map((slot) => {
                 const slotId = `slot-${slot.slot_start}`;
                 const isSelected = value?.slot?.slot_start === slot.slot_start;
-                const isFull = slot.available_units === 0;
-                const badge = getCapacityBadge(slot.available_units);
                 const timeLabel = formatSlotTime(slot.slot_start, slot.slot_end);
-                const ariaLabel = getSlotLabel(
-                  timeLabel.split(' - ')[0],
-                  timeLabel.split(' - ')[1],
-                  slot.available_units,
-                  isFull
-                );
-
-                const badgeClasses = {
-                  error: 'bg-red-100 text-red-800',
-                  warning: 'bg-yellow-100 text-yellow-800',
-                  success: 'bg-green-100 text-green-800',
-                };
+                const ariaLabel = `Time slot ${timeLabel.replace(' - ', ' to ')}`;
 
                 return (
                   <button
                     key={slotId}
                     type="button"
-                    onClick={() => !isFull && handleSlotSelect(slot)}
-                    disabled={isFull}
+                    onClick={() => handleSlotSelect(slot)}
                     role="radio"
                     aria-checked={isSelected}
                     aria-label={ariaLabel}
-                    className={`flex flex-col items-start p-2 rounded-lg border-2 text-left transition-colors ${
+                    className={`p-3 rounded-lg border-2 text-center transition-colors ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100'
-                        : isFull
-                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50'
-                        : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                     } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
                   >
-                    <span className={`text-sm font-medium ${isFull ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    <span className="text-sm font-medium text-gray-900">
                       {timeLabel}
                     </span>
-                    {badge.variant !== 'success' && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium mt-1 ${badgeClasses[badge.variant]}`}
-                      >
-                        {badge.text}
-                      </span>
-                    )}
                   </button>
                 );
               })}

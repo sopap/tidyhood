@@ -59,7 +59,7 @@ export default async function PartnerLayout({
               Your partner account is currently inactive. Please contact support to reactivate your account.
             </p>
             <a
-              href="mailto:support@tidyhood.com"
+              href="mailto:support@tidyhood.nyc"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
             >
               Contact Support
@@ -158,7 +158,7 @@ export default async function PartnerLayout({
           <div className="flex justify-between items-center text-sm text-gray-500">
             <p>&copy; 2025 TidyHood. All rights reserved.</p>
             <a
-              href="mailto:support@tidyhood.com"
+              href="mailto:support@tidyhood.nyc"
               className="hover:text-gray-700"
             >
               Support

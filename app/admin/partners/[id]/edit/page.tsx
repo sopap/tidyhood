@@ -302,30 +302,41 @@ export default function EditPartner({ params }: { params: { id: string } }) {
               {formData.service_type === 'LAUNDRY' && (
                 <div>
                   <label htmlFor="max_orders_per_slot" className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Orders Per Slot
+                    Max Orders Per Slot <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     id="max_orders_per_slot"
                     name="max_orders_per_slot"
+                    required
                     min="1"
                     max="50"
                     value={formData.max_orders_per_slot}
                     onChange={handleInputChange}
                     className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  <p className="text-xs text-gray-600 mt-1">
+                    How many laundry orders this partner can handle per 2-hour time slot
+                  </p>
+                  {formData.max_orders_per_slot > 15 && (
+                    <p className="text-xs text-orange-600 mt-1 flex items-start gap-1">
+                      <span>⚠️</span>
+                      <span>High capacity - ensure partner can handle this volume</span>
+                    </p>
+                  )}
                 </div>
               )}
 
               {formData.service_type === 'CLEANING' && (
                 <div>
                   <label htmlFor="max_minutes_per_slot" className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Minutes Per Slot
+                    Max Minutes Per Slot <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     id="max_minutes_per_slot"
                     name="max_minutes_per_slot"
+                    required
                     min="60"
                     max="960"
                     step="30"
@@ -333,6 +344,15 @@ export default function EditPartner({ params }: { params: { id: string } }) {
                     onChange={handleInputChange}
                     className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  <p className="text-xs text-gray-600 mt-1">
+                    Total cleaning minutes this partner can handle per 2-hour time slot
+                  </p>
+                  {formData.max_minutes_per_slot > 360 && (
+                    <p className="text-xs text-orange-600 mt-1 flex items-start gap-1">
+                      <span>⚠️</span>
+                      <span>High capacity - ensure partner has sufficient team size</span>
+                    </p>
+                  )}
                 </div>
               )}
             </div>

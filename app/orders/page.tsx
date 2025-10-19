@@ -247,7 +247,7 @@ function OrdersContent() {
               Have questions about your order? We're here to help!
             </p>
             <div className="flex flex-wrap gap-3 text-sm">
-              <a href="mailto:support@tidyhood.com" className="text-blue-600 hover:text-blue-700 font-medium">
+              <a href="mailto:support@tidyhood.nyc" className="text-blue-600 hover:text-blue-700 font-medium">
                 Email Support
               </a>
               <span className="text-gray-300">|</span>

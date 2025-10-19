@@ -47,6 +47,8 @@ export default function AdminSettingsPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [editingRule, setEditingRule] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<Record<string, number>>({})
+  const [editingPolicy, setEditingPolicy] = useState<string | null>(null)
+  const [policyFormValues, setPolicyFormValues] = useState<Partial<CancellationPolicy>>({})
 
   useEffect(() => {
     loadData()
@@ -84,6 +86,56 @@ export default function AdminSettingsPage() {
   function showToast(message: string, type: 'success' | 'error') {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  function startEditingPolicy(policy: CancellationPolicy) {
+    setEditingPolicy(policy.id)
+    setPolicyFormValues({
+      notice_hours: policy.notice_hours,
+      cancellation_fee_percent: policy.cancellation_fee_percent,
+      reschedule_notice_hours: policy.reschedule_notice_hours,
+      reschedule_fee_percent: policy.reschedule_fee_percent,
+      allow_cancellation: policy.allow_cancellation,
+      allow_rescheduling: policy.allow_rescheduling,
+      notes: policy.notes || ''
+    })
+  }
+
+  function cancelEditingPolicy() {
+    setEditingPolicy(null)
+    setPolicyFormValues({})
+  }
+
+  async function updatePolicy(policy: CancellationPolicy) {
+    try {
+      const res = await fetch(`/api/admin/settings/policies/${policy.service_type}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...policyFormValues,
+          change_reason: 'Updated via admin settings'
+        })
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Update failed')
+      }
+
+      const data = await res.json()
+      showToast(data.message || 'Policy updated successfully', 'success')
+      
+      await loadData()
+      
+      setEditingPolicy(null)
+      setPolicyFormValues({})
+    } catch (error) {
+      console.error('Error updating policy:', error)
+      showToast(
+        error instanceof Error ? error.message : 'Failed to update policy',
+        'error'
+      )
+    }
   }
 
   async function updatePricingRule(ruleId: string, value: number) {
@@ -637,54 +689,338 @@ export default function AdminSettingsPage() {
       {/* Policies Tab */}
       {activeTab === 'policies' && (
         <div className="space-y-6">
+          {/* Important Notice */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-amber-800">Policy Changes Affect Future Orders</h3>
+                <p className="mt-1 text-sm text-amber-700">
+                  Changes to cancellation policies apply to NEW bookings only. Existing orders retain their original policy terms.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {policies.map((policy) => (
             <div key={policy.id} className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {policy.service_type} Service Policy
-                </h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {policy.service_type === 'LAUNDRY' ? '💼 Laundry' : '🏠 Cleaning'} Service Policy
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Controls cancellation and rescheduling rules for {policy.service_type.toLowerCase()} orders
+                    </p>
+                  </div>
+                  <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                    policy.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {policy.active ? '🟢 ACTIVE' : '⚪ INACTIVE'}
+                  </span>
+                </div>
               </div>
+              
               <div className="px-6 py-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Cancellation Notice (hours)
-                    </label>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{policy.notice_hours}</p>
+                {editingPolicy === policy.id ? (
+                  // Edit Mode
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Cancellation Settings */}
+                      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <span>🚫</span> Cancellation Policy
+                        </h4>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Notice Required (hours)
+                            <span className="text-gray-500 ml-1">(0-168)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="168"
+                            step="1"
+                            value={policyFormValues.notice_hours || 0}
+                            onChange={(e) => setPolicyFormValues({
+                              ...policyFormValues,
+                              notice_hours: parseInt(e.target.value) || 0
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Hours before service when customers can still cancel
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Cancellation Fee (%)
+                            <span className="text-gray-500 ml-1">(0-50)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="50"
+                            step="1"
+                            value={(policyFormValues.cancellation_fee_percent || 0) * 100}
+                            onChange={(e) => setPolicyFormValues({
+                              ...policyFormValues,
+                              cancellation_fee_percent: parseFloat(e.target.value) / 100
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Percentage charged if cancelled after notice period
+                          </p>
+                        </div>
+
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`allow-cancel-${policy.id}`}
+                            checked={policyFormValues.allow_cancellation ?? policy.allow_cancellation}
+                            onChange={(e) => setPolicyFormValues({
+                              ...policyFormValues,
+                              allow_cancellation: e.target.checked
+                            })}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`allow-cancel-${policy.id}`} className="ml-2 text-sm text-gray-700">
+                            Allow cancellations
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Rescheduling Settings */}
+                      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <span>📅</span> Reschedule Policy
+                        </h4>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Notice Required (hours)
+                            <span className="text-gray-500 ml-1">(0-168)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="168"
+                            step="1"
+                            value={policyFormValues.reschedule_notice_hours || 0}
+                            onChange={(e) => setPolicyFormValues({
+                              ...policyFormValues,
+                              reschedule_notice_hours: parseInt(e.target.value) || 0
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Hours before service when customers can still reschedule
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Reschedule Fee (%)
+                            <span className="text-gray-500 ml-1">(0-50)</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="50"
+                            step="1"
+                            value={(policyFormValues.reschedule_fee_percent || 0) * 100}
+                            onChange={(e) => setPolicyFormValues({
+                              ...policyFormValues,
+                              reschedule_fee_percent: parseFloat(e.target.value) / 100
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Percentage charged if rescheduled after notice period
+                          </p>
+                        </div>
+
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`allow-reschedule-${policy.id}`}
+                            checked={policyFormValues.allow_rescheduling ?? policy.allow_rescheduling}
+                            onChange={(e) => setPolicyFormValues({
+                              ...policyFormValues,
+                              allow_rescheduling: e.target.checked
+                            })}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`allow-reschedule-${policy.id}`} className="ml-2 text-sm text-gray-700">
+                            Allow rescheduling
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Policy Notes (optional)
+                      </label>
+                      <textarea
+                        value={policyFormValues.notes || ''}
+                        onChange={(e) => setPolicyFormValues({
+                          ...policyFormValues,
+                          notes: e.target.value
+                        })}
+                        rows={3}
+                        placeholder="Add any additional context or notes about this policy..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => updatePolicy(policy)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <span>💾</span>
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={cancelEditingPolicy}
+                        className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Cancellation Fee
-                    </label>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
-                      {(policy.cancellation_fee_percent * 100).toFixed(0)}%
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Reschedule Notice (hours)
-                    </label>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{policy.reschedule_notice_hours}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Reschedule Fee
-                    </label>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
-                      {(policy.reschedule_fee_percent * 100).toFixed(0)}%
-                    </p>
-                  </div>
-                </div>
-                {policy.notes && (
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                    <p className="text-sm text-blue-900">{policy.notes}</p>
-                  </div>
+                ) : (
+                  // View Mode
+                  <>
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Cancellation Display */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
+                          <span>🚫</span> Cancellation Policy
+                        </h4>
+                        <div className="space-y-3 pl-6">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              Notice Required
+                            </label>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              {policy.notice_hours} hours
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {policy.notice_hours >= 24 
+                                ? `${(policy.notice_hours / 24).toFixed(1)} days`
+                                : `${policy.notice_hours} hours`} before service
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              Cancellation Fee
+                            </label>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              {(policy.cancellation_fee_percent * 100).toFixed(0)}%
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {policy.cancellation_fee_percent === 0 
+                                ? 'No fee if cancelled on time'
+                                : 'Fee applied for late cancellations'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {policy.allow_cancellation ? (
+                              <span className="text-green-600 flex items-center gap-1 text-sm">
+                                ✓ Cancellations allowed
+                              </span>
+                            ) : (
+                              <span className="text-red-600 flex items-center gap-1 text-sm">
+                                ✗ Cancellations disabled
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rescheduling Display */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
+                          <span>📅</span> Reschedule Policy
+                        </h4>
+                        <div className="space-y-3 pl-6">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              Notice Required
+                            </label>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              {policy.reschedule_notice_hours} hours
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {policy.reschedule_notice_hours >= 24 
+                                ? `${(policy.reschedule_notice_hours / 24).toFixed(1)} days`
+                                : `${policy.reschedule_notice_hours} hours`} before service
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                              Reschedule Fee
+                            </label>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              {(policy.reschedule_fee_percent * 100).toFixed(0)}%
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {policy.reschedule_fee_percent === 0 
+                                ? 'No fee if rescheduled on time'
+                                : 'Fee applied for late reschedules'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {policy.allow_rescheduling ? (
+                              <span className="text-green-600 flex items-center gap-1 text-sm">
+                                ✓ Rescheduling allowed
+                              </span>
+                            ) : (
+                              <span className="text-red-600 flex items-center gap-1 text-sm">
+                                ✗ Rescheduling disabled
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {policy.notes && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-gray-700 font-medium mb-1">📝 Policy Notes:</p>
+                        <p className="text-sm text-blue-900">{policy.notes}</p>
+                      </div>
+                    )}
+                    
+                    {policy.updated_at && (
+                      <p className="text-xs text-gray-400">
+                        Last updated: {new Date(policy.updated_at).toLocaleString()}
+                      </p>
+                    )}
+                    
+                    <div className="pt-2 border-t border-gray-200">
+                      <button 
+                        onClick={() => startEditingPolicy(policy)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <span>✏️</span>
+                        Edit Policy
+                      </button>
+                    </div>
+                  </>
                 )}
-                <div className="pt-2">
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Edit Policy
-                  </button>
-                </div>
               </div>
             </div>
           ))}

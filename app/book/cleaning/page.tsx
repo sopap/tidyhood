@@ -553,13 +553,36 @@ function CleaningBookingForm() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Book Cleaning Service</h1>
-            <p className="text-gray-600">Fill out the form below to schedule your cleaning</p>
+          {/* SEO Content Section */}
+          <div className="mb-8 card-standard card-padding">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">Book Home Cleaning in Harlem</h1>
+            <p className="text-gray-700 mb-4">
+              Choose a one-time or recurring clean from trusted Harlem pros. Upfront pricing by home size, clear inclusions, and a satisfaction promise within 24 hours.
+            </p>
+            <ul className="space-y-2 mb-4">
+              <li className="flex items-start">
+                <span className="text-green-600 mr-2 mt-0.5">✓</span>
+                <span className="text-gray-700"><strong>All supplies included</strong></span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 mr-2 mt-0.5">✓</span>
+                <span className="text-gray-700"><strong>Optional deep clean</strong> and inside-fridge/oven add-ons</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 mr-2 mt-0.5">✓</span>
+                <span className="text-gray-700"><strong>Simple reschedule</strong> if plans change</span>
+              </li>
+            </ul>
+            <p className="text-sm text-gray-600 mb-2">
+              <strong>Policy:</strong> See cancellation terms below.
+            </p>
+            <p className="text-sm text-gray-600">
+              <strong>Service areas:</strong> See all ZIPs on our <Link href="/service-areas" className="text-primary-600 hover:text-primary-700 underline">Service Areas page</Link>.
+            </p>
           </div>
 
           {/* Cancellation Policy Banner */}
-          <PolicyBanner />
+          <PolicyBanner serviceType="CLEANING" />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Address Section */}

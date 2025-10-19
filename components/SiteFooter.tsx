@@ -89,10 +89,10 @@ export default function SiteFooter() {
               <li className="flex items-start gap-2">
                 <Mail className="h-5 w-5 text-primary-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <a 
-                  href="mailto:support@tidyhood.com" 
+                  href="mailto:support@tidyhood.nyc" 
                   className="text-base text-gray-300 hover:text-white transition-colors underline"
                 >
-                  support@tidyhood.com
+                  support@tidyhood.nyc
                 </a>
               </li>
             </ul>
@@ -171,7 +171,7 @@ export default function SiteFooter() {
             description: 'Professional laundry pickup and home cleaning services in Harlem, NYC',
             url: 'https://tidyhood.nyc',
             telephone: '+1-917-272-8434',
-            email: 'support@tidyhood.com',
+            email: 'support@tidyhood.nyc',
             address: {
               '@type': 'PostalAddress',
               addressLocality: 'Harlem',

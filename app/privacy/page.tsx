@@ -207,8 +207,7 @@ export default function PrivacyPage() {
                 For questions or concerns about this Privacy Policy or to exercise your privacy rights, contact us:
               </p>
               <ul className="list-none text-gray-700 mb-4">
-                <li>Email: privacy@tidyhood.com</li>
-                <li>Support: support@tidyhood.com</li>
+                <li>Email: <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700">support@tidyhood.nyc</a></li>
                 <li>Address: Harlem, New York, NY</li>
               </ul>
             </section>
@@ -229,7 +228,7 @@ export default function PrivacyPage() {
             <Link href="/privacy" className="text-white font-medium">
               Privacy
             </Link>
-            <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white">
+            <a href="mailto:support@tidyhood.nyc" className="text-gray-400 hover:text-white">
               Contact
             </a>
           </div>

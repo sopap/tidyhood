@@ -491,7 +491,7 @@ export default function OrderDetailPage() {
               <div className="grid gap-2 grid-cols-2">
                 {/* Contact Support */}
                 <a
-                  href={`mailto:support@tidyhood.com?subject=Order Support - Order #${order.id}&body=Hi, I need help with my order #${order.id}.`}
+                  href={`mailto:support@tidyhood.nyc?subject=Order Support - Order #${order.id}&body=Hi, I need help with my order #${order.id}.`}
                   className="px-4 py-2.5 rounded-lg font-medium text-sm bg-white border-2 border-gray-300 text-gray-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-1.5 min-h-[42px]"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

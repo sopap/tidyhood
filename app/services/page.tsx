@@ -104,7 +104,7 @@ export default function ServicesPage() {
                   <span className="text-gray-600">/lb</span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  (minimum order $26.25)
+                  (15 lb minimum)
                 </p>
               </div>
 
@@ -200,7 +200,7 @@ export default function ServicesPage() {
                 ← Back to Home
               </Link>
               <span className="text-gray-300">|</span>
-              <a href="mailto:support@tidyhood.com" className="text-primary-600 hover:text-primary-700 font-medium">
+              <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700 font-medium">
                 Contact Support
               </a>
             </div>
@@ -220,7 +220,7 @@ export default function ServicesPage() {
               <Link href="/privacy" className="text-gray-400 hover:text-white">
                 Privacy
               </Link>
-              <a href="mailto:support@tidyhood.com" className="text-gray-400 hover:text-white">
+              <a href="mailto:support@tidyhood.nyc" className="text-gray-400 hover:text-white">
                 Contact
               </a>
             </div>

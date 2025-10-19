@@ -22,7 +22,7 @@ const structuredData = {
   "description": "Professional laundry and home cleaning services in Harlem",
   "url": process.env.NEXT_PUBLIC_SITE_URL || "https://tidyhood.vercel.app",
   "telephone": "+1-XXX-XXX-XXXX",
-  "email": "support@tidyhood.com",
+  "email": "support@tidyhood.nyc",
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "New York",
@@ -48,7 +48,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [pricing, setPricing] = useState({
     laundryPerLb: '$2.15',
-    laundryMinOrder: '$15.00',
+    laundryMinLbs: '15',
     cleaningStudio: '$89',
   })
 
@@ -72,7 +72,7 @@ export default function Home() {
           
           setPricing({
             laundryPerLb: perLbRule ? `$${(perLbRule.unit_price_cents / 100).toFixed(2)}` : '$2.15',
-            laundryMinOrder: minRule ? `$${(minRule.unit_price_cents / 100).toFixed(2)}` : '$15.00',
+            laundryMinLbs: minRule ? `${(minRule.unit_price_cents / 100)}` : '15',
             cleaningStudio: studioRule ? `$${Math.floor(studioRule.unit_price_cents / 100)}` : '$89',
           })
         }
@@ -210,7 +210,7 @@ export default function Home() {
                   <div className="text-2xl md:text-3xl font-bold text-primary-600">
                     {pricing.laundryPerLb}<span className="text-base md:text-lg">/lb</span>
                   </div>
-                  <div className="text-xs md:text-sm text-text-secondary">(minimum order {pricing.laundryMinOrder})</div>
+                  <div className="text-xs md:text-sm text-text-secondary">({pricing.laundryMinLbs} lb minimum)</div>
                 </div>
 
                 <ul className="space-y-2 md:space-y-3 mb-6">
