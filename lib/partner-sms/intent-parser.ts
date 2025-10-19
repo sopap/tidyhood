@@ -3,16 +3,17 @@ import { Conversation } from './conversation-state';
 
 export interface ParsedIntent {
   type: 
-    | 'CONFIRM_PICKUP'
-    | 'RESCHEDULE'
-    | 'PICKED_UP'
-    | 'WEIGHT'
-    | 'CONFIRM_QUOTE'
-    | 'CONFIRM_DELIVERY'
-    | 'SUGGEST_TIME'
-    | 'UNKNOWN';
+    | 'confirm'
+    | 'reschedule'
+    | 'picked_up'
+    | 'weight'
+    | 'delivered'
+    | 'help'
+    | 'cancel'
+    | 'unknown';
   value?: string | number;
   confidence: 'high' | 'medium' | 'low';
+  data?: { weight?: number; time?: string };
 }
 
 /**
@@ -23,65 +24,60 @@ function quickParseIntent(
   message: string,
   conversationState: string
 ): ParsedIntent | null {
-  const msg = message.trim().toUpperCase();
+  const msg = message.trim().toLowerCase();
   
   // Simple confirmations
-  if (msg === 'CONFIRM' || msg === 'YES' || msg === 'Y' || msg === 'OK' || msg === 'OKAY') {
-    // Context matters - what are they confirming?
-    switch (conversationState) {
-      case 'awaiting_pickup_confirm':
-        return { type: 'CONFIRM_PICKUP', confidence: 'high' };
-      case 'awaiting_quote_approval':
-        return { type: 'CONFIRM_QUOTE', confidence: 'high' };
-      case 'awaiting_delivery_confirm':
-        return { type: 'CONFIRM_DELIVERY', confidence: 'high' };
-      default:
-        return null; // Let Claude handle it
-    }
+  if (msg === 'confirm' || msg === 'yes' || msg === 'y' || msg === 'ok' || msg === 'okay') {
+    return { type: 'confirm', confidence: 'high' };
+  }
+  
+  // Cancel
+  if (msg === 'cancel' || msg.includes('cancel')) {
+    return { type: 'cancel', confidence: 'high' };
+  }
+  
+  // Help
+  if (msg === 'help' || msg === '?') {
+    return { type: 'help', confidence: 'high' };
   }
   
   // Rescheduling
-  if (msg.includes('RESCHEDULE') || msg.includes('LATER') || msg.includes('CANT') || msg.includes('CAN\'T')) {
-    return { type: 'RESCHEDULE', confidence: 'high' };
+  if (msg.includes('reschedule') || msg.includes('later') || msg.includes('cant') || msg.includes('can\'t') || msg.includes('can\'t make it')) {
+    return { type: 'reschedule', confidence: 'high' };
   }
   
   // Picked up notification
-  if (msg.includes('PICKED UP') || msg.includes('GOT IT') || msg.includes('PICKED') || msg.includes('HAVE IT')) {
-    return { type: 'PICKED_UP', confidence: 'high' };
+  if (msg.includes('picked up') || msg.includes('picked') || msg.includes('got it') || msg.includes('have it')) {
+    return { type: 'picked_up', confidence: 'high' };
   }
   
-  // Weight input - just a number
-  if (conversationState === 'awaiting_weight') {
-    const numMatch = msg.match(/^\d+$/);
-    if (numMatch) {
-      return {
-        type: 'WEIGHT',
-        value: parseInt(numMatch[0]),
-        confidence: 'high'
-      };
-    }
-    
-    // Try to extract number from message like "18 lbs" or "weight is 18"
-    const numInText = msg.match(/\b(\d+)\b/);
-    if (numInText) {
-      return {
-        type: 'WEIGHT',
-        value: parseInt(numInText[1]),
-        confidence: 'medium'
-      };
-    }
+  // Delivered
+  if (msg.includes('delivered') || msg.includes('dropped off') || msg.includes('delivery complete')) {
+    return { type: 'delivered', confidence: 'high' };
   }
   
-  // Time suggestion
-  if (conversationState === 'awaiting_delivery_suggestion') {
-    // Look for time patterns like "2pm", "14:00", "tomorrow at 2"
-    if (msg.match(/\d+\s*(AM|PM|:|TOMORROW|TODAY)/)) {
-      return {
-        type: 'SUGGEST_TIME',
-        value: msg,
-        confidence: 'medium'
-      };
-    }
+  // Weight input - just a number or number with units
+  const numMatch = msg.match(/^\s*(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?|kg|kilograms?)?\s*$/i);
+  if (numMatch) {
+    const weight = parseFloat(numMatch[1]);
+    return {
+      type: 'weight',
+      value: weight,
+      data: { weight },
+      confidence: 'high'
+    };
+  }
+  
+  // Try to extract number from message like "18 lbs" or "weight is 18"
+  const numInText = msg.match(/\b(\d+(?:\.\d+)?)\s*(?:lbs?|pounds?)?/i);
+  if (numInText) {
+    const weight = parseFloat(numInText[1]);
+    return {
+      type: 'weight',
+      value: weight,
+      data: { weight },
+      confidence: 'medium'
+    };
   }
   
   return null; // Couldn't parse, need Claude
@@ -97,8 +93,8 @@ async function parseWithClaude(
 ): Promise<ParsedIntent> {
   // Check if API key is configured
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('ANTHROPIC_API_KEY not configured, defaulting to UNKNOWN intent');
-    return { type: 'UNKNOWN', confidence: 'low' };
+    console.warn('ANTHROPIC_API_KEY not configured, defaulting to unknown intent');
+    return { type: 'unknown', confidence: 'low' };
   }
   
   const anthropic = new Anthropic({
@@ -115,27 +111,21 @@ Partner's message: "${message}"
 
 Determine the intent. Respond ONLY with valid JSON:
 {
-  "type": "CONFIRM_PICKUP" | "RESCHEDULE" | "PICKED_UP" | "WEIGHT" | "CONFIRM_QUOTE" | "CONFIRM_DELIVERY" | "SUGGEST_TIME" | "UNKNOWN",
+  "type": "confirm" | "reschedule" | "picked_up" | "weight" | "delivered" | "help" | "cancel" | "unknown",
   "value": "string or number (optional - the weight number, suggested time, etc)",
+  "data": {"weight": number} (optional - for weight intents),
   "confidence": "high" | "medium" | "low"
 }
 
-Examples based on context:
-- When awaiting_pickup_confirm:
-  * "yes" → {"type": "CONFIRM_PICKUP", "confidence": "high"}
-  * "can't do today" → {"type": "RESCHEDULE", "confidence": "high"}
-
-- When awaiting_weight:
-  * "18" → {"type": "WEIGHT", "value": 18, "confidence": "high"}
-  * "weight is 22 pounds" → {"type": "WEIGHT", "value": 22, "confidence": "high"}
-
-- When awaiting_quote_approval:
-  * "ok" → {"type": "CONFIRM_QUOTE", "confidence": "high"}
-  * "looks good" → {"type": "CONFIRM_QUOTE", "confidence": "high"}
-
-- When awaiting_delivery_confirm:
-  * "yes" → {"type": "CONFIRM_DELIVERY", "confidence": "high"}
-  * "no, tomorrow better" → {"type": "SUGGEST_TIME", "value": "tomorrow", "confidence": "medium"}`;
+Examples:
+- "yes" → {"type": "confirm", "confidence": "high"}
+- "can't do today" → {"type": "reschedule", "confidence": "high"}
+- "18" → {"type": "weight", "value": 18, "data": {"weight": 18}, "confidence": "high"}
+- "weight is 22 pounds" → {"type": "weight", "value": 22, "data": {"weight": 22}, "confidence": "high"}
+- "picked up" → {"type": "picked_up", "confidence": "high"}
+- "delivered" → {"type": "delivered", "confidence": "high"}
+- "help" → {"type": "help", "confidence": "high"}
+- "cancel" → {"type": "cancel", "confidence": "high"}`;
 
   try {
     const response = await anthropic.messages.create({
@@ -158,7 +148,7 @@ Examples based on context:
     return parsed as ParsedIntent;
   } catch (error) {
     console.error('Error parsing with Claude:', error);
-    return { type: 'UNKNOWN', confidence: 'low' };
+    return { type: 'unknown', confidence: 'low' };
   }
 }
 
