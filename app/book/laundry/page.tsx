@@ -79,6 +79,11 @@ function LaundryBookingForm() {
   // Key to force AddressAutocomplete remount when address is restored
   const [addressKey, setAddressKey] = useState(0)
   
+  // Guest booking state
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  
   // Address state
   const [address, setAddress] = useState<Address | null>(null)
   const [isAddressValid, setIsAddressValid] = useState(false)
@@ -555,12 +560,7 @@ function LaundryBookingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!user) {
-      handleLoginRequired()
-      return
-    }
-
-    // Validate required fields
+    // Validate required fields for both guest and auth users
     if (!address || !selectedSlot) {
       setToast({ message: 'Please complete all required fields', type: 'warning' })
       return
@@ -570,6 +570,28 @@ function LaundryBookingForm() {
     if (!deliveryDate) {
       setToast({ message: 'Please select a delivery date', type: 'warning' })
       return
+    }
+    
+    // For guest users, validate guest contact fields
+    if (!user) {
+      if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()) {
+        setToast({ message: 'Please provide your contact information', type: 'warning' })
+        return
+      }
+      
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(guestEmail)) {
+        setToast({ message: 'Please provide a valid email address', type: 'warning' })
+        return
+      }
+      
+      // Basic phone validation (10+ digits)
+      const phoneDigits = guestPhone.replace(/\D/g, '')
+      if (phoneDigits.length < 10) {
+        setToast({ message: 'Please provide a valid phone number', type: 'warning' })
+        return
+      }
     }
     
     // Delivery time slot is optional - if not selected, we'll coordinate manually
@@ -586,55 +608,70 @@ function LaundryBookingForm() {
       setSubmitting(true)
 
       // ONLY Setup Intent flow - all new orders use saved payment methods
-      const setupResponse = await fetch('/api/payment/setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            service_type: 'LAUNDRY',
-            service_category: serviceType,
-            estimated_amount_cents: Math.round(pricing.total * 100),
-            payment_method_id: paymentMethodId,
-            slot: {
-              partner_id: selectedSlot.partner_id,
-              slot_start: selectedSlot.slot_start,
-              slot_end: selectedSlot.slot_end,
-            },
-            delivery_slot: selectedDeliverySlot ? {
-              partner_id: selectedDeliverySlot.partner_id,
-              slot_start: selectedDeliverySlot.slot_start,
-              slot_end: selectedDeliverySlot.slot_end,
-            } : undefined,
-            address: {
-              line1: address.line1,
-              line2: addressLine2 || undefined,
-              city: address.city,
-              zip: address.zip,
-              notes: specialInstructions || undefined,
-            },
-            phone: phone,
-            details: {
-              serviceType,
-              weightTier: (serviceType === 'washFold' || serviceType === 'mixed') ? weightTier : undefined,
-              estimatedPounds: (serviceType === 'washFold' || serviceType === 'mixed') ? estimatedPounds : undefined,
-              rushService,
-              preferredDeliveryDate: deliveryDate
-            }
-          })
-        })
-
-        if (!setupResponse.ok) {
-          const error = await setupResponse.json()
-          throw new Error(error.error || 'Failed to setup payment')
+      const setupPayload: any = {
+        service_type: 'LAUNDRY',
+        service_category: serviceType,
+        estimated_amount_cents: Math.round(pricing.total * 100),
+        payment_method_id: paymentMethodId,
+        slot: {
+          partner_id: selectedSlot.partner_id,
+          slot_start: selectedSlot.slot_start,
+          slot_end: selectedSlot.slot_end,
+        },
+        delivery_slot: selectedDeliverySlot ? {
+          partner_id: selectedDeliverySlot.partner_id,
+          slot_start: selectedDeliverySlot.slot_start,
+          slot_end: selectedDeliverySlot.slot_end,
+        } : undefined,
+        address: {
+          line1: address.line1,
+          line2: addressLine2 || undefined,
+          city: address.city,
+          zip: address.zip,
+          notes: specialInstructions || undefined,
+        },
+        phone: user ? phone : guestPhone,
+        details: {
+          serviceType,
+          weightTier: (serviceType === 'washFold' || serviceType === 'mixed') ? weightTier : undefined,
+          estimatedPounds: (serviceType === 'washFold' || serviceType === 'mixed') ? estimatedPounds : undefined,
+          rushService,
+          preferredDeliveryDate: deliveryDate
         }
+      }
+      
+      // Add guest data if not authenticated
+      if (!user) {
+        setupPayload.guest_name = guestName.trim()
+        setupPayload.guest_email = guestEmail.trim()
+        setupPayload.guest_phone = '+1' + guestPhone.replace(/\D/g, '') // Convert to E.164
+      }
+      
+      const setupResponse = await fetch('/api/payment/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(setupPayload)
+      })
 
-        const setupResult = await setupResponse.json()
-        const orderId = setupResult.order_id
+      if (!setupResponse.ok) {
+        const error = await setupResponse.json()
+        throw new Error(error.error || 'Failed to setup payment')
+      }
+
+      const setupResult = await setupResponse.json()
+      const orderId = setupResult.order_id
 
       // Clear draft on successful booking
       clearDraft()
       
-      // Redirect to order page
-      router.push(`/orders/${orderId}`)
+      // Redirect to appropriate page based on auth status
+      if (!user) {
+        // Guest user - show success page with conversion CTAs
+        router.push(`/orders/${orderId}/laundry-success?guest=true`)
+      } else {
+        // Authenticated user - go to order detail page
+        router.push(`/orders/${orderId}`)
+      }
       
     } catch (err: any) {
       console.error('Order creation error:', err)
@@ -1189,54 +1226,121 @@ function LaundryBookingForm() {
             <div className="card-standard card-padding">
               <h2 className="heading-section">✉️ Contact Information</h2>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => {
-                      const formatted = formatPhone(e.target.value)
-                      setPhone(formatted)
-                      updatePersistedPhone(e.target.value)
-                    }}
-                    placeholder="(555) 123-4567"
-                    className="input-field"
-                    required
-                  />
-                  <div className="flex items-center justify-between mt-2">
-                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={remember}
-                        onChange={(e) => toggleRemember(e.target.checked)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
-                      />
-                      <span className="group-hover:text-gray-900">
-                        Remember my details on this device
-                      </span>
-                      <span 
-                        className="text-gray-400 hover:text-gray-600 cursor-help" 
-                        title="Saved in your browser only. You can clear anytime."
-                      >
-                        ⓘ
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        clearAll()
-                        setPhone('')
-                        setAddressLine2('')
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-700 underline"
-                    >
-                      Not you? Clear saved details
-                    </button>
-                  </div>
+              {!user && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    💡 Book without creating an account! We'll send booking details to your contact info.
+                  </p>
                 </div>
+              )}
+              
+              <div className="space-y-4">
+                {/* Guest fields - only show when not logged in */}
+                {!user && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder="Jane Doe"
+                        className="input-field"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        placeholder="jane@example.com"
+                        className="input-field"
+                        required
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        We'll send your booking confirmation here
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={guestPhone}
+                        onChange={(e) => {
+                          const formatted = formatPhone(e.target.value)
+                          setGuestPhone(formatted)
+                        }}
+                        placeholder="(917) 123-4567"
+                        className="input-field"
+                        required
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        For booking updates and partner communication
+                      </p>
+                    </div>
+                  </>
+                )}
+                
+                {/* Authenticated user phone field */}
+                {user && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        const formatted = formatPhone(e.target.value)
+                        setPhone(formatted)
+                        updatePersistedPhone(e.target.value)
+                      }}
+                      placeholder="(555) 123-4567"
+                      className="input-field"
+                      required
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={remember}
+                          onChange={(e) => toggleRemember(e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                        />
+                        <span className="group-hover:text-gray-900">
+                          Remember my details on this device
+                        </span>
+                        <span 
+                          className="text-gray-400 hover:text-gray-600 cursor-help" 
+                          title="Saved in your browser only. You can clear anytime."
+                        >
+                          ⓘ
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearAll()
+                          setPhone('')
+                          setAddressLine2('')
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-700 underline"
+                      >
+                        Not you? Clear saved details
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1259,32 +1363,35 @@ function LaundryBookingForm() {
 
             {/* Submit */}
             <div className="card-standard card-padding">
-              {!user ? (
-                <button
-                  type="button"
-                  onClick={handleLoginRequired}
-                  className="w-full btn-primary text-lg py-4"
-                >
-                  Log In to Complete Booking
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={
-                    !persistedLoaded || 
-                    loading || 
-                    submitting ||
-                    !address || 
-                    !isAddressValid || 
-                    !selectedSlot ||
-                    !phone?.trim() ||
-                    phone.replace(/\D/g, '').length < 10 ||
-                    !paymentMethodId
-                  }
-                  className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? 'Scheduling…' : 'Schedule Pickup'}
-                </button>
+              <button
+                type="submit"
+                disabled={
+                  !persistedLoaded || 
+                  loading || 
+                  submitting ||
+                  !address || 
+                  !isAddressValid || 
+                  !selectedSlot ||
+                  (!user && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim())) ||
+                  (user && (!phone?.trim() || phone.replace(/\D/g, '').length < 10)) ||
+                  !paymentMethodId
+                }
+                className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Scheduling…' : user ? 'Schedule Pickup' : 'Book as Guest'}
+              </button>
+              
+              {!user && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600 mb-2">Already have an account?</p>
+                  <button
+                    type="button"
+                    onClick={handleLoginRequired}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+                  >
+                    Log in to see your past bookings
+                  </button>
+                </div>
               )}
               
               {/* Payment messaging */}

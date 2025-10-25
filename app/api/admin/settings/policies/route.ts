@@ -36,10 +36,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Policies fetch error:', error)
     
-    if (error instanceof Error && error.message.includes('Forbidden')) {
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
       )
     }
     

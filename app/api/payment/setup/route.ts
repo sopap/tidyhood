@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import { handleApiError, ValidationError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 import { canUsePaymentAuthorization } from '@/lib/feature-flags';
@@ -31,6 +31,10 @@ const setupSchema = z.object({
   phone: z.string().optional(),
   details: z.any(), // Allow any details object for flexibility between LAUNDRY and CLEANING
   subscription_id: z.string().uuid().optional(), // For recurring cleaning
+  // Guest booking fields
+  guest_name: z.string().optional(),
+  guest_email: z.string().email().optional(),
+  guest_phone: z.string().regex(/^\+[1-9]\d{1,14}$/).optional(), // E.164 format
 });
 
 /**
@@ -53,30 +57,43 @@ const setupSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    // Get user if authenticated (optional for guest bookings)
+    const user = await getCurrentUser();
     
-    // Check feature flag
-    if (!canUsePaymentAuthorization(user.id)) {
+    // Parse and validate request
+    const body = await request.json();
+    const params = setupSchema.parse(body);
+    
+    // Validate guest booking requirements
+    if (!user) {
+      if (!params.guest_name || !params.guest_email || !params.guest_phone) {
+        throw new ValidationError(
+          'Guest bookings require guest_name, guest_email, and guest_phone',
+          'GUEST_INFO_REQUIRED'
+        );
+      }
+    }
+    
+    // Check feature flag (only for authenticated users)
+    if (user && !canUsePaymentAuthorization(user.id)) {
       throw new ValidationError(
         'Payment setup not available for your account',
         'FEATURE_NOT_ENABLED'
       );
     }
     
-    // Parse and validate request
-    const body = await request.json();
-    const params = setupSchema.parse(body);
-    
     logger.info({
       event: 'payment_setup_request',
-      user_id: user.id,
+      user_id: user?.id || 'guest',
+      is_guest: !user,
+      guest_email: params.guest_email,
       service_category: params.service_category,
       estimated_amount: params.estimated_amount_cents
     });
     
     // Execute payment setup saga
     const order = await executePaymentAuthorizationSaga({
-      user_id: user.id,
+      user_id: user?.id,
       service_type: params.service_type,
       service_category: params.service_category,
       estimated_amount_cents: params.estimated_amount_cents,
@@ -86,6 +103,9 @@ export async function POST(request: NextRequest) {
       address: params.address,
       phone: params.phone,
       details: params.details,
+      guest_name: params.guest_name,
+      guest_email: params.guest_email,
+      guest_phone: params.guest_phone,
     });
     
     // Check if 3D Secure is required
@@ -93,7 +113,8 @@ export async function POST(request: NextRequest) {
     
     logger.info({
       event: 'payment_setup_success',
-      user_id: user.id,
+      user_id: user?.id || 'guest',
+      is_guest: !user,
       order_id: order.id,
       requires_action: requires3DS,
       card_validated: order.card_validated

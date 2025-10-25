@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { quoteLaundry, quoteCleaning, formatMoney } from '../pricing';
 import type { LaundryQuoteParams, CleaningQuoteParams } from '../pricing';
 
 // Mock the database module before any imports
@@ -128,9 +127,24 @@ const mockCleaningRules = [
 ];
 
 describe('Pricing Module', () => {
-  beforeEach(() => {
+  let quoteLaundry: any;
+  let quoteCleaning: any;
+  let formatMoney: any;
+  let mockGetServiceClient: jest.Mock;
+  
+  beforeEach(async () => {
     // Reset mocks before each test
     jest.clearAllMocks();
+    
+    // Get the mocked db module
+    const db = await import('../db');
+    mockGetServiceClient = db.getServiceClient as jest.Mock;
+    
+    // Import the pricing module after mocking
+    const pricing = await import('../pricing');
+    quoteLaundry = pricing.quoteLaundry;
+    quoteCleaning = pricing.quoteCleaning;
+    formatMoney = pricing.formatMoney;
   });
   
   describe('formatMoney', () => {
@@ -154,8 +168,8 @@ describe('Pricing Module', () => {
 
   describe('quoteLaundry', () => {
     beforeEach(() => {
-      const db = require('../db');
-      db.getServiceClient = jest.fn(() => ({
+      // Set up the mock to return laundry pricing rules
+      mockGetServiceClient.mockReturnValue({
         from: jest.fn(() => ({
           select: jest.fn(() => ({
             eq: jest.fn(() => ({
@@ -165,7 +179,7 @@ describe('Pricing Module', () => {
             })),
           })),
         })),
-      }));
+      });
     });
 
     describe('Basic Pricing', () => {
@@ -300,7 +314,7 @@ describe('Pricing Module', () => {
 
         expect(result.subtotal_cents).toBe(3000);
         expect(result.items).toHaveLength(1);
-        expect(result.items.find(i => i.key === 'LND_RUSH_24HR')).toBeUndefined();
+        expect(result.items.find((i: any) => i.key === 'LND_RUSH_24HR')).toBeUndefined();
       });
     });
 
@@ -329,7 +343,7 @@ describe('Pricing Module', () => {
         const result = await quoteLaundry(params);
 
         // All items should be tax-exempt
-        result.items.forEach(item => {
+        result.items.forEach((item: any) => {
           expect(item.taxable).toBe(false);
         });
       });
@@ -374,8 +388,8 @@ describe('Pricing Module', () => {
 
   describe('quoteCleaning', () => {
     beforeEach(() => {
-      const db = require('../db');
-      db.getServiceClient = jest.fn(() => ({
+      // Set up the mock to return cleaning pricing rules
+      mockGetServiceClient.mockReturnValue({
         from: jest.fn(() => ({
           select: jest.fn(() => ({
             eq: jest.fn(() => ({
@@ -385,7 +399,7 @@ describe('Pricing Module', () => {
             })),
           })),
         })),
-      }));
+      });
     });
 
     describe('Basic Pricing', () => {
@@ -501,7 +515,7 @@ describe('Pricing Module', () => {
 
         expect(result.items[0].total_cents).toBe(12000);
         // Should have info line about future discount
-        const infoItem = result.items.find(i => i.key === 'RECURRING_INFO');
+        const infoItem = result.items.find((i: any) => i.key === 'RECURRING_INFO');
         expect(infoItem).toBeDefined();
         expect(infoItem?.label).toContain('weekly discount starts next visit');
       });
@@ -517,7 +531,7 @@ describe('Pricing Module', () => {
 
         const result = await quoteCleaning(params);
 
-        const discountItem = result.items.find(i => i.key === 'RECURRING_DISCOUNT');
+        const discountItem = result.items.find((i: any) => i.key === 'RECURRING_DISCOUNT');
         expect(discountItem).toBeDefined();
         expect(discountItem?.total_cents).toBe(-2400); // 20% of $120 = $24
         expect(discountItem?.label).toContain('20%');
@@ -537,7 +551,7 @@ describe('Pricing Module', () => {
 
         const result = await quoteCleaning(params);
 
-        const discountItem = result.items.find(i => i.key === 'RECURRING_DISCOUNT');
+        const discountItem = result.items.find((i: any) => i.key === 'RECURRING_DISCOUNT');
         expect(discountItem?.total_cents).toBe(-1800); // 15% of $120 = $18
         expect(discountItem?.label).toContain('15%');
       });
@@ -553,7 +567,7 @@ describe('Pricing Module', () => {
 
         const result = await quoteCleaning(params);
 
-        const discountItem = result.items.find(i => i.key === 'RECURRING_DISCOUNT');
+        const discountItem = result.items.find((i: any) => i.key === 'RECURRING_DISCOUNT');
         expect(discountItem?.total_cents).toBe(-1200); // 10% of $120 = $12
         expect(discountItem?.label).toContain('10%');
       });
@@ -569,7 +583,7 @@ describe('Pricing Module', () => {
 
         const result = await quoteCleaning(params);
 
-        const discountItem = result.items.find(i => i.key === 'RECURRING_DISCOUNT');
+        const discountItem = result.items.find((i: any) => i.key === 'RECURRING_DISCOUNT');
         expect(discountItem).toBeUndefined();
       });
     });
@@ -621,7 +635,7 @@ describe('Pricing Module', () => {
 
         const result = await quoteCleaning(params);
 
-        const addonItem = result.items.find(i => i.key === 'CLN_FRIDGE_INSIDE');
+        const addonItem = result.items.find((i: any) => i.key === 'CLN_FRIDGE_INSIDE');
         expect(addonItem).toBeDefined();
         expect(addonItem?.total_cents).toBe(2500);
       });
@@ -637,8 +651,8 @@ describe('Pricing Module', () => {
         const result = await quoteCleaning(params);
 
         expect(result.items.length).toBeGreaterThan(2);
-        expect(result.items.find(i => i.key === 'CLN_FRIDGE_INSIDE')).toBeDefined();
-        expect(result.items.find(i => i.key === 'CLN_OVEN_INSIDE')).toBeDefined();
+        expect(result.items.find((i: any) => i.key === 'CLN_FRIDGE_INSIDE')).toBeDefined();
+        expect(result.items.find((i: any) => i.key === 'CLN_OVEN_INSIDE')).toBeDefined();
       });
     });
 
@@ -684,7 +698,7 @@ describe('Pricing Module', () => {
         const result = await quoteCleaning(params);
 
         // All non-info items should be taxable
-        result.items.forEach(item => {
+        result.items.forEach((item: any) => {
           if (item.key !== 'RECURRING_INFO') {
             expect(item.taxable).toBe(true);
           }

@@ -47,6 +47,12 @@ export default function AdminNav({ userEmail }: AdminNavProps) {
                 Capacity
               </Link>
               <Link
+                href="/admin/waitlist"
+                className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
+              >
+                Waitlist
+              </Link>
+              <Link
                 href="/admin/settings"
                 className="text-gray-700 hover:text-gray-900 px-3 py-2 text-sm font-medium"
               >

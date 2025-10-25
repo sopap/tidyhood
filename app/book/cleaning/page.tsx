@@ -70,6 +70,12 @@ function CleaningBookingForm() {
     clearDraft,
   } = useBookingDraft('CLEANING')
   
+  // Guest booking state
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  
   // Address state
   const [address, setAddress] = useState<Address | null>(null)
   const [isAddressValid, setIsAddressValid] = useState(false)
@@ -349,14 +355,32 @@ function CleaningBookingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!user) {
-      handleLoginRequired()
-      return
-    }
-
+    // Validate required fields for both guest and auth users
     if (!address || !selectedSlot) {
       setToast({ message: 'Please complete all required fields', type: 'warning' })
       return
+    }
+    
+    // For guest users, validate guest contact fields
+    if (!user) {
+      if (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim()) {
+        setToast({ message: 'Please provide your contact information', type: 'warning' })
+        return
+      }
+      
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(guestEmail)) {
+        setToast({ message: 'Please provide a valid email address', type: 'warning' })
+        return
+      }
+      
+      // Basic phone validation (10+ digits)
+      const phoneDigits = guestPhone.replace(/\D/g, '')
+      if (phoneDigits.length < 10) {
+        setToast({ message: 'Please provide a valid phone number', type: 'warning' })
+        return
+      }
     }
     
     // If Setup Intent is enabled, require payment method
@@ -374,9 +398,9 @@ function CleaningBookingForm() {
       if (isSetupIntentFlow && paymentMethodId) {
         // NEW FLOW: Use Setup Intent saga
         
-        // Step 1: Create subscription if recurring
+        // Step 1: Create subscription if recurring (only for authenticated users)
         let subscriptionId: string | undefined
-        if (frequency !== 'oneTime') {
+        if (frequency !== 'oneTime' && user) {
           const subResponse = await fetch('/api/recurring/plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -405,38 +429,47 @@ function CleaningBookingForm() {
         }
         
         // Step 2: Call payment setup API
+        const setupPayload: any = {
+          service_type: 'CLEANING',
+          service_category: 'standard',
+          estimated_amount_cents: Math.round(pricing.total * 100),
+          payment_method_id: paymentMethodId,
+          slot: {
+            partner_id: selectedSlot.partner_id,
+            slot_start: selectedSlot.slot_start,
+            slot_end: selectedSlot.slot_end,
+          },
+          address: {
+            line1: address.line1,
+            line2: addressLine2 || undefined,
+            city: address.city,
+            zip: address.zip,
+            notes: specialInstructions || undefined,
+          },
+          phone: user ? phone : guestPhone,
+          details: {
+            bedrooms,
+            bathrooms,
+            cleaningType,
+            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
+            frequency,
+            firstVisitDeep,
+            subscription_id: subscriptionId
+          },
+          subscription_id: subscriptionId
+        }
+        
+        // Add guest data if not authenticated
+        if (!user) {
+          setupPayload.guest_name = guestName.trim()
+          setupPayload.guest_email = guestEmail.trim()
+          setupPayload.guest_phone = '+1' + guestPhone.replace(/\D/g, '') // Convert to E.164
+        }
+        
         const setupResponse = await fetch('/api/payment/setup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            service_type: 'CLEANING',
-            service_category: 'standard',
-            estimated_amount_cents: Math.round(pricing.total * 100),
-            payment_method_id: paymentMethodId,
-            slot: {
-              partner_id: selectedSlot.partner_id,
-              slot_start: selectedSlot.slot_start,
-              slot_end: selectedSlot.slot_end,
-            },
-            address: {
-              line1: address.line1,
-              line2: addressLine2 || undefined,
-              city: address.city,
-              zip: address.zip,
-              notes: specialInstructions || undefined,
-            },
-            phone: phone,
-            details: {
-              bedrooms,
-              bathrooms,
-              cleaningType,
-              addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
-              frequency,
-              firstVisitDeep,
-              subscription_id: subscriptionId
-            },
-            subscription_id: subscriptionId
-          })
+          body: JSON.stringify(setupPayload)
         })
 
         if (!setupResponse.ok) {
@@ -449,9 +482,9 @@ function CleaningBookingForm() {
       } else {
         // OLD FLOW: Deferred payment (existing code)
         
-        // Step 1: Create subscription if recurring
+        // Step 1: Create subscription if recurring (only for authenticated users)
         let subscriptionId: string | undefined
-        if (frequency !== 'oneTime') {
+        if (frequency !== 'oneTime' && user) {
           const subResponse = await fetch('/api/recurring/plan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -481,6 +514,38 @@ function CleaningBookingForm() {
 
         // Step 2: Create order
         const idempotencyKey = `cleaning-${Date.now()}-${Math.random()}`
+        
+        const orderPayload: any = {
+          service_type: 'CLEANING',
+          slot: {
+            partner_id: selectedSlot.partner_id,
+            slot_start: selectedSlot.slot_start,
+            slot_end: selectedSlot.slot_end
+          },
+          address: {
+            line1: address.line1,
+            line2: addressLine2 || undefined,
+            city: address.city,
+            zip: address.zip,
+            notes: specialInstructions || undefined
+          },
+          details: {
+            bedrooms,
+            bathrooms,
+            cleaningType,
+            addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
+            frequency,
+            firstVisitDeep
+          },
+          subscription_id: subscriptionId
+        }
+        
+        // Add guest data if not authenticated
+        if (!user) {
+          orderPayload.guest_name = guestName.trim()
+          orderPayload.guest_email = guestEmail.trim()
+          orderPayload.guest_phone = '+1' + guestPhone.replace(/\D/g, '') // Convert to E.164
+        }
 
         const response = await fetch('/api/orders', {
           method: 'POST',
@@ -488,30 +553,7 @@ function CleaningBookingForm() {
             'Content-Type': 'application/json',
             'Idempotency-Key': idempotencyKey
           },
-          body: JSON.stringify({
-            service_type: 'CLEANING',
-            slot: {
-              partner_id: selectedSlot.partner_id,
-              slot_start: selectedSlot.slot_start,
-              slot_end: selectedSlot.slot_end
-            },
-            address: {
-              line1: address.line1,
-              line2: addressLine2 || undefined,
-              city: address.city,
-              zip: address.zip,
-              notes: specialInstructions || undefined
-            },
-            details: {
-              bedrooms,
-              bathrooms,
-              cleaningType,
-              addons: Object.keys(addons).filter(key => addons[key as CleaningAddonKey]),
-              frequency,
-              firstVisitDeep
-            },
-            subscription_id: subscriptionId
-          })
+          body: JSON.stringify(orderPayload)
         })
 
         if (!response.ok) {
@@ -524,10 +566,16 @@ function CleaningBookingForm() {
       }
 
       // Clear draft on successful booking
-      clearDraft()
+      clearDraft();
       
-      // Redirect to order page
-      router.push(`/orders/${orderId}`)
+      // Redirect to appropriate page based on auth status
+      if (!user) {
+        // Guest user - show success page with conversion CTAs
+        router.push(`/orders/${orderId}/guest-success?guest=true`)
+      } else {
+        // Authenticated user - go to order detail page
+        router.push(`/orders/${orderId}`)
+      }
       
     } catch (err: any) {
       console.error('Order creation error:', err)
@@ -817,10 +865,18 @@ function CleaningBookingForm() {
               </div>
             </div>
 
-            {/* Payment Method Collection - Only if Setup Intent enabled */}
+            {/* Payment Method Collection - For all users after slot selection */}
             {isSetupIntentFlow && address && selectedSlot && pricing.total > 0 && (
               <div className="card-standard card-padding">
                 <h2 className="heading-section">💳 Payment Method</h2>
+                
+                {!user && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      ⚡ <strong>Secure your booking</strong> - We'll save your card now and charge you after service completion. $0.00 charged today.
+                    </p>
+                  </div>
+                )}
                 
                 <Elements stripe={stripePromise}>
                   <StripePaymentCollector
@@ -850,24 +906,90 @@ function CleaningBookingForm() {
             <div className="card-standard card-padding">
               <h2 className="heading-section">✉️ Contact Information</h2>
               
+              {!user && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    💡 Book without creating an account! We'll send booking details to your contact info.
+                  </p>
+                </div>
+              )}
+              
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => {
-                      const formatted = formatPhone(e.target.value)
-                      setPhone(formatted)
-                      updatePersistedPhone(e.target.value)
-                    }}
-                    placeholder="(555) 123-4567"
-                    className="input-field"
-                    required
-                  />
-                  <div className="flex items-center justify-between mt-2">
+                {/* Guest fields - only show when not logged in */}
+                {!user && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder="Jane Doe"
+                        className="input-field"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        placeholder="jane@example.com"
+                        className="input-field"
+                        required
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        We'll send your booking confirmation here
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={guestPhone}
+                        onChange={(e) => {
+                          const formatted = formatPhone(e.target.value)
+                          setGuestPhone(formatted)
+                        }}
+                        placeholder="(917) 123-4567"
+                        className="input-field"
+                        required
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        For booking updates and partner communication
+                      </p>
+                    </div>
+                  </>
+                )}
+                
+                {/* Authenticated user phone field */}
+                {user && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        const formatted = formatPhone(e.target.value)
+                        setPhone(formatted)
+                        updatePersistedPhone(e.target.value)
+                      }}
+                      placeholder="(555) 123-4567"
+                      className="input-field"
+                      required
+                    />
+                    <div className="flex items-center justify-between mt-2">
                     <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer group">
                       <input
                         type="checkbox"
@@ -898,8 +1020,9 @@ function CleaningBookingForm() {
                     >
                       Not you? Clear saved details
                     </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -932,36 +1055,39 @@ function CleaningBookingForm() {
 
             {/* Submit */}
             <div className="card-standard card-padding">
-              {!user ? (
-                <button
-                  type="button"
-                  onClick={handleLoginRequired}
-                  className="w-full btn-primary text-lg py-4"
-                >
-                  Log In to Complete Booking
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={
-                    !persistedLoaded || 
-                    loading || 
-                    submitting ||
-                    !address || 
-                    !isAddressValid || 
-                    !selectedSlot ||
-                    !phone?.trim() ||
-                    phone.replace(/\D/g, '').length < 10 ||
-                    (isSetupIntentFlow && !paymentMethodId)
-                  }
-                  className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? 'Scheduling…' : 'Schedule Cleaning'}
-                </button>
+              <button
+                type="submit"
+                disabled={
+                  !persistedLoaded || 
+                  loading || 
+                  submitting ||
+                  !address || 
+                  !isAddressValid || 
+                  !selectedSlot ||
+                  (!user && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim())) ||
+                  (user && (!phone?.trim() || phone.replace(/\D/g, '').length < 10)) ||
+                  (isSetupIntentFlow && !paymentMethodId) // Require payment for ALL users
+                }
+                className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Scheduling…' : user ? 'Schedule Cleaning' : 'Book as Guest'}
+              </button>
+              
+              {!user && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600 mb-2">Already have an account?</p>
+                  <button
+                    type="button"
+                    onClick={handleLoginRequired}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+                  >
+                    Log in to see your past bookings
+                  </button>
+                </div>
               )}
               
               {/* Payment messaging */}
-              <PaymentBanner isSetupIntent={isSetupIntentFlow} className="mt-4" />
+              <PaymentBanner isSetupIntent={isSetupIntentFlow && !!user} className="mt-4" />
             </div>
             {/* Accessibility: Prefill announcement */}
             {prefillMsg && (

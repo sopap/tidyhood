@@ -3,11 +3,15 @@
  * 
  * Handles all business logic for determining fees, refunds, and eligibility
  * for order cancellations and rescheduling.
+ * 
+ * MIGRATION 035: Now reads from database instead of hardcoded values
  */
+
+import { getServiceClient } from '@/lib/db'
 
 export interface Order {
   id: string
-  user_id: string
+  user_id: string | null  // Nullable for guest orders (Migration 035)
   service_type: 'LAUNDRY' | 'CLEANING'
   status: string
   slot_start: string
@@ -16,6 +20,7 @@ export interface Order {
   paid_at?: string
   payment_id?: string
   partner_id: string
+  policy_id: string | null  // FK to cancellation_policies (Migration 035)
 }
 
 export interface CancellationPolicy {
@@ -26,6 +31,7 @@ export interface CancellationPolicy {
   cancellationFee: number
   rescheduleFee: number
   refundAmount: number
+  policyVersion?: number  // Policy version locked at booking time (Migration 035)
   reason?: string
 }
 
@@ -40,9 +46,41 @@ const MODIFIABLE_STATUSES = [
 ]
 
 /**
- * Calculate comprehensive cancellation policy for an order
+ * Get default fallback policy for orders without policy_id (pre-migration 035)
+ * Uses original hardcoded values for backward compatibility
  */
-export function getCancellationPolicy(order: Order): CancellationPolicy {
+function getDefaultPolicy(serviceType: 'LAUNDRY' | 'CLEANING'): {
+  noticeHours: number
+  cancellationFeePercent: number
+  rescheduleFeePercent: number
+  allowCancellation: boolean
+  allowRescheduling: boolean
+} {
+  if (serviceType === 'LAUNDRY') {
+    return {
+      noticeHours: 0,
+      cancellationFeePercent: 0,
+      rescheduleFeePercent: 0,
+      allowCancellation: true,
+      allowRescheduling: true,
+    }
+  }
+  
+  // CLEANING defaults (original hardcoded values)
+  return {
+    noticeHours: 24,
+    cancellationFeePercent: 0.15,  // 15%
+    rescheduleFeePercent: 0,
+    allowCancellation: true,
+    allowRescheduling: true,
+  }
+}
+
+/**
+ * Calculate comprehensive cancellation policy for an order
+ * Reads from database using policy locked at booking time (Migration 035)
+ */
+export async function getCancellationPolicy(order: Order): Promise<CancellationPolicy> {
   const now = new Date()
   const slotTime = new Date(order.slot_start)
   const hoursUntilSlot = (slotTime.getTime() - now.getTime()) / (1000 * 60 * 60)
@@ -77,63 +115,93 @@ export function getCancellationPolicy(order: Order): CancellationPolicy {
     }
   }
   
+  // Fetch policy from database (policy locked at booking time)
+  let policyData
+  let policyVersion: number | undefined
+  
+  if (order.policy_id) {
+    const db = getServiceClient()
+    const { data: policy, error } = await db
+      .from('cancellation_policies')
+      .select('*')
+      .eq('id', order.policy_id)
+      .single()
+    
+    if (error || !policy) {
+      console.warn(`[getCancellationPolicy] Policy ${order.policy_id} not found for order ${order.id}, using defaults`)
+      policyData = getDefaultPolicy(order.service_type)
+      policyVersion = undefined
+    } else {
+      policyData = {
+        noticeHours: policy.notice_hours,
+        cancellationFeePercent: policy.cancellation_fee_percent,
+        rescheduleFeePercent: policy.reschedule_fee_percent,
+        allowCancellation: policy.allow_cancellation,
+        allowRescheduling: policy.allow_rescheduling,
+      }
+      policyVersion = policy.version
+    }
+  } else {
+    // Old orders without policy_id (pre-migration 035)
+    console.warn(`[getCancellationPolicy] No policy_id for order ${order.id}, using defaults`)
+    policyData = getDefaultPolicy(order.service_type)
+    policyVersion = undefined
+  }
+  
+  // Calculate using database values (NOT hardcoded)
+  const withinNoticeWindow = hoursUntilSlot >= policyData.noticeHours
+  
   // Laundry (unpaid) - always free to modify
   if (order.service_type === 'LAUNDRY') {
     return {
-      canCancel: true,
-      canReschedule: true,
-      requiresNotice: false,
-      noticeHours: 0,
+      canCancel: policyData.allowCancellation,
+      canReschedule: policyData.allowRescheduling,
+      requiresNotice: policyData.noticeHours > 0,
+      noticeHours: policyData.noticeHours,
       cancellationFee: 0,
       rescheduleFee: 0,
       refundAmount: 0, // No refund because no payment made yet
+      policyVersion,
       reason: 'Free cancellation/rescheduling for unpaid laundry orders'
     }
   }
   
-  // Cleaning (paid) - Updated policy: Free reschedule and cancel >24h, 15% cancel fee <24h
-  if (order.service_type === 'CLEANING') {
-    const feePercent = 0.15
-    const cancellationFee = Math.round(order.total_cents * feePercent)
-    const withinNoticeWindow = hoursUntilSlot >= 24
-    
-    if (!withinNoticeWindow) {
-      // Within 24 hours - can cancel with 15% fee, but cannot reschedule (too late)
-      return {
-        canCancel: true,
-        canReschedule: false,
-        requiresNotice: true,
-        noticeHours: 24,
-        cancellationFee: cancellationFee,
-        rescheduleFee: 0,
-        refundAmount: order.total_cents - cancellationFee,
-        reason: 'Cancellations within 24 hours incur a 15% fee. Rescheduling not available.'
-      }
-    }
-    
-    // 24+ hours notice - both reschedule and cancel are free
+  // Cleaning (paid) - calculate using database values
+  const cancellationFee = withinNoticeWindow 
+    ? 0 
+    : Math.round(order.total_cents * policyData.cancellationFeePercent)
+  
+  const rescheduleFee = withinNoticeWindow
+    ? 0
+    : Math.round(order.total_cents * policyData.rescheduleFeePercent)
+  
+  if (!withinNoticeWindow) {
+    // Within notice window - can cancel with fee, may not reschedule
+    const feePercent = Math.round(policyData.cancellationFeePercent * 100)
     return {
-      canCancel: true,
-      canReschedule: true,
+      canCancel: policyData.allowCancellation,
+      canReschedule: false, // Too late to reschedule
       requiresNotice: true,
-      noticeHours: 24,
-      cancellationFee: 0, // Free cancellation
-      rescheduleFee: 0, // Free rescheduling
-      refundAmount: order.total_cents, // Full refund
-      reason: 'Free rescheduling and cancellation with 24+ hours notice.'
+      noticeHours: policyData.noticeHours,
+      cancellationFee,
+      rescheduleFee: 0,
+      refundAmount: order.total_cents - cancellationFee,
+      policyVersion,
+      reason: `Cancellations within ${policyData.noticeHours} hours incur a ${feePercent}% fee. Rescheduling not available.`
     }
   }
   
-  // Unknown service type
+  // Sufficient notice - both cancel and reschedule are free
   return {
-    canCancel: false,
-    canReschedule: false,
-    requiresNotice: false,
-    noticeHours: 0,
+    canCancel: policyData.allowCancellation,
+    canReschedule: policyData.allowRescheduling,
+    requiresNotice: policyData.noticeHours > 0,
+    noticeHours: policyData.noticeHours,
     cancellationFee: 0,
     rescheduleFee: 0,
-    refundAmount: 0,
-    reason: 'Unknown service type'
+    refundAmount: order.total_cents,
+    policyVersion,
+    reason: `Free rescheduling and cancellation with ${policyData.noticeHours}+ hours notice.`
   }
 }
 
@@ -234,11 +302,11 @@ export function formatDeadline(deadline: Date): string {
  * Validate that a cancellation/reschedule is allowed
  * Throws error if not allowed
  */
-export function validateModification(
+export async function validateModification(
   order: Order,
   modificationType: 'cancel' | 'reschedule'
-): void {
-  const policy = getCancellationPolicy(order)
+): Promise<void> {
+  const policy = await getCancellationPolicy(order)
   
   if (modificationType === 'cancel' && !policy.canCancel) {
     throw new Error(policy.reason || 'Cannot cancel this order')
@@ -251,11 +319,15 @@ export function validateModification(
 
 /**
  * Get cancellation policy summary for display
+ * Note: This is a simplified sync version. For accurate policy details,
+ * use the GET /api/policies/cancellation endpoint
  */
 export function getPolicySummary(serviceType: 'LAUNDRY' | 'CLEANING'): string {
   if (serviceType === 'LAUNDRY') {
     return 'Free cancellation or rescheduling anytime before pickup'
   }
   
-  return 'Free rescheduling with 24+ hours notice. Cancellations incur a 15% fee if within 24 hours.'
+  // Note: This returns default summary. Actual policy may vary.
+  // Use /api/policies/cancellation for real-time policy details
+  return 'Free rescheduling with notice. Cancellation fees may apply within notice window.'
 }

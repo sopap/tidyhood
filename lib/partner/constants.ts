@@ -89,7 +89,7 @@ export function getCapacityColor(utilization: number): string {
 export const VALIDATION_MESSAGES = {
   QUOTE_TOO_LOW: `Quote total must be at least $${QUOTE_LIMITS.MIN_TOTAL}`,
   QUOTE_TOO_HIGH: `Quote total exceeds maximum ($${QUOTE_LIMITS.MAX_TOTAL})`,
-  WEIGHT_TOO_LOW: `Weight must be at least ${QUOTE_LIMITS.MIN_WEIGHT} lb`,
+  WEIGHT_TOO_LOW: `Weight must be at least ${QUOTE_LIMITS.MIN_WEIGHT} lbs`,
   WEIGHT_TOO_HIGH: `Weight cannot exceed ${QUOTE_LIMITS.MAX_WEIGHT} lbs`,
   TIME_TOO_LOW: `Time must be at least ${QUOTE_LIMITS.MIN_TIME} minutes`,
   TIME_TOO_HIGH: `Time cannot exceed ${QUOTE_LIMITS.MAX_TIME} minutes`,

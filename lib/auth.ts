@@ -15,6 +15,20 @@ export async function getCurrentUser() {
           get(name: string) {
             return cookieStore.get(name)?.value
           },
+          set(name: string, value: string, options: any) {
+            try {
+              cookieStore.set({ name, value, ...options })
+            } catch (error) {
+              // Cookie setting can fail after headers are sent - ignore in these cases
+            }
+          },
+          remove(name: string, options: any) {
+            try {
+              cookieStore.set({ name, value: '', ...options })
+            } catch (error) {
+              // Cookie removal can fail after headers are sent - ignore in these cases
+            }
+          },
         },
       }
     )

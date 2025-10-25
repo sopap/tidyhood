@@ -198,9 +198,9 @@ async function handleLaundryReschedule(
   db: any
 ) {
   // Validate rescheduling is allowed
-  validateModification(order, 'reschedule')
+  await validateModification(order, 'reschedule')
   
-  const policy = getCancellationPolicy(order)
+  const policy = await getCancellationPolicy(order)
   if (!policy.canReschedule) {
     throw new ValidationError(
       policy.reason || 'Order cannot be rescheduled at this time',

@@ -47,9 +47,14 @@ export function StripePaymentCollector({
   // Detect test mode
   const isTestMode = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_');
   
-  // Load saved payment methods
+  // Load saved payment methods (only for authenticated users)
   useEffect(() => {
-    loadSavedCards();
+    if (userId) {
+      loadSavedCards();
+    } else {
+      // Guest users - skip saved cards and show new card form
+      setShowNewCard(true);
+    }
   }, [userId]);
   
   // Auto-notify parent when saved card is selected
@@ -171,15 +176,6 @@ export function StripePaymentCollector({
   
   return (
     <div className="space-y-4">
-      {/* Test Mode Banner */}
-      {isTestMode && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-          <p className="text-sm text-yellow-800 font-medium">
-            🧪 Test Mode - Use test card: 4242 4242 4242 4242
-          </p>
-        </div>
-      )}
-      
       {/* Payment Setup Display */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">

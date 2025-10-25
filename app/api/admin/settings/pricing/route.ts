@@ -52,6 +52,14 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Pricing rules fetch error:', error)
+    
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

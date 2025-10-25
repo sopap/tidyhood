@@ -179,9 +179,9 @@ async function handleLaundryCancellation(
   db: any
 ) {
   // Validate cancellation using existing policy system
-  validateModification(order, 'cancel')
+  await validateModification(order, 'cancel')
   
-  const policy = getCancellationPolicy(order)
+  const policy = await getCancellationPolicy(order)
   if (!policy.canCancel) {
     throw new ValidationError(
       policy.reason || 'Order cannot be canceled at this time',

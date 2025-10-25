@@ -119,7 +119,7 @@ export default function ServiceDetails({
                 }`}
                 aria-pressed={weightTier === tier.key}
               >
-                {tier.label} ~{tier.lbs}lb ~{tier.price}
+                {tier.label} ~{tier.lbs} lbs ~{tier.price}
               </button>
             ))}
           </div>
