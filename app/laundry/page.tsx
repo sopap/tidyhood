@@ -101,7 +101,7 @@ export default async function LaundryPage() {
                 <div className="text-5xl font-bold text-primary-600 mb-2">
                   {pricing.perLbPriceFormatted}<span className="text-2xl">/lb</span>
                 </div>
-                <p className="text-text-secondary">{pricing.minWeightLbs} lbs minimum ({pricing.minOrderPriceFormatted})</p>
+                <p className="text-text-secondary">({pricing.minWeightLbs} lbs minimum)</p>
               </div>
             </div>
             

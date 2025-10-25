@@ -720,7 +720,10 @@ function LaundryBookingForm() {
               <li className="flex items-start">
                 <span className="text-green-600 mr-2 mt-0.5">✓</span>
                 <span className="text-gray-700">
-                  <strong>Typical turnaround:</strong> {deliveryPolicy ? `${Math.round(deliveryPolicy.standard_minimum_hours / 24)} days` : '24–48 hours'}
+                  <strong>Typical turnaround:</strong> {deliveryPolicy ? (() => {
+                    const days = Math.round(deliveryPolicy.standard_minimum_hours / 24);
+                    return `${days} ${days === 1 ? 'day' : 'days'}`;
+                  })() : '24–48 hours'}
                 </span>
               </li>
               <li className="flex items-start">

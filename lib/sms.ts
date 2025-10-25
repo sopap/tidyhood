@@ -2,13 +2,28 @@ import twilio from 'twilio'
 
 const isDev = process.env.NODE_ENV === 'development'
 
-// Initialize Twilio client
-const twilioClient = isDev
-  ? null
-  : twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    )
+// Lazy-initialize Twilio client (only when needed at runtime)
+let twilioClient: ReturnType<typeof twilio> | null = null
+
+function getTwilioClient() {
+  if (isDev) {
+    return null
+  }
+  
+  if (!twilioClient) {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    
+    if (!accountSid || !authToken) {
+      console.warn('Twilio credentials not configured')
+      return null
+    }
+    
+    twilioClient = twilio(accountSid, authToken)
+  }
+  
+  return twilioClient
+}
 
 const FROM_PHONE = process.env.TWILIO_FROM_PHONE
 
@@ -67,13 +82,15 @@ export async function sendSMS(params: SendSMSParams): Promise<void> {
     return
   }
   
-  if (!twilioClient || !FROM_PHONE) {
+  const client = getTwilioClient()
+  
+  if (!client || !FROM_PHONE) {
     console.error('Twilio not configured')
     return
   }
   
   try {
-    await twilioClient.messages.create({
+    await client.messages.create({
       body: message,
       to: normalizedPhone,
       from: FROM_PHONE,
