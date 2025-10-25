@@ -161,18 +161,18 @@ export default function LaundrySuccessPage() {
       
       if (details.serviceType === 'washFold') {
         const tierLabel = {
-          small: 'Small (~15 lbs)',
-          medium: 'Medium (~25 lbs)',
-          large: 'Large (~50 lbs)'
+          small: 'Small (~15-lbs)',
+          medium: 'Medium (~25-lbs)',
+          large: 'Large (~50-lbs)'
         }[details.weightTier || 'medium'];
         return `Wash & Fold · ${tierLabel}`;
       } else if (details.serviceType === 'dryClean') {
         return 'Dry Clean Only';
       } else if (details.serviceType === 'mixed') {
         const tierLabel = {
-          small: 'Small (~15 lbs)',
-          medium: 'Medium (~25 lbs)',
-          large: 'Large (~50 lbs)'
+          small: 'Small (~15-lbs)',
+          medium: 'Medium (~25-lbs)',
+          large: 'Large (~50-lbs)'
         }[details.weightTier || 'medium'];
         return `Mixed Service · ${tierLabel} wash & fold + dry clean items`;
       }

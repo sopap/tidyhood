@@ -253,14 +253,14 @@ export default function AdminSettingsPage() {
         displayName: 'Per Pound Rate',
         description: 'Foundation of all laundry orders (wash + fold + dry)',
         category: 'BASE_PRICING',
-        example: '25 lbs × $1.75 = $43.75',
+        example: '25-lbs × $1.75 = $43.75',
         usageNote: 'Applied to 89% of orders'
       },
       'LND_WF_MIN_LBS': {
         displayName: 'Minimum Order Charge',
         description: 'Minimum dollar amount charged for any laundry order',
         category: 'BASE_PRICING',
-        example: 'Small orders (e.g. 5 lbs) are still charged $15.00 minimum',
+        example: 'Small orders (e.g. 5-lbs) are still charged $15.00 minimum',
         usageNote: 'Ensures profitability on small orders'
       },
       'LND_RUSH_24HR': {

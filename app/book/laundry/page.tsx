@@ -725,7 +725,7 @@ function LaundryBookingForm() {
               </li>
               <li className="flex items-start">
                 <span className="text-green-600 mr-2 mt-0.5">✓</span>
-                <span className="text-gray-700"><strong>Transparent pricing</strong> with 15-lb minimum</span>
+                <span className="text-gray-700"><strong>Transparent pricing</strong> with 15-lbs minimum</span>
               </li>
               <li className="flex items-start">
                 <span className="text-green-600 mr-2 mt-0.5">✓</span>
@@ -872,7 +872,7 @@ function LaundryBookingForm() {
                         }`}
                       >
                         <div className="font-medium">Small</div>
-                        <div className="text-xs text-gray-500 mt-1">~15 lbs</div>
+                        <div className="text-xs text-gray-500 mt-1">~15-lbs</div>
                         <div className="text-xs text-gray-400">2-3 loads</div>
                       </button>
                       <button
@@ -885,7 +885,7 @@ function LaundryBookingForm() {
                         }`}
                       >
                         <div className="font-medium">Medium</div>
-                        <div className="text-xs text-gray-500 mt-1">~25 lbs</div>
+                        <div className="text-xs text-gray-500 mt-1">~25-lbs</div>
                         <div className="text-xs text-gray-400">3-4 loads</div>
                       </button>
                       <button
@@ -898,7 +898,7 @@ function LaundryBookingForm() {
                         }`}
                       >
                         <div className="font-medium">Large</div>
-                        <div className="text-xs text-gray-500 mt-1">~50 lbs</div>
+                        <div className="text-xs text-gray-500 mt-1">~50-lbs</div>
                         <div className="text-xs text-gray-400">6-8 loads</div>
                       </button>
                     </div>
