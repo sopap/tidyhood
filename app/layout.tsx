@@ -77,6 +77,18 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <StructuredData />
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-V30CGJ70W7"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-V30CGJ70W7');
+            `,
+          }}
+        />
       </head>
       <body>
         <AuthProvider>
