@@ -86,7 +86,7 @@ export class PaymentAuthorizationSaga {
     return tracePaymentOperation(
       'payment_authorization_saga',
       {
-        user_id: params.user_id,
+        user_id: params.user_id || 'guest',
         service_category: params.service_category,
         estimated_amount: params.estimated_amount_cents
       },
