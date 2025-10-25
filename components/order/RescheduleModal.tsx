@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCancellationPolicy, formatMoney } from '@/lib/cancellationFees'
+import type { CancellationPolicy } from '@/lib/cancellationFees'
 import { formatSlotTime } from '@/lib/slots'
 import SlotPicker from '@/components/booking/SlotPicker'
 import type { Order, BookingSlot } from '@/lib/types'
@@ -20,8 +21,14 @@ export default function RescheduleModal({ isOpen, onClose, order, onSuccess }: R
   const [newSlot, setNewSlot] = useState<{ date: string; slot?: BookingSlot }>({ date: '' })
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [policy, setPolicy] = useState<CancellationPolicy | null>(null)
 
-  const policy = getCancellationPolicy(order as any)
+  // Fetch policy when modal opens
+  useEffect(() => {
+    if (isOpen && order) {
+      getCancellationPolicy(order as any).then(setPolicy).catch(console.error)
+    }
+  }, [isOpen, order])
 
   // Reset state when modal closes
   const handleClose = () => {
@@ -148,7 +155,7 @@ export default function RescheduleModal({ isOpen, onClose, order, onSuccess }: R
               </div>
 
               {/* Policy Info */}
-              {policy.requiresNotice && (
+              {policy?.requiresNotice && (
                 <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                   <div className="flex items-start gap-2">
                     <svg className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -156,8 +163,8 @@ export default function RescheduleModal({ isOpen, onClose, order, onSuccess }: R
                     </svg>
                     <div className="text-sm">
                       <p className="text-blue-800">
-                        {policy.reason}
-                        {policy.rescheduleFee > 0 && (
+                        {policy?.reason}
+                        {policy && policy.rescheduleFee > 0 && (
                           <span className="block mt-1 font-medium">
                             A {formatMoney(policy.rescheduleFee)} rescheduling fee will be charged.
                           </span>
@@ -272,7 +279,7 @@ export default function RescheduleModal({ isOpen, onClose, order, onSuccess }: R
               </div>
 
               {/* Fee Info */}
-              {policy.rescheduleFee > 0 && (
+              {policy && policy.rescheduleFee > 0 && (
                 <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-orange-900">Rescheduling Fee:</span>
@@ -315,7 +322,7 @@ export default function RescheduleModal({ isOpen, onClose, order, onSuccess }: R
                       <span>Rescheduling...</span>
                     </>
                   ) : (
-                    `Confirm Reschedule${policy.rescheduleFee > 0 ? ` (${formatMoney(policy.rescheduleFee)})` : ''}`
+                    `Confirm Reschedule${policy && policy.rescheduleFee > 0 ? ` (${formatMoney(policy.rescheduleFee)})` : ''}`
                   )}
                 </button>
               </div>

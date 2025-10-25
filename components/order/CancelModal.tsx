@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCancellationPolicy, formatMoney } from '@/lib/cancellationFees'
 import type { Order } from '@/lib/types'
+import type { CancellationPolicy } from '@/lib/cancellationFees'
 
 interface CancelModalProps {
   isOpen: boolean
@@ -27,8 +28,14 @@ export default function CancelModal({ isOpen, onClose, order, onSuccess }: Cance
   const [otherReason, setOtherReason] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [policy, setPolicy] = useState<CancellationPolicy | null>(null)
 
-  const policy = getCancellationPolicy(order as any)
+  // Fetch policy when modal opens
+  useEffect(() => {
+    if (isOpen && order) {
+      getCancellationPolicy(order as any).then(setPolicy).catch(console.error)
+    }
+  }, [isOpen, order])
 
   // Reset state when modal closes
   const handleClose = () => {
@@ -116,13 +123,14 @@ export default function CancelModal({ isOpen, onClose, order, onSuccess }: Cance
               </div>
 
               {/* Policy Info */}
-              <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <div className="flex items-start gap-2">
-                  <svg className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div className="text-sm">
-                    {policy.refundAmount > 0 ? (
+              {policy && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="text-sm">
+                      {policy.refundAmount > 0 ? (
                       <p className="text-gray-700">
                         You'll receive a refund of <strong>{formatMoney(policy.refundAmount)}</strong> within 5-10 business days.
                         {policy.cancellationFee > 0 && (
@@ -135,10 +143,11 @@ export default function CancelModal({ isOpen, onClose, order, onSuccess }: Cance
                       <p className="text-gray-700">
                         Your order will be canceled at no charge.
                       </p>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Reason Form */}
               <form onSubmit={handleReasonSubmit} className="space-y-4">
@@ -246,7 +255,7 @@ export default function CancelModal({ isOpen, onClose, order, onSuccess }: Cance
                     })}
                   </span>
                 </div>
-                {policy.refundAmount > 0 && (
+                {policy && policy.refundAmount > 0 && (
                   <>
                     <div className="border-t border-gray-200 my-2" />
                     <div className="flex justify-between text-sm">
