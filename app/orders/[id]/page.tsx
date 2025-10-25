@@ -79,6 +79,7 @@ export default function OrderDetailPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [policy, setPolicy] = useState<any>(null);
 
   // Helper functions for payment method detection
   const shouldShowLegacyPayButton = (order: Order) => {
@@ -120,6 +121,13 @@ export default function OrderDetailPage() {
       fetchOrder();
     }
   }, [user, authLoading, params.id]);
+
+  // Fetch cancellation policy when order loads
+  useEffect(() => {
+    if (order) {
+      getCancellationPolicy(order as any).then(setPolicy).catch(console.error);
+    }
+  }, [order]);
 
   const fetchOrder = async () => {
     try {
@@ -287,10 +295,9 @@ export default function OrderDetailPage() {
   const showPayButton = shouldShowLegacyPayButton(order);
   const showPaymentInfo = shouldShowPaymentMethodInfo(order);
   
-  // Calculate cancellation policy
-  const policy = getCancellationPolicy(order as any);
+  // Calculate hours until slot
   const hoursUntil = getHoursUntilSlot(order.slot_start);
-  const showActions = policy.canCancel || policy.canReschedule;
+  const showActions = policy ? (policy.canCancel || policy.canReschedule) : false;
 
   return (
     <div className="min-h-screen bg-gray-50">
