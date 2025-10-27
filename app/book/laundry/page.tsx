@@ -1200,7 +1200,17 @@ function LaundryBookingForm() {
             {/* Payment Method Collection - REQUIRED for all new laundry orders */}
             {address && selectedSlot && pricing.total > 0 && (
               <div className="card-standard card-padding">
-                <h2 className="heading-section">💳 Payment Method</h2>
+                {/* Trust messaging BEFORE payment section */}
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+                  <h3 className="font-bold text-lg text-blue-900 mb-2">🔒 100% Secure Booking</h3>
+                  <p className="text-sm text-blue-800">
+                    We'll save your payment method but <strong>charge $0.00 now</strong>. 
+                    You'll only be charged <strong>${pricing.total.toFixed(2)}</strong> after we complete your laundry service. 
+                    Cancel anytime before pickup.
+                  </p>
+                </div>
+                
+                <h2 className="heading-section">💳 Save Payment Method (No Charge Until Complete)</h2>
                 
                 <Elements stripe={stripePromise}>
                   <StripePaymentCollector
