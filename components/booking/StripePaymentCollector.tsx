@@ -174,29 +174,63 @@ export function StripePaymentCollector({
     }
   };
   
+  // State for progressive disclosure
+  const [showPaymentForm, setShowPaymentForm] = useState(false)
+  
   return (
-    <div className="space-y-4">
-      {/* Payment Setup Display */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl" aria-hidden="true">💳</span>
-          <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 mb-1">
-              Secure Your Booking
-            </h3>
-            <p className="text-sm text-blue-700 mb-2">
-              We'll save your card to secure your booking. 
-              <strong> You'll be charged $0.00 now</strong> and the exact amount after we weigh your items.
+    <div className="space-y-6">
+      {!showPaymentForm ? (
+        /* Progressive Disclosure - Show button first */
+        <div className="text-center py-8">
+          <button
+            type="button"
+            onClick={() => setShowPaymentForm(true)}
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-lg px-12 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+          >
+            <span>💳</span>
+            <span>Save Card Securely</span>
+          </button>
+          
+          <div className="flex items-center justify-center gap-6 mt-6 text-sm text-gray-600">
+            <div className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>256-bit encryption</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Powered by Stripe</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>PCI compliant</span>
+            </div>
+          </div>
+          
+          <p className="text-sm text-gray-500 mt-4">
+            💡 Your card is saved securely but not charged until service is complete
+          </p>
+        </div>
+      ) : (
+        /* Show actual payment form after click */
+        <>
+          {/* Final reassurance before form */}
+          <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
+            <p className="text-sm text-green-900 font-semibold mb-2">
+              ✓ Your card is securely saved (not charged)
             </p>
-            <p className="text-xs text-blue-600">
-              Estimated cost: ${estimateDisplay}
+            <p className="text-xs text-green-700">
+              We'll charge <strong>${estimateDisplay}</strong> only after we complete your service and confirm the final amount.
             </p>
           </div>
-        </div>
-      </div>
-      
-      {/* Saved Cards */}
-      {savedCards.length > 0 && !showNewCard && (
+          
+          {/* Saved Cards */}
+          {savedCards.length > 0 && !showNewCard && (
         <div className="space-y-3">
           <label className="block text-sm font-medium text-gray-700">
             Select Payment Method
@@ -297,32 +331,19 @@ export function StripePaymentCollector({
           )}
         </div>
       )}
-      
-      {/* Security Notice */}
-      <div className="flex items-center gap-2 text-xs text-gray-600">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        <span>Secured by Stripe • PCI compliant • Your card info is never stored on our servers</span>
-      </div>
-      
-      {/* Payment Process Explanation */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="font-semibold text-gray-900 text-sm mb-2">
-          How Payment Works
-        </h4>
-        <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside">
-          <li>We save your card now to secure your booking ($0.00 charged today)</li>
-          {serviceType === 'CLEANING' ? (
-            <li>After we complete your cleaning, we calculate the final cost based on time and services provided</li>
-          ) : (
-            <li>After pickup, we weigh your items and calculate the exact cost</li>
-          )}
-          <li>If within 20% of estimate, we charge automatically</li>
-          <li>If significantly different, you'll approve the final amount first</li>
-          <li>You'll receive an email receipt once charged</li>
-        </ol>
-      </div>
+          
+          {/* Security Notice */}
+          <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              256-bit SSL
+            </span>
+            <span>💯 Money-back guarantee</span>
+          </div>
+        </>
+      )}
       
       {/* Hidden input for form integration */}
       <input

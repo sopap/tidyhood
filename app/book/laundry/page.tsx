@@ -1197,20 +1197,103 @@ function LaundryBookingForm() {
               )}
             </div>
 
-            {/* Payment Method Collection - REQUIRED for all new laundry orders */}
-            {address && selectedSlot && pricing.total > 0 && (
-              <div className="card-standard card-padding">
-                {/* Trust messaging BEFORE payment section */}
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
-                  <h3 className="font-bold text-lg text-blue-900 mb-2">🔒 100% Secure Booking</h3>
-                  <p className="text-sm text-blue-800">
-                    We'll save your payment method but <strong>charge $0.00 now</strong>. 
-                    You'll only be charged <strong>${pricing.total.toFixed(2)}</strong> after we complete your laundry service. 
-                    Cancel anytime before pickup.
+            {/* Price Summary - Make it prominent */}
+            {address && pricing.total > 0 && (
+              <div className="bg-gradient-to-br from-emerald-50 to-green-100 border-3 border-emerald-400 rounded-2xl p-8 mb-6 shadow-lg">
+                <div className="text-center mb-6">
+                  <div className="text-5xl font-black text-emerald-700 mb-2">
+                    ${pricing.total.toFixed(2)}
+                  </div>
+                  <p className="text-sm font-semibold text-gray-700">
+                    Estimated total • Final price after weighing
                   </p>
                 </div>
                 
-                <h2 className="heading-section">💳 Save Payment Method (No Charge Until Complete)</h2>
+                <div className="bg-white rounded-xl p-4">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Wash & Fold (~{estimatedPounds} lbs)</span>
+                      <span className="font-semibold">${pricing.subtotal.toFixed(2)}</span>
+                    </div>
+                    {rushService && (
+                      <div className="flex justify-between text-orange-600">
+                        <span>⚡ Rush Service (+25%)</span>
+                        <span className="font-semibold">+${(pricing.subtotal * 0.25).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-gray-600">
+                      <span>Tax (8.875%)</span>
+                      <span>${pricing.tax.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 bg-emerald-600 text-white rounded-xl p-4 text-center">
+                  <p className="text-sm mb-1">💰 You'll be charged on:</p>
+                  <p className="font-bold text-lg">
+                    {deliveryDate ? new Date(deliveryDate + 'T12:00:00').toLocaleDateString('en-US', {
+                      timeZone: 'America/New_York',
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric'
+                    }) : 'Delivery date'}
+                  </p>
+                  <p className="text-xs mt-1 opacity-90">After we complete your service</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Visual Timeline */}
+            {address && selectedSlot && pricing.total > 0 && (
+              <div className="card-standard card-padding mb-6">
+                <h3 className="font-bold text-center mb-6">📅 Your Booking Journey</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                      ✓
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">Today: Book & Save Card</p>
+                      <p className="text-sm font-bold text-green-600">$0.00 charged</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
+                      📦
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pickup'}: We Pick Up</p>
+                      <p className="text-sm font-bold text-blue-600">Still $0.00</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
+                      💰
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{deliveryDate ? new Date(deliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Delivery'}: Delivery & Charge</p>
+                      <p className="text-sm font-bold text-emerald-600">
+                        ${pricing.total.toFixed(2)} charged
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 p-3 bg-blue-50 rounded-lg text-center">
+                  <p className="text-sm text-blue-900 font-semibold">
+                    ⏰ Cancel free anytime before {date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'pickup'}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Payment Method Collection */}
+            {address && selectedSlot && pricing.total > 0 && (
+              <div className="card-standard card-padding">
+                <h2 className="heading-section mb-6">💳 Secure Your Booking</h2>
                 
                 <Elements stripe={stripePromise}>
                   <StripePaymentCollector
@@ -1226,12 +1309,6 @@ function LaundryBookingForm() {
                     <p className="text-sm text-red-700">{paymentError}</p>
                   </div>
                 )}
-                
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-xs text-blue-700">
-                    💡 <strong>$0.00 charged now.</strong> Your card is securely saved. You'll be charged the exact amount after we complete your laundry.
-                  </p>
-                </div>
               </div>
             )}
 
