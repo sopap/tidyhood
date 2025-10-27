@@ -174,9 +174,10 @@ export default function SiteFooter() {
             email: 'support@tidyhood.nyc',
             address: {
               '@type': 'PostalAddress',
-              addressLocality: 'Harlem',
+              streetAddress: '171 W 131st St',
+              addressLocality: 'New York',
               addressRegion: 'NY',
-              postalCode: zipsDisplay.split(',')[0]?.trim() || '10026',
+              postalCode: '10027',
               addressCountry: 'US'
             },
             areaServed: {

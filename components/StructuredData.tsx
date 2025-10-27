@@ -10,7 +10,8 @@ const structuredData = {
       "description": "Professional laundry and home cleaning services in Harlem",
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "Harlem",
+        "streetAddress": "171 W 131st St",
+        "addressLocality": "New York",
         "addressRegion": "NY",
         "postalCode": "10027",
         "addressCountry": "US"
