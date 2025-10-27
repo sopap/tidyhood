@@ -43,6 +43,120 @@ const structuredData = {
   ]
 }
 
+// FAQPage Schema for rich snippets
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do you offer same-day laundry pickup in Harlem?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Schedule before 11 AM for same-day pickup in most Harlem ZIP codes (10026, 10027, 10030). Next-day pickup is guaranteed for all bookings."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Are TidyHood cleaners background-checked?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Every cleaner passes comprehensive background checks and quality assessments before joining our network."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What areas in Harlem do you serve?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We serve all of Harlem including Central Harlem, South Harlem, and Morningside Heights — ZIP codes 10026, 10027, 10030."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What payment methods do you accept?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We accept all major credit cards, debit cards, and digital wallets through our secure payment processor. Payment is processed when you book, and you'll receive a receipt via email."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I schedule recurring service?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes! You can set up weekly or bi-weekly recurring services for both laundry and cleaning. Contact us after your first booking to set up a schedule that works for you."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I cancel or reschedule?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "You can cancel or reschedule up to 4 hours before your scheduled time at no charge. Contact us via email or phone, or manage your booking through your account dashboard."
+      }
+    }
+  ]
+}
+
+// Service Schema for better search visibility
+const servicesStructuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "Laundry Service",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "TidyHood"
+    },
+    "areaServed": {
+      "@type": "City",
+      "name": "Harlem, New York"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Laundry Services",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Wash & Fold Laundry",
+            "description": "Professional wash and fold service with same-day pickup and 48-hour return"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "House Cleaning Service",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "TidyHood"
+    },
+    "areaServed": {
+      "@type": "City",
+      "name": "Harlem, New York"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Cleaning Services",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Standard Home Cleaning",
+            "description": "Professional home cleaning by background-verified experts"
+          }
+        }
+      ]
+    }
+  }
+]
+
 export default function Home() {
   const { user } = useAuth()
   const [lastOrder, setLastOrder] = useState<any>(null)
@@ -105,6 +219,17 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
+      {servicesStructuredData.map((service, index) => (
+        <script
+          key={index}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(service) }}
+        />
+      ))}
       
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
         <Header />
