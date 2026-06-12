@@ -6,6 +6,18 @@ import { logger } from '@/lib/logger';
 import { canUsePaymentAuthorization } from '@/lib/feature-flags';
 import { executePaymentAuthorizationSaga } from '@/lib/payment-saga';
 import { logPaymentError, createErrorResponse } from '@/lib/payment-errors';
+import { quoteLaundry } from '@/lib/pricing';
+
+/**
+ * Max authorization for dry-clean-only orders (quoted after inspection,
+ * so there is no server-computable price at booking time).
+ */
+const MAX_DRY_CLEAN_AUTH_CENTS = parseInt(
+  process.env.MAX_DRY_CLEAN_AUTH_CENTS || '30000',
+  10
+);
+
+const TIER_TO_LBS: Record<string, number> = { small: 15, medium: 25, large: 35 };
 
 const authorizeSchema = z.object({
   estimated_amount_cents: z.number().int().positive(),
@@ -80,7 +92,44 @@ export async function POST(request: NextRequest) {
       service_category: params.service_category,
       estimated_amount: params.estimated_amount_cents
     });
-    
+
+    // SECURITY: Never trust the client-supplied amount.
+    // - wash_fold / mixed: recompute the estimate server-side from weight + addons.
+    // - dry_clean: priced after inspection, so cap the authorization at a sanity bound.
+    let authorizedAmountCents: number;
+    if (params.service_category === 'wash_fold' || params.service_category === 'mixed') {
+      const lbs =
+        params.details.lbs ??
+        (params.details.weightTier ? TIER_TO_LBS[params.details.weightTier] : undefined);
+      if (!lbs || lbs <= 0) {
+        throw new ValidationError('Weight tier or lbs required for wash & fold orders');
+      }
+      const quote = await quoteLaundry({
+        zip: params.address.zip,
+        lbs,
+        addons: params.details.addons,
+      });
+      authorizedAmountCents = quote.total_cents;
+
+      if (Math.abs(authorizedAmountCents - params.estimated_amount_cents) > 100) {
+        logger.warn({
+          event: 'payment_authorization_estimate_mismatch',
+          user_id: user.id,
+          client_estimate_cents: params.estimated_amount_cents,
+          server_quote_cents: authorizedAmountCents,
+        });
+      }
+    } else {
+      // dry_clean
+      if (params.estimated_amount_cents > MAX_DRY_CLEAN_AUTH_CENTS) {
+        throw new ValidationError(
+          'Estimated amount exceeds the maximum allowed for dry cleaning orders',
+          'AMOUNT_EXCEEDS_CAP'
+        );
+      }
+      authorizedAmountCents = params.estimated_amount_cents;
+    }
+
     // Convert snake_case to camelCase for database
     const serviceCategoryMap: Record<string, 'washFold' | 'dryClean' | 'mixed'> = {
       'wash_fold': 'washFold',
@@ -93,7 +142,7 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       service_type: 'LAUNDRY',
       service_category: serviceCategoryMap[params.service_category],
-      estimated_amount_cents: params.estimated_amount_cents,
+      estimated_amount_cents: authorizedAmountCents,
       payment_method_id: params.payment_method_id,
       slot: params.slot,
       delivery_slot: params.delivery_slot,

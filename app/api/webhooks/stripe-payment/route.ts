@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await db
       .from('webhook_events')
       .select('id')
-      .eq('stripe_event_id', event.id)
+      .eq('event_id', event.id)
       .single();
     
     if (existing) {
@@ -101,13 +101,20 @@ export async function POST(request: NextRequest) {
         });
     }
     
-    // Mark webhook as processed
-    await db.from('webhook_events').insert({
-      stripe_event_id: event.id,
+    // Mark webhook as processed (column names must match migration 021 schema)
+    const { error: insertError } = await db.from('webhook_events').insert({
+      event_id: event.id,
       event_type: event.type,
-      payload_json: event.data.object,
+      payload: event.data.object,
       processed_at: new Date().toISOString()
     });
+    if (insertError) {
+      logger.error({
+        event: 'webhook_idempotency_insert_failed',
+        stripe_event_id: event.id,
+        error: insertError.message
+      });
+    }
     
     return NextResponse.json({ received: true });
     

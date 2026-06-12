@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { z } from 'zod'
 import { checkRateLimit, resetRateLimit, getTimeUntilReset } from '@/lib/rate-limit'
+import { getSupabaseConfig } from '@/lib/supabase-config'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -31,10 +32,10 @@ export async function POST(request: NextRequest) {
     }
 
     const cookieStore = await cookies()
-    // TEMPORARY FIX: Hardcoding values due to Vercel env var blocking
+    const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig()
     const supabase = createServerClient(
-      'https://gbymheksmnenuranuvjr.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieW1oZWtzbW5lbnVyYW51dmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTY1MDksImV4cCI6MjA3NTE3MjUwOX0.SSbPkXH5wHjAz7L6uBT8s4NzfXcwHw4wHDax0BoB2ZA',
+      supabaseUrl,
+      supabaseAnonKey,
       {
         cookies: {
           get(name: string) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseConfig } from '@/lib/supabase-config';
 
 /**
  * GET /api/partners/[id]
@@ -23,12 +24,9 @@ export async function GET(
       );
     }
     
-    // Create server-side Supabase client for API routes
-    // TEMPORARY FIX: Hardcoding values due to Vercel env var blocking
-    const supabase = createClient(
-      'https://gbymheksmnenuranuvjr.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieW1oZWtzbW5lbnVyYW51dmpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTY1MDksImV4cCI6MjA3NTE3MjUwOX0.SSbPkXH5wHjAz7L6uBT8s4NzfXcwHw4wHDax0BoB2ZA'
-    );
+    // Create server-side Supabase client for API routes (anon key — public data only)
+    const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig()
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
     // Fetch partner public information (using actual schema columns)
     const { data: partner, error } = await supabase
