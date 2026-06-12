@@ -238,30 +238,29 @@ export class PaymentAuthorizationSaga {
         stripe.paymentMethods.retrieve(params.payment_method_id)
       );
       
-      // If payment method is attached to a different customer, detach and re-attach
+      // If the payment method belongs to a different customer, we must NOT
+      // detach/re-attach it: Stripe permanently invalidates detached
+      // PaymentMethods, which also silently breaks the saved card on any
+      // earlier order that referenced it. Ask the customer to re-enter
+      // their card instead.
       if (paymentMethod.customer && paymentMethod.customer !== customerId) {
-        logger.info({
-          event: 'payment_method_reattachment_needed',
+        logger.warn({
+          event: 'payment_method_belongs_to_other_customer',
           payment_method_id: params.payment_method_id,
           old_customer: paymentMethod.customer,
           new_customer: customerId
         });
-        
-        // Detach from old customer
-        await stripe.paymentMethods.detach(params.payment_method_id);
-        
-        // Attach to current customer
-        await stripe.paymentMethods.attach(params.payment_method_id, {
-          customer: customerId
-        });
-        
-        logger.info({
-          event: 'payment_method_reattached',
-          payment_method_id: params.payment_method_id,
-          customer_id: customerId
-        });
+        const reuseError: any = new Error(
+          'payment method cannot be reused for this booking. Please re-enter your card details and try again.'
+        );
+        reuseError.code = 'payment_method_reuse';
+        throw reuseError;
       }
     } catch (error: any) {
+      // Our own reuse guard must propagate, not be swallowed below
+      if (error.code === 'payment_method_reuse') {
+        throw error;
+      }
       // Check if this is a "No such PaymentMethod" error
       if (error.code === 'resource_missing' || error.message?.includes('No such')) {
         const isTestKey = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_');
@@ -594,12 +593,26 @@ export class PaymentAuthorizationSaga {
     
     // For guest users
     if (guestEmail) {
+      // Reuse an existing Stripe customer with this email (prevents one guest
+      // accumulating multiple customers, which breaks payment-method reuse)
+      const existing = await executeWithQuota(() =>
+        stripe.customers.list({ email: guestEmail, limit: 1 })
+      );
+      if (existing.data.length > 0) {
+        logger.info({
+          event: 'stripe_customer_reused_guest',
+          guest_email: guestEmail,
+          customer_id: existing.data[0].id
+        });
+        return existing.data[0].id;
+      }
+
       // Create ephemeral Stripe customer for guest
       const customer = await executeWithQuota(() =>
         stripe.customers.create({
           email: guestEmail,
           name: guestName || undefined,
-          metadata: { 
+          metadata: {
             is_guest: 'true',
             guest_email: guestEmail
           }

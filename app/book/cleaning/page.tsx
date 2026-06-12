@@ -579,10 +579,21 @@ function CleaningBookingForm() {
       
     } catch (err: any) {
       console.error('Order creation error:', err)
-      setToast({ 
-        message: err.message || 'Failed to create order. Please try again.', 
-        type: 'error' 
-      })
+      // If the payment method was consumed/rejected by Stripe, clear it so the
+      // card form reappears — retrying with the same one will always fail.
+      const msg: string = err.message || ''
+      if (/payment\s?method|paymentintent|card/i.test(msg)) {
+        setPaymentMethodId(null)
+        setToast({
+          message: 'That card session expired. Please re-enter your card details and try again.',
+          type: 'error'
+        })
+      } else {
+        setToast({
+          message: msg || 'Failed to create order. Please try again.',
+          type: 'error'
+        })
+      }
     } finally {
       setLoading(false)
       setSubmitting(false)
