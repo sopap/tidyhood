@@ -17,11 +17,12 @@ import { loadStripe } from '@stripe/stripe-js'
 import { StripePaymentCollector } from '@/components/booking/StripePaymentCollector'
 import AddressRequiredState from '@/components/booking/AddressRequiredState'
 import { isSetupIntentEnabled } from '@/lib/feature-flags'
-import { 
-  findSlotClosestTo24Hours, 
-  getMinimumDeliveryDate, 
-  findEarliestDeliverySlot 
+import {
+  findSlotClosestTo24Hours,
+  getMinimumDeliveryDate,
+  findEarliestDeliverySlot
 } from '@/lib/slots'
+import { formatDateOnly } from '@/lib/timezone'
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -1260,7 +1261,7 @@ function LaundryBookingForm() {
                       📦
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold">{date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pickup'}: We Pick Up</p>
+                      <p className="font-semibold">{date ? formatDateOnly(date) : 'Pickup'}: We Pick Up</p>
                       <p className="text-sm font-bold text-blue-600">Still $0.00</p>
                     </div>
                   </div>
@@ -1270,7 +1271,7 @@ function LaundryBookingForm() {
                       💰
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold">{deliveryDate ? new Date(deliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Delivery'}: Delivery & Charge</p>
+                      <p className="font-semibold">{deliveryDate ? formatDateOnly(deliveryDate) : 'Delivery'}: Delivery & Charge</p>
                       <p className="text-sm font-bold text-emerald-600">
                         ${pricing.total.toFixed(2)} charged
                       </p>
@@ -1280,7 +1281,7 @@ function LaundryBookingForm() {
                 
                 <div className="mt-6 p-3 bg-blue-50 rounded-lg text-center">
                   <p className="text-sm text-blue-900 font-semibold">
-                    ⏰ Cancel free anytime before {date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'pickup'}
+                    ⏰ Cancel free anytime before {date ? formatDateOnly(date) : 'pickup'}
                   </p>
                 </div>
               </div>

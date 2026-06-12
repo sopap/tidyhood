@@ -332,3 +332,16 @@ export function formatCancellationDeadline(deadline: Date): string {
 
   return `${timeStr} on ${dateStr}`;
 }
+
+/**
+ * Format a date-only string (YYYY-MM-DD) for display without timezone drift.
+ * new Date('YYYY-MM-DD') parses as UTC midnight, which renders as the
+ * PREVIOUS day in New York — so parse the parts as a local date instead.
+ */
+export function formatDateOnly(
+  dateStr: string,
+  options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', options);
+}

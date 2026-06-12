@@ -65,9 +65,11 @@ async function getMetrics(): Promise<Metrics | null> {
     const yesterdayGMV = yesterdayOrders?.reduce((sum, order) => 
       sum + (order.total_cents || 0), 0) || 0
 
-    // Calculate SLA (simplified - orders delivered vs late)
-    const completedToday = todayOrders?.filter(o => 
-      ['DELIVERED', 'CLEANED'].includes(o.status)
+    // Calculate SLA (simplified - orders delivered vs late).
+    // Status values are lowercase in the modern schema; legacy rows may be
+    // uppercase, so compare case-insensitively.
+    const completedToday = todayOrders?.filter(o =>
+      ['delivered', 'completed', 'cleaned'].includes((o.status || '').toLowerCase())
     ).length || 0
     
     const slaToday = todayOrderCount > 0 ? completedToday / todayOrderCount : 1
@@ -76,7 +78,14 @@ async function getMetrics(): Promise<Metrics | null> {
     const { count: pendingCount } = await db
       .from('orders')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['PENDING', 'PAID', 'RECEIVED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY'])
+      .in('status', [
+        // Legacy uppercase statuses
+        'PENDING', 'PAID', 'RECEIVED', 'IN_PROGRESS', 'READY', 'OUT_FOR_DELIVERY',
+        // Modern lowercase statuses (non-terminal)
+        'pending', 'pending_pickup', 'at_facility', 'awaiting_payment',
+        'paid_processing', 'in_progress', 'out_for_delivery',
+        'assigned', 'en_route', 'on_site', 'scheduled'
+      ])
 
     // Get user statistics
     const { data: allUsers } = await db
