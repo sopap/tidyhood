@@ -62,7 +62,7 @@ const faqStructuredData = {
       "name": "Can I schedule recurring service?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes! You can set up weekly or bi-weekly recurring services for both laundry and cleaning. Contact us after your first booking to set up a schedule that works for you."
+        "text": "Yes! Choose weekly or bi-weekly when you book a cleaning and save on every visit. For recurring laundry pickup, book your first order and we'll set your schedule from your account."
       }
     },
     {
@@ -135,7 +135,8 @@ export default function Home() {
         <Header />
 
         {/* Hero Section */}
-        <main className="container mx-auto px-4 py-4 md:py-8 lg:py-12">
+        {/* pb-24 keeps content clear of the fixed MobileCTABar on small screens */}
+        <main className="container mx-auto px-4 py-4 md:py-8 lg:py-12 pb-24 lg:pb-12">
           <motion.div 
             className="max-w-4xl mx-auto text-center mb-8 md:mb-12"
             initial="hidden"
@@ -514,7 +515,7 @@ export default function Home() {
                   </svg>
                 </summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  Yes! You can set up weekly or bi-weekly recurring services for both laundry and cleaning. Contact us after your first booking to set up a schedule that works for you.
+                  Yes! Choose weekly or bi-weekly when you book a cleaning and save on every visit. For recurring laundry pickup, book your first order and we&apos;ll set your schedule from your account.
                 </p>
               </details>
               

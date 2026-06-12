@@ -247,24 +247,19 @@ function LaundryBookingForm() {
     
     // Wait for user to be authenticated before restoring
     if (!user) {
-      console.log('Waiting for user auth to complete before restoring draft...')
       return
     }
     
     const draft = restoreDraft()
     
     // Debug: Log what we're restoring
-    console.log('=== RESTORING DRAFT ===')
-    console.log('Draft:', draft)
     
     if (draft && draft.serviceType === 'LAUNDRY' && draft.laundry) {
       // Restore shared fields
       if (draft.phone) {
-        console.log('Restoring phone:', draft.phone)
         setPhone(formatPhone(draft.phone))
       }
       if (draft.address) {
-        console.log('Restoring address:', draft.address)
         setAddress(draft.address)
         setIsAddressValid(true)
         setIsAddressCollapsed(false) // Keep it expanded so user can see it was restored
@@ -433,10 +428,6 @@ function LaundryBookingForm() {
       const minDeliveryDate = getMinimumDeliveryDate(selectedSlot.slot_end, rushService, 'LAUNDRY', deliveryPolicy)
       
       // CRITICAL: Log for debugging to verify correct calculation
-      console.log('Pickup ends:', selectedSlot.slot_end)
-      console.log('Rush service:', rushService)
-      console.log('Minimum delivery date:', minDeliveryDate)
-      console.log('Browser timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone)
       
       // Parse the minimum date - it's already in YYYY-MM-DD format from getMinimumDeliveryDate
       // which uses NY timezone internally, so we just use it as-is
@@ -445,7 +436,6 @@ function LaundryBookingForm() {
       // Simply set to the minimum date - don't search for slots
       // The slot filtering will happen when displaying delivery time slots
       // This allows users to select the minimum date even if no specific time slots meet the requirement
-      console.log('Setting delivery date to minimum:', minDateStr)
       setDeliveryDate(minDateStr)
       setSelectedDeliverySlot(null)
     }
@@ -526,10 +516,6 @@ function LaundryBookingForm() {
   // Handle login required (save draft and redirect)
   const handleLoginRequired = () => {
     // Debug: Log what we're saving
-    console.log('=== SAVING DRAFT ===')
-    console.log('Address:', address)
-    console.log('Phone:', phone)
-    console.log('Service Type:', serviceType)
     
     // Save whatever form state we have (even if incomplete)
     const draftData = {
@@ -550,7 +536,6 @@ function LaundryBookingForm() {
       }
     }
     
-    console.log('Draft to save:', JSON.stringify(draftData, null, 2))
     saveDraft(draftData)
     
     // Redirect with restore parameter to trigger draft restoration after auth
@@ -1453,6 +1438,23 @@ function LaundryBookingForm() {
 
             {/* Submit */}
             <div className="card-standard card-padding">
+              {(() => {
+                const missing: string[] = []
+                if (!address || !isAddressValid) missing.push('your address')
+                if (!selectedSlot) missing.push('a pickup time')
+                if (!user && (!guestName.trim() || !guestEmail.trim() || !guestPhone.trim())) missing.push('your contact info')
+                if (user && (!phone?.trim() || phone.replace(/\D/g, '').length < 10)) missing.push('your phone number')
+                if (!paymentMethodId) missing.push('a payment method')
+                if (missing.length === 0 || submitting || !persistedLoaded) return null
+                return (
+                  <p
+                    role="status"
+                    className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 text-center"
+                  >
+                    Almost there — add {missing.join(', ')} to book.
+                  </p>
+                )
+              })()}
               <button
                 type="submit"
                 disabled={

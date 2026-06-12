@@ -1,71 +1,79 @@
-'use client'
-
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Header } from '@/components/Header'
+import { getLaundryDisplayPricing, getCleaningDisplayPricing } from '@/lib/display-pricing'
 
-// This would normally be in a separate metadata export, but since this is a client component,
-// we'll need to handle SEO differently or make this a server component with client components inside
+export const metadata: Metadata = {
+  title: 'Our Services — Laundry Pickup & Home Cleaning',
+  description:
+    'Wash & fold laundry with free pickup & delivery, plus professional home cleaning across all of Manhattan. Transparent pricing, easy online booking.',
+  alternates: {
+    canonical: 'https://tidyhood.nyc/services',
+  },
+  openGraph: {
+    title: 'Our Services — Laundry Pickup & Home Cleaning | Tidyhood',
+    description:
+      'Wash & fold laundry with free pickup & delivery, plus professional home cleaning across all of Manhattan.',
+    url: 'https://tidyhood.nyc/services',
+    siteName: 'Tidyhood',
+    locale: 'en_US',
+    type: 'website',
+    images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'Tidyhood - Laundry & Cleaning in Manhattan' }],
+  },
+}
 
-const servicesStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "item": {
-        "@type": "Service",
-        "name": "Wash & Fold Laundry Service",
-        "description": "Professional laundry service with pickup and delivery",
-        "provider": {
-          "@type": "LocalBusiness",
-          "name": "Tidyhood"
-        },
-        "areaServed": {
-          "@type": "City",
-          "name": "Manhattan, New York"
-        },
-        "offers": {
-          "@type": "Offer",
-          "price": "1.75",
-          "priceCurrency": "USD",
-          "priceSpecification": {
-            "@type": "UnitPriceSpecification",
-            "price": "1.75",
+export default async function ServicesPage() {
+  const [laundry, cleaning] = await Promise.all([
+    getLaundryDisplayPricing(),
+    getCleaningDisplayPricing(),
+  ])
+
+  const servicesStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "item": {
+          "@type": "Service",
+          "name": "Wash & Fold Laundry Service",
+          "description": "Professional laundry service with pickup and delivery",
+          "provider": { "@id": "https://tidyhood.nyc/#org" },
+          "areaServed": { "@type": "City", "name": "Manhattan, New York" },
+          "offers": {
+            "@type": "Offer",
+            "price": laundry.perLbPrice.toFixed(2),
             "priceCurrency": "USD",
-            "unitText": "per pound"
+            "priceSpecification": {
+              "@type": "UnitPriceSpecification",
+              "price": laundry.perLbPrice.toFixed(2),
+              "priceCurrency": "USD",
+              "unitText": "per pound"
+            }
+          }
+        }
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "item": {
+          "@type": "Service",
+          "name": "Home Cleaning Service",
+          "description": "Professional home cleaning for apartments and houses",
+          "provider": { "@id": "https://tidyhood.nyc/#org" },
+          "areaServed": { "@type": "City", "name": "Manhattan, New York" },
+          "offers": {
+            "@type": "AggregateOffer",
+            "lowPrice": cleaning.studioPrice.toString(),
+            "highPrice": (cleaning.twoBrPrice * 1.5).toFixed(0),
+            "priceCurrency": "USD"
           }
         }
       }
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "item": {
-        "@type": "Service",
-        "name": "Home Cleaning Service",
-        "description": "Professional home cleaning for apartments and houses",
-        "provider": {
-          "@type": "LocalBusiness",
-          "name": "Tidyhood"
-        },
-        "areaServed": {
-          "@type": "City",
-          "name": "Manhattan, New York"
-        },
-        "offers": {
-          "@type": "AggregateOffer",
-          "lowPrice": "89",
-          "highPrice": "219",
-          "priceCurrency": "USD"
-        }
-      }
-    }
-  ]
-}
+    ]
+  }
 
-export default function ServicesPage() {
   return (
     <>
       {/* Structured Data for SEO */}
@@ -93,25 +101,25 @@ export default function ServicesPage() {
             {/* Laundry Service Card */}
             <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-6xl mb-6 text-center">🧺</div>
-              <h2 className="text-3xl font-bold mb-4 text-center">Harlem's Premium Wash & Fold Service</h2>
+              <h2 className="text-3xl font-bold mb-4 text-center">Premium Wash &amp; Fold Service</h2>
               <p className="text-gray-600 mb-6 text-center">
                 Same-day pickup, 48-hour return. Professional care that fits your schedule.
               </p>
 
               <div className="bg-primary-50 rounded-lg p-6 mb-6">
                 <div className="text-center mb-4">
-                  <span className="text-4xl font-bold text-primary-600">$1.75</span>
+                  <span className="text-4xl font-bold text-primary-600">{laundry.perLbPriceFormatted}</span>
                   <span className="text-gray-600">/lb</span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  (15-lbs minimum)
+                  ({laundry.minWeightLbs}-lbs minimum)
                 </p>
               </div>
 
               <div className="space-y-3 mb-8">
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
-                  <span className="text-gray-700">Contactless pickup & delivery (FREE)</span>
+                  <span className="text-gray-700">Contactless pickup &amp; delivery (FREE)</span>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 mr-2">✓</span>
@@ -142,17 +150,17 @@ export default function ServicesPage() {
             {/* Cleaning Service Card */}
             <div className="card hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="text-6xl mb-6 text-center">✨</div>
-              <h2 className="text-3xl font-bold mb-4 text-center">Professional Home Cleaning by Harlem Experts</h2>
+              <h2 className="text-3xl font-bold mb-4 text-center">Professional Home Cleaning</h2>
               <p className="text-gray-600 mb-6 text-center">
                 Background-verified professionals delivering spotless results with 100% satisfaction guarantee.
               </p>
 
               <div className="bg-primary-50 rounded-lg p-6 mb-6">
                 <div className="text-center mb-4">
-                  <span className="text-4xl font-bold text-primary-600">Starting at $89</span>
+                  <span className="text-4xl font-bold text-primary-600">Starting at {cleaning.studioPriceFormatted}</span>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
-                  Studio $89 • 1BR $119 • 2BR $149
+                  Studio {cleaning.studioPriceFormatted} • 1BR {cleaning.oneBrPriceFormatted} • 2BR {cleaning.twoBrPriceFormatted}
                 </p>
               </div>
 
@@ -206,26 +214,6 @@ export default function ServicesPage() {
             </div>
           </div>
         </main>
-
-        {/* Footer */}
-        <footer className="bg-gray-900 text-white mt-24 py-12">
-          <div className="container mx-auto px-4 text-center">
-            <p className="text-gray-400">
-              © 2025 Tidyhood. Supporting Harlem businesses.
-            </p>
-            <div className="mt-4 space-x-4">
-              <Link href="/terms" className="text-gray-400 hover:text-white">
-                Terms
-              </Link>
-              <Link href="/privacy" className="text-gray-400 hover:text-white">
-                Privacy
-              </Link>
-              <a href="mailto:support@tidyhood.nyc" className="text-gray-400 hover:text-white">
-                Contact
-              </a>
-            </div>
-          </div>
-        </footer>
       </div>
     </>
   )

@@ -23,12 +23,12 @@ export function Header() {
   return (
     <header className="container mx-auto px-4 py-3 md:py-4">
       <div className="flex items-center justify-between">
-        <Link 
+        <Link
           href="/"
           onClick={handleLogoClick}
           className="flex items-center hover:opacity-80 transition-opacity"
         >
-          <Image 
+          <Image
             src="/logo.svg"
             alt="TidyHood"
             width={420}
@@ -37,31 +37,35 @@ export function Header() {
             className="h-16 md:h-[67px] lg:h-[77px] w-auto"
           />
         </Link>
-        <nav className="space-x-6">
+        <nav className="flex items-center gap-4 md:gap-6">
+          {/* Service links — desktop only to keep mobile uncluttered */}
+          <Link href="/laundry" className="hidden md:inline text-text-secondary hover:text-primary-600">
+            Laundry
+          </Link>
+          <Link href="/cleaning" className="hidden md:inline text-text-secondary hover:text-primary-600">
+            Cleaning
+          </Link>
           {user ? (
-            // Logged in navigation
             <>
               <Link href="/orders" className="text-text-secondary hover:text-primary-600">
                 My Orders
               </Link>
-              <button 
+              <button
                 onClick={handleLogout}
-                className="text-text-secondary hover:text-primary-600"
+                className="hidden md:inline text-text-secondary hover:text-primary-600"
               >
                 Logout
               </button>
             </>
           ) : (
-            // Logged out navigation
-            <>
-              <Link href="/login" className="text-text-secondary hover:text-primary-600">
-                Login
-              </Link>
-              <Link href="/signup" className="btn-primary">
-                Sign Up
-              </Link>
-            </>
+            <Link href="/login" className="text-text-secondary hover:text-primary-600">
+              Login
+            </Link>
           )}
+          {/* Primary conversion CTA — always visible */}
+          <Link href="/book/laundry" className="btn-primary whitespace-nowrap" aria-label="Book a pickup">
+            Book Now
+          </Link>
         </nav>
       </div>
     </header>
