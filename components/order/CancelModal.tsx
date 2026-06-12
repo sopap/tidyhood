@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCancellationPolicy, formatMoney } from '@/lib/cancellationFees'
+import { formatMoney } from '@/lib/cancellationFees'
 import type { Order } from '@/lib/types'
 import type { CancellationPolicy } from '@/lib/cancellationFees'
 
@@ -30,10 +30,13 @@ export default function CancelModal({ isOpen, onClose, order, onSuccess }: Cance
   const [error, setError] = useState<string | null>(null)
   const [policy, setPolicy] = useState<CancellationPolicy | null>(null)
 
-  // Fetch policy when modal opens
+  // Fetch policy when modal opens (server-side computation — see /api/orders/[id]/policy)
   useEffect(() => {
     if (isOpen && order) {
-      getCancellationPolicy(order as any).then(setPolicy).catch(console.error)
+      fetch(`/api/orders/${order.id}/policy`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then(setPolicy)
+        .catch(console.error)
     }
   }, [isOpen, order])
 

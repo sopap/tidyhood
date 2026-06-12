@@ -15,7 +15,7 @@ import RescheduleModal from '@/components/order/RescheduleModal';
 import { CleaningOrderView } from '@/components/cleaning/CleaningOrderView';
 import { mapDatabaseStatus } from '@/lib/orderStatus';
 import { getStatusLabel, OrderStatus } from '@/lib/orderStateMachine';
-import { getCancellationPolicy, getHoursUntilSlot, formatMoney } from '@/lib/cancellationFees';
+import { getHoursUntilSlot, formatMoney } from '@/lib/cancellationFees';
 import { isFeatureEnabled } from '@/lib/features';
 import { mapToCleaningStatus } from '@/types/cleaningOrders';
 import { shouldShowAddToCalendar, downloadCalendarEvent } from '@/lib/calendar';
@@ -122,10 +122,18 @@ export default function OrderDetailPage() {
     }
   }, [user, authLoading, params.id]);
 
-  // Fetch cancellation policy when order loads
+  // Fetch cancellation policy when order loads.
+  // Must go through the API: the policy lookup needs the server-side
+  // service-role client (calling it directly here crashed the page).
   useEffect(() => {
     if (order) {
-      getCancellationPolicy(order as any).then(setPolicy).catch(console.error);
+      fetch(`/api/orders/${order.id}/policy`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => setPolicy(data))
+        .catch((err) => {
+          console.error('Failed to load order policy:', err);
+          setPolicy(null);
+        });
     }
   }, [order]);
 
@@ -508,7 +516,7 @@ export default function OrderDetailPage() {
                 </a>
 
                 {/* Reschedule */}
-                {policy.canReschedule && (
+                {policy?.canReschedule && (
                   <button
                     onClick={() => setShowRescheduleModal(true)}
                     className="px-4 py-2.5 rounded-lg font-medium text-sm bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 hover:shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-1.5 min-h-[42px]"
@@ -521,7 +529,7 @@ export default function OrderDetailPage() {
                 )}
                 
                 {/* Cancel */}
-                {policy.canCancel && (
+                {policy?.canCancel && (
                   <button
                     onClick={() => setShowCancelModal(true)}
                     className="px-4 py-2.5 rounded-lg font-medium text-sm bg-red-600 text-white hover:bg-red-700 hover:shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 flex items-center justify-center gap-1.5 min-h-[42px]"
@@ -535,7 +543,7 @@ export default function OrderDetailPage() {
               </div>
 
               {/* Policy Notice */}
-              {policy.requiresNotice && hoursUntil < 24 && (
+              {policy?.requiresNotice && hoursUntil < 24 && (
                 <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
                   <div className="flex items-start gap-2">
                     <svg className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -555,7 +563,7 @@ export default function OrderDetailPage() {
               )}
 
               {/* Help text */}
-              {(!policy.requiresNotice || hoursUntil >= 24) && (
+              {policy && (!policy.requiresNotice || hoursUntil >= 24) && (
                 <p className="text-xs text-gray-500 text-center">
                   {order.service_type === 'LAUNDRY' 
                     ? 'Free to reschedule or cancel anytime before pickup'
