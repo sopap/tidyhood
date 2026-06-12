@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { z } from 'zod'
+import { requireAdmin } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { logAudit } from '@/lib/audit'
+
+const addNoteSchema = z.object({
+  note: z.string()
+})
 
 // Get all notes for an order
 export async function GET(
@@ -9,15 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth()
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin()
 
     const db = getServiceClient()
     const { id: orderId } = await params
@@ -36,6 +33,14 @@ export async function GET(
     return NextResponse.json({ notes: notes || [] })
   } catch (error) {
     console.error('Get notes error:', error)
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch notes' },
       { status: 500 }
@@ -49,24 +54,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth()
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
+    const user = await requireAdmin()
 
-    const { note } = await request.json()
+    const parsed = addNoteSchema.safeParse(await request.json())
 
-    if (!note || !note.trim()) {
+    if (!parsed.success || !parsed.data.note.trim()) {
       return NextResponse.json(
         { error: 'Note content is required' },
         { status: 400 }
       )
     }
+
+    const { note } = parsed.data
 
     const db = getServiceClient()
     const { id: orderId } = await params
@@ -120,6 +119,14 @@ export async function POST(
     })
   } catch (error) {
     console.error('Add note error:', error)
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to add note' },
       { status: 500 }

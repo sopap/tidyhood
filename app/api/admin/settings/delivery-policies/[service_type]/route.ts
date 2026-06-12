@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { getServiceClient } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
+
+const updateDeliveryPolicySchema = z.object({
+  standard_minimum_hours: z.number(),
+  rush_enabled: z.boolean().optional(),
+  rush_early_pickup_hours: z.number().optional(),
+  rush_late_pickup_hours: z.number().optional(),
+  rush_cutoff_hour: z.number().optional(),
+  same_day_earliest_hour: z.number().optional(),
+  notes: z.string().nullable().optional(),
+  change_reason: z.string().nullable().optional()
+})
 
 interface RouteContext {
   params: Promise<{
@@ -85,17 +97,6 @@ export async function PUT(
     const { service_type } = await context.params
     const body = await request.json()
 
-    const {
-      standard_minimum_hours,
-      rush_enabled,
-      rush_early_pickup_hours,
-      rush_late_pickup_hours,
-      rush_cutoff_hour,
-      same_day_earliest_hour,
-      notes,
-      change_reason
-    } = body
-
     // Validate service type
     if (!['LAUNDRY', 'CLEANING'].includes(service_type.toUpperCase())) {
       return NextResponse.json(
@@ -105,12 +106,24 @@ export async function PUT(
     }
 
     // Validate required fields
-    if (standard_minimum_hours === undefined) {
+    const parsed = updateDeliveryPolicySchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'standard_minimum_hours is required' },
         { status: 400 }
       )
     }
+
+    const {
+      standard_minimum_hours,
+      rush_enabled,
+      rush_early_pickup_hours,
+      rush_late_pickup_hours,
+      rush_cutoff_hour,
+      same_day_earliest_hour,
+      notes,
+      change_reason
+    } = parsed.data
 
     // Validate ranges
     if (standard_minimum_hours < 24 || standard_minimum_hours > 168) {

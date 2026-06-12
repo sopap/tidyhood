@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
 import { getServiceClient } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+
+const linkAccountSchema = z.object({
+  email: z.string().min(1)
+});
 
 /**
  * POST /api/orders/[id]/link-account
@@ -18,15 +23,17 @@ export async function POST(
     const user = await requireAuth();
     const { id } = await params;
     const body = await request.json();
-    
-    const { email } = body;
-    
-    if (!email) {
+
+    const parsed = linkAccountSchema.safeParse(body);
+
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Email is required' },
         { status: 400 }
       );
     }
+
+    const { email } = parsed.data;
     
     const db = getServiceClient();
     

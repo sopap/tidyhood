@@ -1,16 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceClient } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+
+const updatePartnerSchema = z.object({
+  name: z.string().min(1),
+  service_type: z.string().min(1),
+  contact_email: z.string().min(1),
+  contact_phone: z.string().min(1),
+  address: z.string().nullable().optional(),
+  payout_percent: z.number().optional(),
+  service_areas: z.array(z.string()).optional(),
+  max_orders_per_slot: z.number().optional(),
+  max_minutes_per_slot: z.number().optional()
+});
+
+const togglePartnerSchema = z.object({
+  active: z.boolean()
+});
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireAdmin();
 
     const { id } = await params;
     const db = getServiceClient();
@@ -61,6 +75,14 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching partner:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch partner' },
       { status: 500 }
@@ -73,13 +95,19 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const { id } = await params;
     const body = await request.json();
+
+    // Validation
+    const parsed = updatePartnerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
     const {
       name,
       service_type,
@@ -90,15 +118,7 @@ export async function PUT(
       service_areas,
       max_orders_per_slot,
       max_minutes_per_slot,
-    } = body;
-
-    // Validation
-    if (!name || !service_type || !contact_email || !contact_phone) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     if (!['LAUNDRY', 'CLEANING'].includes(service_type)) {
       return NextResponse.json(
@@ -207,6 +227,14 @@ export async function PUT(
     return NextResponse.json({ partner });
   } catch (error) {
     console.error('Error updating partner:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to update partner' },
       { status: 500 }
@@ -219,21 +247,19 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const { id } = await params;
     const body = await request.json();
-    const { active } = body;
 
-    if (typeof active !== 'boolean') {
+    const parsed = togglePartnerSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'active field must be a boolean' },
         { status: 400 }
       );
     }
+    const { active } = parsed.data;
 
     const db = getServiceClient();
 
@@ -279,6 +305,14 @@ export async function PATCH(
     return NextResponse.json({ partner });
   } catch (error) {
     console.error('Error toggling partner status:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to toggle partner status' },
       { status: 500 }

@@ -1,31 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { z } from 'zod'
+import { requireAdmin } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { logAudit } from '@/lib/audit'
+
+const forceStatusSchema = z.object({
+  newStatus: z.string().min(1),
+  reason: z.string().optional()
+})
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth()
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
+    const user = await requireAdmin()
 
-    const { newStatus, reason } = await request.json()
+    const parsed = forceStatusSchema.safeParse(await request.json())
 
-    if (!newStatus) {
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'New status is required' },
         { status: 400 }
       )
     }
+
+    const { newStatus, reason } = parsed.data
 
     const db = getServiceClient()
     const { id: orderId } = await params
@@ -91,6 +91,14 @@ export async function POST(
     })
   } catch (error) {
     console.error('Force status error:', error)
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to update order status' },
       { status: 500 }

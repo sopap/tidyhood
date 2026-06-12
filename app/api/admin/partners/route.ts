@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceClient } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+
+const createPartnerSchema = z.object({
+  name: z.string().min(1),
+  service_type: z.string().min(1),
+  contact_email: z.string().min(1),
+  contact_phone: z.string().min(1),
+  address: z.string().nullable().optional(),
+  payout_percent: z.number().optional(),
+  service_areas: z.array(z.string()).optional(),
+  max_orders_per_slot: z.number().optional(),
+  max_minutes_per_slot: z.number().optional()
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireAdmin();
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -41,6 +51,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ partners: partners || [] });
   } catch (error) {
     console.error('Error fetching partners:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch partners' },
       { status: 500 }
@@ -50,12 +68,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const body = await request.json();
+
+    // Validation
+    const parsed = createPartnerSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name, service_type, contact_email, contact_phone' },
+        { status: 400 }
+      );
+    }
     const {
       name,
       service_type,
@@ -66,15 +90,7 @@ export async function POST(request: NextRequest) {
       service_areas,
       max_orders_per_slot,
       max_minutes_per_slot,
-    } = body;
-
-    // Validation
-    if (!name || !service_type || !contact_email || !contact_phone) {
-      return NextResponse.json(
-        { error: 'Missing required fields: name, service_type, contact_email, contact_phone' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Validate service type
     if (!['LAUNDRY', 'CLEANING'].includes(service_type)) {
@@ -166,6 +182,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ partner }, { status: 201 });
   } catch (error) {
     console.error('Error creating partner:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to create partner' },
       { status: 500 }

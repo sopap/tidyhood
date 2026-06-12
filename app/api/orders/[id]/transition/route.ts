@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { getServiceClient } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import type { TransitionRequest, TransitionResponse } from '@/types/cleaningOrders';
 
 /**
@@ -145,54 +146,55 @@ async function triggerSideEffects(
         case 'assign':
           // Notify partner of assignment
           // TODO: Send SMS/email to partner
-          console.log(`[Side Effect] Notify partner ${order.partner_id} of assignment`);
+          logger.info({ event: 'side_effect', action: 'assign', order_id: order.id, partner_id: order.partner_id }, 'Notify partner of assignment');
           break;
 
         case 'en_route':
           // Notify customer that partner is on the way
           // TODO: Send SMS to customer
-          console.log(`[Side Effect] Notify customer ${order.user_id} - partner en route`);
+          logger.info({ event: 'side_effect', action: 'en_route', order_id: order.id, user_id: order.user_id }, 'Notify customer - partner en route');
           break;
 
         case 'complete':
           // Send rating/tip request
           // TODO: Schedule rating reminder
-          console.log(`[Side Effect] Schedule rating request for order ${order.id}`);
+          logger.info({ event: 'side_effect', action: 'complete', order_id: order.id }, 'Schedule rating request');
           break;
 
         case 'open_dispute':
           // Alert admin team
           // TODO: Create admin notification
-          console.log(`[Side Effect] Alert admin team - dispute opened on ${order.id}`);
+          logger.info({ event: 'side_effect', action: 'open_dispute', order_id: order.id }, 'Alert admin team - dispute opened');
           break;
 
         case 'resolve_dispute_refund':
           // Process refund via Stripe
           // TODO: Call Stripe refund API
-          console.log(`[Side Effect] Process refund for order ${order.id}`);
+          logger.info({ event: 'side_effect', action: 'resolve_dispute_refund', order_id: order.id }, 'Process refund');
           break;
       }
     } else if (serviceType === 'LAUNDRY') {
       switch (action) {
         case 'send_quote':
           // Send quote notification to customer
-          console.log(`[Side Effect] Send quote notification for order ${order.id}`);
+          logger.info({ event: 'side_effect', action: 'send_quote', order_id: order.id }, 'Send quote notification');
           break;
 
         case 'mark_delivered':
           // Send rating request
-          console.log(`[Side Effect] Send rating request for order ${order.id}`);
+          logger.info({ event: 'side_effect', action: 'mark_delivered', order_id: order.id }, 'Send rating request');
           break;
       }
     }
 
     // Log to analytics (PostHog, Amplitude, etc.)
     // TODO: Integrate analytics
-    console.log(`[Analytics] order_${action}`, {
+    logger.info({
+      event: `order_${action}`,
       order_id: order.id,
       service_type: serviceType,
       actor_role: actorRole
-    });
+    }, 'Order transition analytics');
 
   } catch (error) {
     // Don't fail the request if side effects fail

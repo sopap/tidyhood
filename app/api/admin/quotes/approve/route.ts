@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { sendSMS } from '@/lib/sms'
 
@@ -11,16 +11,8 @@ const approveQuoteSchema = z.object({
 // POST /api/admin/quotes/approve - Approve partner quote and auto-charge customer
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth()
-    
-    // Verify user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      )
-    }
-    
+    const user = await requireAdmin()
+
     const body = await request.json()
     const { order_id } = approveQuoteSchema.parse(body)
     
@@ -170,7 +162,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

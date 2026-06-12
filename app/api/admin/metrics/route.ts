@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth()
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin()
 
     const db = getServiceClient()
     const today = new Date()
@@ -118,6 +110,14 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Admin metrics error:', error)
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch metrics' },
       { status: 500 }

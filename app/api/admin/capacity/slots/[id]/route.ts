@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceClient } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+
+const updateSlotSchema = z.object({
+  slot_start: z.string().optional(),
+  slot_end: z.string().optional(),
+  max_units: z.number().optional(),
+  notes: z.string().nullable().optional()
+});
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireAdmin();
 
     const { id } = await params;
     const db = getServiceClient();
@@ -46,6 +51,14 @@ export async function GET(
     return NextResponse.json({ slot: slotWithAvailability });
   } catch (error) {
     console.error('Error fetching slot:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch slot' },
       { status: 500 }
@@ -58,19 +71,24 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const { id } = await params;
     const body = await request.json();
+
+    const parsed = updateSlotSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
     const {
       slot_start,
       slot_end,
       max_units,
       notes
-    } = body;
+    } = parsed.data;
 
     const db = getServiceClient();
 
@@ -211,6 +229,14 @@ export async function PUT(
     return NextResponse.json({ slot });
   } catch (error) {
     console.error('Error updating slot:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to update slot' },
       { status: 500 }
@@ -223,10 +249,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const { id } = await params;
     const db = getServiceClient();
@@ -280,6 +303,14 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting slot:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to delete slot' },
       { status: 500 }

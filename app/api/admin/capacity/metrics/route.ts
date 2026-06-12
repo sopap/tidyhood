@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { getNYTime } from '@/lib/timezone';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireAdmin();
 
     const db = getServiceClient();
     const now = getNYTime();
@@ -119,6 +116,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ metrics });
   } catch (error) {
     console.error('Error fetching capacity metrics:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch metrics' },
       { status: 500 }

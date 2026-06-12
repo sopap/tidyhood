@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { getServiceClient } from '@/lib/db'
-import { requireAdmin, getCurrentUser } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
+
+const updatePricingRuleSchema = z.object({
+  unit_price_cents: z.number().optional(),
+  multiplier: z.number().optional(),
+  active: z.boolean().optional(),
+  change_reason: z.string().nullable().optional()
+})
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -24,7 +32,15 @@ export async function PUT(
     const { id } = await context.params
     
     const body = await request.json()
-    const { unit_price_cents, multiplier, active, change_reason } = body
+
+    const parsed = updatePricingRuleSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      )
+    }
+    const { unit_price_cents, multiplier, active, change_reason } = parsed.data
 
     // Validation
     if (unit_price_cents !== undefined && unit_price_cents <= 0) {

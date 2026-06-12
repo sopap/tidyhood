@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceClient } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+
+const createSlotSchema = z.object({
+  partner_id: z.string().min(1),
+  service_type: z.string().min(1),
+  slot_start: z.string().min(1),
+  slot_end: z.string().min(1),
+  max_units: z.number(),
+  notes: z.string().nullable().optional()
+});
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireAdmin();
 
     const { searchParams } = new URL(request.url);
     const partnerId = searchParams.get('partner_id');
@@ -62,6 +69,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ slots: slotsWithAvailability });
   } catch (error) {
     console.error('Error fetching capacity slots:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch capacity slots' },
       { status: 500 }
@@ -71,12 +86,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const body = await request.json();
+
+    // Validation
+    const parsed = createSlotSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
     const {
       partner_id,
       service_type,
@@ -84,15 +105,7 @@ export async function POST(request: NextRequest) {
       slot_end,
       max_units,
       notes
-    } = body;
-
-    // Validation
-    if (!partner_id || !service_type || !slot_start || !slot_end || !max_units) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     if (!['LAUNDRY', 'CLEANING'].includes(service_type)) {
       return NextResponse.json(
@@ -209,6 +222,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ slot }, { status: 201 });
   } catch (error) {
     console.error('Error creating capacity slot:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to create capacity slot' },
       { status: 500 }

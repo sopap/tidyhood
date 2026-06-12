@@ -1,28 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServiceClient } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
+
+const bulkCreateSchema = z.object({
+  template_id: z.string().min(1),
+  start_date: z.string().min(1),
+  end_date: z.string().min(1)
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await requireAdmin();
 
     const body = await request.json();
-    const {
-      template_id,
-      start_date,
-      end_date
-    } = body;
 
     // Validation
-    if (!template_id || !start_date || !end_date) {
+    const parsed = bulkCreateSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Missing required fields: template_id, start_date, end_date' },
         { status: 400 }
       );
     }
+    const { template_id, start_date, end_date } = parsed.data;
 
     const startDate = new Date(start_date);
     const endDate = new Date(end_date);
@@ -169,6 +170,14 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('Error bulk creating slots:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to bulk create slots' },
       { status: 500 }

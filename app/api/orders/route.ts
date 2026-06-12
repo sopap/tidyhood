@@ -7,6 +7,7 @@ import { reserveCapacity, calculateCleaningMinutes, validateZipCode } from '@/li
 import { generateLabelCode } from '@/lib/ids'
 import { sendOrderCreatedSMS } from '@/lib/sms'
 import { ValidationError, ConflictError, handleApiError } from '@/lib/errors'
+import { logger } from '@/lib/logger'
 
 // Force dynamic rendering (uses cookies for auth)
 export const dynamic = 'force-dynamic'
@@ -200,11 +201,11 @@ const createOrderSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[POST /api/orders] Starting order creation')
+    logger.info({ event: 'order_create_start' }, '[POST /api/orders] Starting order creation')
     const user = await requireAuth()
-    console.log('[POST /api/orders] User authenticated:', user.id)
+    logger.info({ event: 'order_create_authenticated', user_id: user.id }, '[POST /api/orders] User authenticated')
     const body = await request.json()
-    console.log('[POST /api/orders] Request body:', JSON.stringify(body, null, 2))
+    logger.info({ event: 'order_create_request', service_type: body?.service_type }, '[POST /api/orders] Request body received')
     
     // Check for idempotency key
     const idempotencyKey = request.headers.get('idempotency-key')
@@ -232,16 +233,17 @@ export async function POST(request: NextRequest) {
     }
     
     // Calculate pricing
-    console.log('[POST /api/orders] Calculating pricing...')
+    logger.info({ event: 'order_create_pricing' }, '[POST /api/orders] Calculating pricing')
     let pricing
     let units = 1 // For laundry, 1 order = 1 unit
     
     if (params.service_type === 'LAUNDRY') {
       // CRITICAL: New laundry orders should NEVER use this endpoint
       // They should use /api/payment/setup which guarantees payment method collection
-      console.warn('[DEPRECATED] Creating laundry order via /api/orders endpoint')
-      console.warn('[DEPRECATED] This order will NOT have a saved payment method')
-      console.warn('[DEPRECATED] User ID:', user.id, '| Idempotency Key:', idempotencyKey)
+      logger.warn(
+        { event: 'deprecated_laundry_order_endpoint', user_id: user.id, idempotency_key: idempotencyKey },
+        '[DEPRECATED] Creating laundry order via /api/orders endpoint - order will NOT have a saved payment method'
+      )
       
       const serviceType = params.details.serviceType || 'washFold'; // Default to washFold for backward compatibility
       
@@ -283,19 +285,20 @@ export async function POST(request: NextRequest) {
     }
     
     // Reserve capacity
-    console.log('[POST /api/orders] Reserving capacity...', {
+    logger.info({
+      event: 'order_create_reserve_capacity',
       partner_id: params.slot.partner_id,
       service_type: params.service_type,
       slot_start: params.slot.slot_start,
       units
-    })
+    }, '[POST /api/orders] Reserving capacity')
     const reserved = await reserveCapacity(
       params.slot.partner_id,
       params.service_type,
       params.slot.slot_start,
       units
     )
-    console.log('[POST /api/orders] Capacity reserved:', reserved)
+    logger.info({ event: 'order_create_capacity_reserved', reserved }, '[POST /api/orders] Capacity reserved')
     
     if (!reserved) {
       throw new ConflictError('Selected time slot is no longer available', 'SLOT_FULL')
@@ -309,7 +312,7 @@ export async function POST(request: NextRequest) {
       .single()
     
     // Create order
-    console.log('[POST /api/orders] Creating order in database...')
+    logger.info({ event: 'order_create_insert' }, '[POST /api/orders] Creating order in database')
     
     // Set initial status based on service type
     // LAUNDRY: pay after pickup → pending_pickup
@@ -344,7 +347,14 @@ export async function POST(request: NextRequest) {
     if (params.service_type === 'CLEANING') {
       orderData.cleaning_status = 'scheduled'
     }
-    console.log('[POST /api/orders] Order data:', JSON.stringify(orderData, null, 2))
+    logger.info({
+      event: 'order_create_data',
+      user_id: user.id,
+      service_type: params.service_type,
+      partner_id: params.slot.partner_id,
+      status: initialStatus,
+      total_cents: pricing.total_cents
+    }, '[POST /api/orders] Order data prepared')
     
     const { data: order, error: orderError } = await db
       .from('orders')
@@ -356,7 +366,7 @@ export async function POST(request: NextRequest) {
       console.error('[POST /api/orders] Database error creating order:', orderError)
       throw orderError
     }
-    console.log('[POST /api/orders] Order created successfully:', order.id)
+    logger.info({ event: 'order_created', order_id: order.id }, '[POST /api/orders] Order created successfully')
     
     // Create order event
     await db.from('order_events').insert({
@@ -426,7 +436,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log('[POST /api/orders] Order creation complete')
+    logger.info({ event: 'order_create_complete', order_id: order.id }, '[POST /api/orders] Order creation complete')
     return NextResponse.json(order, { status: 201 })
   } catch (error) {
     console.error('[POST /api/orders] Error:', error)

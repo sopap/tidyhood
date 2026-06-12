@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { canTransition, validateTransition } from '@/lib/orderStateMachine'
 import { NotFoundError, ConflictError, ValidationError, handleApiError } from '@/lib/errors'
+import { logger } from '@/lib/logger'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -37,9 +38,10 @@ export async function POST(
     const db = getServiceClient()
     
     // Log legacy payment usage for monitoring
-    console.log('[LEGACY_PAYMENT] Manual payment being processed')
-    console.log('[LEGACY_PAYMENT] Order ID:', orderId)
-    console.log('[LEGACY_PAYMENT] User ID:', user.id)
+    logger.info(
+      { event: 'legacy_payment_processing', order_id: orderId, user_id: user.id },
+      '[LEGACY_PAYMENT] Manual payment being processed'
+    )
     
     // Fetch order
     const { data: order, error } = await db
@@ -54,9 +56,16 @@ export async function POST(
     }
     
     // Additional logging for legacy payment flow
-    console.log('[LEGACY_PAYMENT] Order service type:', order.service_type)
-    console.log('[LEGACY_PAYMENT] Order status:', order.status)
-    console.log('[LEGACY_PAYMENT] Has saved payment method:', !!order.saved_payment_method_id)
+    logger.info(
+      {
+        event: 'legacy_payment_order_details',
+        order_id: orderId,
+        service_type: order.service_type,
+        status: order.status,
+        has_saved_payment_method: !!order.saved_payment_method_id
+      },
+      '[LEGACY_PAYMENT] Order details'
+    )
     
     // Validate payment eligibility using state machine
     const targetStatus = 'paid_processing'

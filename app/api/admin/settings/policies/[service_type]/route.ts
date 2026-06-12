@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { getServiceClient } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
+
+const updatePolicySchema = z.object({
+  notice_hours: z.number(),
+  cancellation_fee_percent: z.number(),
+  reschedule_notice_hours: z.number(),
+  reschedule_fee_percent: z.number(),
+  allow_cancellation: z.boolean(),
+  allow_rescheduling: z.boolean(),
+  notes: z.string().nullable().optional(),
+  change_reason: z.string().nullable().optional()
+})
 
 interface RouteContext {
   params: Promise<{ service_type: string }>
@@ -43,6 +55,14 @@ export async function PUT(
     }
 
     const body = await request.json()
+
+    const parsedBody = updatePolicySchema.safeParse(body)
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      )
+    }
     const {
       notice_hours,
       cancellation_fee_percent,
@@ -52,7 +72,7 @@ export async function PUT(
       allow_rescheduling,
       notes,
       change_reason
-    } = body
+    } = parsedBody.data
 
     // Validation
     if (notice_hours < 0 || notice_hours > 168) {

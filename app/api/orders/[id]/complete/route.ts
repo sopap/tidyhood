@@ -78,7 +78,7 @@ export async function POST(
     
     // Verify partner owns this order
     if (order.partner_id !== partner.id) {
-      console.warn('Partner attempted to complete order they do not own')
+      logger.warn({ event: 'order_complete_forbidden', order_id: orderId, partner_id: partner.id }, 'Partner attempted to complete order they do not own')
       return NextResponse.json(
         { error: 'You are not assigned to this order' },
         { status: 403 }
@@ -107,7 +107,7 @@ export async function POST(
       )
     }
     
-    console.log('Order completed by partner:', orderId)
+    logger.info({ event: 'order_completed_by_partner', order_id: orderId, partner_id: partner.id }, 'Order completed by partner')
     
     return NextResponse.json({
       success: true,

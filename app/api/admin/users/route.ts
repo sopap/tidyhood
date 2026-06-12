@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { getServiceClient } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
-    const user = await getCurrentUser();
-    
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    await requireAdmin();
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
@@ -112,6 +105,14 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Users API error:', error);
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to fetch users' },
       { status: 500 }

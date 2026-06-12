@@ -1,38 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth'
+import { z } from 'zod'
+import { requireAdmin } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { logAudit } from '@/lib/audit'
+
+const refundSchema = z.object({
+  amount: z.number(),
+  reason: z.string().min(1)
+})
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth()
-    
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
+    const user = await requireAdmin()
 
-    const { amount, reason } = await request.json()
+    const parsed = refundSchema.safeParse(await request.json())
 
-    if (!amount || amount <= 0) {
+    if (!parsed.success || parsed.data.amount <= 0) {
+      const reasonOnlyInvalid =
+        parsed.success === false &&
+        parsed.error.errors.every(e => e.path[0] === 'reason')
+
       return NextResponse.json(
-        { error: 'Valid refund amount is required' },
+        { error: reasonOnlyInvalid ? 'Refund reason is required' : 'Valid refund amount is required' },
         { status: 400 }
       )
     }
 
-    if (!reason) {
-      return NextResponse.json(
-        { error: 'Refund reason is required' },
-        { status: 400 }
-      )
-    }
+    const { amount, reason } = parsed.data
 
     const db = getServiceClient()
     const { id: orderId } = await params
@@ -122,6 +119,14 @@ export async function POST(
     })
   } catch (error) {
     console.error('Refund error:', error)
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to process refund' },
       { status: 500 }

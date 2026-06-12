@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { getServiceClient } from '@/lib/db'
 import { quoteLaundry } from '@/lib/pricing'
 import Stripe from 'stripe'
@@ -27,17 +27,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth()
+    const user = await requireAdmin()
     const { id: orderId } = await params
-    
-    // Verify user is admin
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      )
-    }
-    
+
     const body = await request.json()
     const { actual_weight_lbs, notes } = adminQuoteSchema.parse(body)
     
@@ -193,7 +185,14 @@ export async function POST(
         { status: 400 }
       )
     }
-    
+
+    if (error instanceof Error && (error.message === 'Unauthorized' || error.message.includes('Forbidden'))) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.message === 'Unauthorized' ? 401 : 403 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
