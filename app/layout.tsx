@@ -9,7 +9,7 @@ const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.
 const zipsDisplay = allowedZips.join(', ')
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tidyhood.nyc'),
   title: {
     default: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
     template: '%s | Tidyhood'
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/logo.png',
+        url: '/og-card.png',
         width: 1200,
         height: 630,
         alt: 'Tidyhood - Laundry & Cleaning Services in Harlem',
@@ -49,8 +49,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
     description: 'Professional wash & fold and home cleaning in Harlem',
-    creator: '@tidyhood',
-    images: ['/logo.png'],
+    images: ['/og-card.png'],
   },
   robots: {
     index: true,

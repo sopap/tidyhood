@@ -179,7 +179,7 @@ export function generateInvoicePDF(data: InvoiceData): Promise<Buffer> {
       doc
         .fontSize(8)
         .text('Thank you for your business!', 50, 720, { align: 'center' })
-        .text('Questions? Contact support@tidyhood.com', 50, 735, { align: 'center' })
+        .text('Questions? Contact support@tidyhood.nyc', 50, 735, { align: 'center' })
       
       doc.end()
     } catch (error) {

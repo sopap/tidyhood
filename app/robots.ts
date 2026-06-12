@@ -1,8 +1,8 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = 'https://www.tidyhood.nyc'
-  
+  const baseUrl = 'https://tidyhood.nyc'
+
   return {
     rules: [
       {
@@ -15,7 +15,6 @@ export default function robots(): MetadataRoute.Robots {
           '/partner/',
           '/signup',
           '/login',
-          '/book/',
         ],
       },
     ],

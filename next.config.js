@@ -33,6 +33,18 @@ const nextConfig = {
         destination: 'https://tidyhood.nyc/:path*',
         permanent: true,
       },
+      {
+        // Canonical host: apex. Redirect www -> apex.
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.tidyhood.nyc',
+          },
+        ],
+        destination: 'https://tidyhood.nyc/:path*',
+        permanent: true,
+      },
     ]
   },
 }

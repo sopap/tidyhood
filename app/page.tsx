@@ -15,33 +15,10 @@ import {
   cardHoverVariants 
 } from '@/lib/motionVariants'
 
-const structuredData = {
-  "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  "name": "TidyHood",
-  "description": "Professional laundry and home cleaning services in Harlem",
-  "url": process.env.NEXT_PUBLIC_SITE_URL || "https://tidyhood.nyc",
-  "telephone": "+1-917-272-8434",
-  "email": "support@tidyhood.com",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "171 W 131st St",
-    "addressLocality": "New York",
-    "addressRegion": "NY",
-    "addressCountry": "US",
-    "postalCode": "10027"
-  },
-  "areaServed": [
-    {
-      "@type": "City",
-      "name": "Harlem",
-      "containedInPlace": {
-        "@type": "City",
-        "name": "New York"
-      }
-    }
-  ]
-}
+// NOTE: Organization/WebSite schema is injected site-wide via
+// components/StructuredData.tsx (in app/layout.tsx). Service schema lives on
+// /laundry and /cleaning. Only the FAQPage schema belongs here, matching the
+// FAQ content visible on this page.
 
 // FAQPage Schema for rich snippets
 const faqStructuredData = {
@@ -99,64 +76,6 @@ const faqStructuredData = {
   ]
 }
 
-// Service Schema for better search visibility
-const servicesStructuredData = [
-  {
-    "@context": "https://schema.org",
-    "@type": "Service",
-    "serviceType": "Laundry Service",
-    "provider": {
-      "@type": "LocalBusiness",
-      "name": "TidyHood"
-    },
-    "areaServed": {
-      "@type": "City",
-      "name": "Harlem, New York"
-    },
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Laundry Services",
-      "itemListElement": [
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Wash & Fold Laundry",
-            "description": "Professional wash and fold service with same-day pickup and 48-hour return"
-          }
-        }
-      ]
-    }
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "Service",
-    "serviceType": "House Cleaning Service",
-    "provider": {
-      "@type": "LocalBusiness",
-      "name": "TidyHood"
-    },
-    "areaServed": {
-      "@type": "City",
-      "name": "Harlem, New York"
-    },
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Cleaning Services",
-      "itemListElement": [
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Service",
-            "name": "Standard Home Cleaning",
-            "description": "Professional home cleaning by background-verified experts"
-          }
-        }
-      ]
-    }
-  }
-]
-
 export default function Home() {
   const { user } = useAuth()
   const [lastOrder, setLastOrder] = useState<any>(null)
@@ -208,23 +127,12 @@ export default function Home() {
 
   return (
     <>
-      {/* Structured Data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
+      {/* FAQPage structured data (matches the FAQ section on this page) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
       />
-      {servicesStructuredData.map((service, index) => (
-        <script
-          key={index}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(service) }}
-        />
-      ))}
-      
+
       <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
         <Header />
 

@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.tidyhood.nyc'
+  const baseUrl = 'https://tidyhood.nyc'
   
   // Get current date for lastModified
   const currentDate = new Date()

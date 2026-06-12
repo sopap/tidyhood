@@ -60,8 +60,8 @@ export function RescheduleCleaningModal({
                 1-800-TIDYHOOD
               </a>
               {' '}or email{' '}
-              <a href="mailto:support@tidyhood.com" className="font-medium underline">
-                support@tidyhood.com
+              <a href="mailto:support@tidyhood.nyc" className="font-medium underline">
+                support@tidyhood.nyc
               </a>
             </p>
             <p className="text-xs text-blue-800 mt-2">

@@ -22,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: 'Tidyhood',
       locale: 'en_US',
       type: 'website',
+      images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'Tidyhood - Laundry & Cleaning in Harlem' }],
     },
   }
 }
@@ -36,7 +37,7 @@ export default async function CleaningPage() {
     "provider": {
       "@type": "LocalBusiness",
       "name": "Tidyhood",
-      "image": "https://tidyhood.nyc/static/og-cleaning.jpg",
+      "image": "https://tidyhood.nyc/og-card.png",
       "@id": "https://tidyhood.nyc/#org",
     },
     "areaServed": allowedZips.map(zip => ({

@@ -159,50 +159,6 @@ export default function SiteFooter() {
         </div>
       </div>
 
-      {/* Structured Data for SEO */}
-      <script
-        type="application/ld+json"
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'LocalBusiness',
-            name: 'TidyHood',
-            description: 'Professional laundry pickup and home cleaning services in Harlem, NYC',
-            url: 'https://tidyhood.nyc',
-            telephone: '+1-917-272-8434',
-            email: 'support@tidyhood.nyc',
-            address: {
-              '@type': 'PostalAddress',
-              streetAddress: '171 W 131st St',
-              addressLocality: 'New York',
-              addressRegion: 'NY',
-              postalCode: '10027',
-              addressCountry: 'US'
-            },
-            areaServed: {
-              '@type': 'GeoCircle',
-              geoMidpoint: {
-                '@type': 'GeoCoordinates',
-                latitude: 40.8116,
-                longitude: -73.9465
-              },
-              geoRadius: '5000'
-            },
-            openingHoursSpecification: {
-              '@type': 'OpeningHoursSpecification',
-              dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-              opens: '08:00',
-              closes: '20:00'
-            },
-            sameAs: [
-              'https://facebook.com/tidyhood',
-              'https://twitter.com/tidyhood',
-              'https://instagram.com/tidyhood'
-            ]
-          })
-        }}
-      />
     </footer>
   )
 }

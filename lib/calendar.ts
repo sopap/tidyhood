@@ -43,7 +43,7 @@ DTSTAMP:${now}
 DTSTART:${pickupStart}
 DTEND:${pickupEnd}
 SUMMARY:${order.service_type === 'LAUNDRY' ? 'Laundry' : 'Cleaning'} Pickup - Tidyhood
-DESCRIPTION:Order #${order.id}\\n\\nService: ${order.service_type === 'LAUNDRY' ? 'Wash & Fold Laundry' : 'House Cleaning'}\\n\\nQuestions? Contact us at support@tidyhood.com
+DESCRIPTION:Order #${order.id}\\n\\nService: ${order.service_type === 'LAUNDRY' ? 'Wash & Fold Laundry' : 'House Cleaning'}\\n\\nQuestions? Contact us at support@tidyhood.nyc
 LOCATION:${formatAddress()}
 STATUS:CONFIRMED
 TRANSP:OPAQUE
@@ -61,7 +61,7 @@ DTSTAMP:${now}
 DTSTART:${deliveryStart}
 DTEND:${deliveryEnd}
 SUMMARY:Laundry Delivery - Tidyhood
-DESCRIPTION:Order #${order.id}\\n\\nYour clean laundry will be delivered during this window.\\n\\nQuestions? Contact us at support@tidyhood.com
+DESCRIPTION:Order #${order.id}\\n\\nYour clean laundry will be delivered during this window.\\n\\nQuestions? Contact us at support@tidyhood.nyc
 LOCATION:${formatAddress()}
 STATUS:CONFIRMED
 TRANSP:OPAQUE
