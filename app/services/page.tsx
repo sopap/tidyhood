@@ -24,7 +24,7 @@ const servicesStructuredData = {
         },
         "areaServed": {
           "@type": "City",
-          "name": "Harlem, New York"
+          "name": "Manhattan, New York"
         },
         "offers": {
           "@type": "Offer",
@@ -52,7 +52,7 @@ const servicesStructuredData = {
         },
         "areaServed": {
           "@type": "City",
-          "name": "Harlem, New York"
+          "name": "Manhattan, New York"
         },
         "offers": {
           "@type": "AggregateOffer",
@@ -84,7 +84,7 @@ export default function ServicesPage() {
               Choose Your Service
             </h1>
             <p className="text-xl text-gray-600">
-              Select the service that fits your needs. Both include pickup and delivery in Harlem.
+              Select the service that fits your needs. Both include pickup and delivery across all of Manhattan.
             </p>
           </div>
 

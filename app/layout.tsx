@@ -4,18 +4,14 @@ import { AuthProvider } from '@/lib/auth-context'
 import SiteFooter from '@/components/SiteFooter'
 import StructuredData from '@/components/StructuredData'
 
-// Get allowed ZIP codes for metadata
-const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
-const zipsDisplay = allowedZips.join(', ')
-
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tidyhood.nyc'),
   title: {
-    default: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
+    default: 'Tidyhood | Laundry & Home Cleaning in Manhattan, NYC',
     template: '%s | Tidyhood'
   },
-  description: `Professional laundry and home cleaning services in Harlem (${zipsDisplay}). Wash & fold from $1.75/lb, house cleaning from $89. Same-day delivery available.`,
-  keywords: ['harlem laundry service', 'harlem house cleaning', 'wash and fold nyc', 'home cleaning harlem', `laundry delivery ${allowedZips[0]}`, `cleaning service ${allowedZips[0]}`, 'harlem laundromat', 'apartment cleaning nyc'],
+  description: 'Born in Harlem, serving all of Manhattan. Wash & fold from $1.75/lb, house cleaning from $89. Free pickup & delivery, same-day options.',
+  keywords: ['manhattan laundry service', 'harlem laundry service', 'wash and fold nyc', 'laundry pickup manhattan', 'home cleaning manhattan', 'house cleaning harlem', 'apartment cleaning nyc', 'laundry delivery nyc'],
   authors: [{ name: 'Tidyhood' }],
   creator: 'Tidyhood',
   publisher: 'Tidyhood',
@@ -30,8 +26,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
-    description: 'Professional wash & fold and home cleaning delivered to your door in Harlem. Same-day service available.',
+    title: 'Tidyhood | Laundry & Home Cleaning in Manhattan, NYC',
+    description: 'Born in Harlem, serving all of Manhattan. Wash & fold and home cleaning delivered to your door. Same-day service available.',
     url: '/',
     siteName: 'Tidyhood',
     locale: 'en_US',
@@ -47,8 +43,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Tidyhood | Laundry & Cleaning Services in Harlem NYC',
-    description: 'Professional wash & fold and home cleaning in Harlem',
+    title: 'Tidyhood | Laundry & Home Cleaning in Manhattan, NYC',
+    description: 'Born in Harlem, serving all of Manhattan. Wash & fold and home cleaning delivered.',
     images: ['/og-card.png'],
   },
   robots: {

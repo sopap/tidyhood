@@ -2,27 +2,28 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Header } from '@/components/Header'
 import { getCleaningDisplayPricing } from '@/lib/display-pricing'
+import { getAllowedZips } from '@/lib/service-area'
 
-// Get allowed ZIP codes from environment variable
-const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+// Allowed ZIP codes (single source: lib/service-area.ts)
+const allowedZips = getAllowedZips()
 
 export async function generateMetadata(): Promise<Metadata> {
   const pricing = await getCleaningDisplayPricing()
   
   return {
-    title: `House Cleaning Service in Harlem | Deep Cleaning from ${pricing.studioPriceFormatted} | Tidyhood`,
-    description: 'Trusted Harlem cleaners for apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
+    title: `House Cleaning Service in Manhattan | Deep Cleaning from ${pricing.studioPriceFormatted} | Tidyhood`,
+    description: 'Trusted local cleaners for Manhattan apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
     alternates: {
       canonical: 'https://tidyhood.nyc/cleaning',
     },
     openGraph: {
-      title: `House Cleaning Service in Harlem | Deep Cleaning from ${pricing.studioPriceFormatted} | Tidyhood`,
-      description: 'Trusted Harlem cleaners for apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
+      title: `House Cleaning Service in Manhattan | Deep Cleaning from ${pricing.studioPriceFormatted} | Tidyhood`,
+      description: 'Trusted local cleaners for Manhattan apartments and brownstones. Eco-friendly products, flexible scheduling, satisfaction guaranteed.',
       url: 'https://tidyhood.nyc/cleaning',
       siteName: 'Tidyhood',
       locale: 'en_US',
       type: 'website',
-      images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'Tidyhood - Laundry & Cleaning in Harlem' }],
+      images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'Tidyhood - Laundry & Cleaning in Manhattan' }],
     },
   }
 }
@@ -42,10 +43,10 @@ export default async function CleaningPage() {
     },
     "areaServed": allowedZips.map(zip => ({
       "@type": "City",
-      "name": "Harlem",
+      "name": "Manhattan",
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "Harlem",
+        "addressLocality": "New York",
         "addressRegion": "NY",
         "postalCode": zip
       }
@@ -72,7 +73,7 @@ export default async function CleaningPage() {
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              House Cleaning Service in Harlem
+              House Cleaning Service in Manhattan
             </h1>
             <p className="text-xl text-text-secondary mb-6">
               Background-checked professionals for apartments, condos, and brownstones. Standard or deep cleaning.
@@ -225,21 +226,16 @@ export default async function CleaningPage() {
 
           {/* Service Areas */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-6">Cleaning Service Areas in Harlem</h2>
+            <h2 className="text-3xl font-bold mb-6">House Cleaning Across All of Manhattan</h2>
             <div className="card bg-gray-50">
               <p className="text-text-secondary mb-4">
-                We serve all of Harlem, from historic brownstones to modern high-rises. Our professional cleaners cover:
+                From historic Harlem brownstones to downtown high-rises — our professional
+                cleaners cover every Manhattan neighborhood.
               </p>
-              <div className="grid md:grid-cols-3 gap-4 mb-4">
-                {allowedZips.map(zip => (
-                  <div key={zip} className="flex items-center">
-                    <span className="text-primary-600 mr-2">📍</span>
-                    <span className="font-semibold">ZIP {zip}</span>
-                  </div>
-                ))}
-              </div>
               <p className="text-sm text-text-tertiary">
-                Covering Central Harlem, South Harlem, Morningside Heights, and surrounding neighborhoods.
+                <Link href="/service-areas" className="text-primary-600 underline hover:text-primary-700">
+                  See every neighborhood and ZIP code we cover →
+                </Link>
               </p>
             </div>
           </section>
@@ -292,7 +288,7 @@ export default async function CleaningPage() {
 
           {/* FAQ Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-6">FAQ — House Cleaning in Harlem</h2>
+            <h2 className="text-3xl font-bold mb-6">FAQ — House Cleaning in Manhattan</h2>
             <div className="space-y-4">
               <details className="card-compact cursor-pointer">
                 <summary className="font-semibold">Are your cleaners background-checked?</summary>
@@ -328,7 +324,7 @@ export default async function CleaningPage() {
           <div className="text-center py-12 bg-primary-50 rounded-xl">
             <h2 className="text-2xl font-bold mb-4">Ready for a Sparkling Clean Home?</h2>
             <p className="text-text-secondary mb-6">
-              Join Harlem residents who trust Tidyhood for reliable, professional home cleaning.
+              Join your neighbors across Manhattan who trust Tidyhood for reliable, professional home cleaning.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/book/cleaning" className="btn-primary btn-lg">
@@ -344,7 +340,7 @@ export default async function CleaningPage() {
           <div className="mt-12 text-center text-sm text-text-tertiary">
             <Link href="/" className="underline hover:text-primary-600">Home</Link>
             {' · '}
-            <Link href="/laundry" className="underline hover:text-primary-600">Wash & Fold Laundry Delivery in Harlem</Link>
+            <Link href="/laundry" className="underline hover:text-primary-600">Wash & Fold Laundry Delivery in Manhattan</Link>
             {' · '}
             <Link href="/services" className="underline hover:text-primary-600">All Services</Link>
           </div>

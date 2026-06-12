@@ -27,7 +27,8 @@ const clientEnvSchema = z.object({
   NEXT_PUBLIC_SITE_NAME: z.string().min(1).default('Tidyhood'),
   NEXT_PUBLIC_SITE_URL: z.string().url().default('https://tidyhood.nyc'),
   NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_ALLOWED_ZIPS: z.string().min(1).default('10026,10027,10030').transform((val) => val.split(',')),
+  // Default: all of Manhattan (kept in sync with lib/service-area.ts MANHATTAN_ZIPS)
+  NEXT_PUBLIC_ALLOWED_ZIPS: z.string().min(1).default('10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10016,10017,10018,10019,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10044,10065,10069,10075,10128,10280,10282').transform((val) => val.split(',')),
 
   // Supabase (Public keys only)
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),

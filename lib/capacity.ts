@@ -1,5 +1,6 @@
 import { getServiceClient } from './db'
 import { getNYTime, isSlotWithin6Hours, formatTimeWindow, isSlotInPast } from './timezone'
+import { isZipAllowed } from './service-area'
 
 export interface TimeSlot {
   partner_id: string
@@ -344,18 +345,10 @@ export function calculateCleaningMinutes(
 }
 
 /**
- * Validate ZIP code is in allowed areas
+ * Validate ZIP code is in allowed areas (single source: lib/service-area.ts)
  */
 export function validateZipCode(zip: string): boolean {
-  // TEMPORARY FIX: Hardcoding allowed ZIPs due to Vercel env var issues
-  const allowedZipsEnv = '10025,10026,10027,10029,10030,10031,10032,10035,10037,10039,10128'
-  console.log('[validateZipCode] NEXT_PUBLIC_ALLOWED_ZIPS:', allowedZipsEnv)
-  const allowedZips = allowedZipsEnv.split(',').map(z => z.trim()).filter(z => z.length > 0)
-  console.log('[validateZipCode] Parsed allowed ZIPs:', allowedZips)
-  console.log('[validateZipCode] Checking ZIP:', zip)
-  const isValid = allowedZips.includes(zip)
-  console.log('[validateZipCode] Is valid:', isValid)
-  return isValid
+  return isZipAllowed(zip)
 }
 
 /**

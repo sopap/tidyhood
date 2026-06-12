@@ -1,115 +1,73 @@
 import { Header } from '@/components/Header'
-import SiteFooter from '@/components/SiteFooter'
 import Link from 'next/link'
 import { Metadata } from 'next'
+import { getAllowedZips, NEIGHBORHOODS } from '@/lib/service-area'
 
 export const metadata: Metadata = {
-  title: 'Service Areas in Harlem & Morningside Heights | TidyHood NYC',
-  description: 'TidyHood serves Central Harlem, Morningside Heights, Hamilton Heights, and parts of Upper West Side. See all ZIP codes: 10025, 10026, 10027, 10029, 10030, 10031, 10032, 10035, 10037, 10039, 10128.',
+  title: 'Service Areas — All of Manhattan | TidyHood NYC',
+  description:
+    'TidyHood picks up and delivers across all of Manhattan — Harlem, Upper West Side, Upper East Side, Midtown, Downtown, and everywhere in between. Check your neighborhood.',
+  alternates: {
+    canonical: 'https://tidyhood.nyc/service-areas',
+  },
   openGraph: {
-    title: 'Service Areas in Harlem & Morningside Heights | TidyHood NYC',
-    description: 'TidyHood serves Central Harlem, Morningside Heights, Hamilton Heights, and parts of Upper West Side. Check if we serve your ZIP code.',
+    title: 'Service Areas — All of Manhattan | TidyHood NYC',
+    description:
+      'Born in Harlem, now serving all of Manhattan. Check if we serve your neighborhood and ZIP code.',
   },
 }
 
 export default function ServiceAreasPage() {
+  const allowedZips = getAllowedZips()
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      
+
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Hero Section */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Service Areas: Harlem & Nearby
+              Serving All of Manhattan
             </h1>
             <p className="text-lg text-gray-700">
-              We currently serve Central Harlem, Morningside Heights, Hamilton Heights, 
-              and parts of Upper West Side. If you're near the border of our service area, 
-              email <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700 underline">support@tidyhood.nyc</a> and we'll confirm availability.
+              TidyHood started in Harlem and now picks up and delivers across the
+              entire borough — from Inwood down to Battery Park City. Not sure about
+              your address? Email{' '}
+              <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700 underline">
+                support@tidyhood.nyc
+              </a>{' '}
+              and we&apos;ll confirm availability.
             </p>
           </div>
 
-          {/* ZIP Codes Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">ZIP Codes We Serve</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {['10025', '10026', '10027', '10029', '10030', '10031', '10032', '10035', '10037', '10039', '10128'].map(zip => (
-                <div key={zip} className="bg-primary-50 border border-primary-200 rounded-lg px-4 py-3 text-center">
-                  <span className="text-lg font-bold text-primary-900">{zip}</span>
+          {/* Neighborhoods Section */}
+          <div className="space-y-4 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Neighborhoods We Serve</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {NEIGHBORHOODS.map((hood) => (
+                <div key={hood.name} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{hood.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    <strong>ZIPs:</strong> {hood.zips.join(', ')}
+                  </p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Neighborhoods Section */}
-          <div className="space-y-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Neighborhoods</h2>
-
-            {/* Central Harlem */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Central Harlem</h3>
-              <p className="text-gray-700 mb-3">
-                Our core service area includes Central Harlem from 110th to 155th Street. 
-                We handle walk-ups and elevator buildings with equal care, and our partners 
-                know the neighborhood's building quirks—from pre-war walk-ups to newer developments.
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Common ZIPs:</strong> 10026, 10027, 10030, 10037, 10039
-              </p>
-            </div>
-
-            {/* Morningside Heights */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Morningside Heights</h3>
-              <p className="text-gray-700 mb-3">
-                From Columbia University down to Cathedral Parkway, we serve the entire Morningside 
-                Heights corridor. Expect flexible pickup windows that work around your schedule, 
-                whether you're a student, faculty, or neighborhood resident.
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Common ZIPs:</strong> 10025, 10027
-              </p>
-            </div>
-
-            {/* Hamilton Heights */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Hamilton Heights</h3>
-              <p className="text-gray-700 mb-3">
-                We cover Hamilton Heights from 135th to 155th Street. Our team is experienced 
-                with the neighborhood's classic brownstones and apartment buildings. Same-day 
-                service often available when you book by 11 AM.
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Common ZIPs:</strong> 10031, 10032, 10039
-              </p>
-            </div>
-
-            {/* Upper West Side (Border) */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Upper West Side (Select Areas)</h3>
-              <p className="text-gray-700 mb-3">
-                We serve parts of Upper West Side near Morningside Heights and Central Harlem. 
-                Buildings with doormen are welcome—just let us know your building's procedures 
-                in the booking notes.
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Common ZIPs:</strong> 10025, 10128
-              </p>
-            </div>
-
-            {/* East Harlem (Select Areas) */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">East Harlem (Select Areas)</h3>
-              <p className="text-gray-700 mb-3">
-                We cover select areas of East Harlem, primarily near the western border. 
-                If you're in this area, we recommend checking availability at booking or 
-                contacting us directly.
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Common ZIPs:</strong> 10029, 10035
-              </p>
+          {/* ZIP Codes Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              All ZIP Codes We Serve ({allowedZips.length})
+            </h2>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              {allowedZips.map((zip) => (
+                <div key={zip} className="bg-primary-50 border border-primary-200 rounded-lg px-2 py-2 text-center">
+                  <span className="text-sm font-bold text-primary-900">{zip}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -143,13 +101,13 @@ export default function ServiceAreasPage() {
               Choose laundry pickup or home cleaning—both with transparent pricing and flexible scheduling.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link 
+              <Link
                 href="/book/laundry"
                 className="inline-block bg-white text-primary-700 font-semibold px-8 py-3 rounded-lg hover:bg-primary-50 transition-colors"
               >
                 Book Laundry Service
               </Link>
-              <Link 
+              <Link
                 href="/book/cleaning"
                 className="inline-block bg-white text-primary-700 font-semibold px-8 py-3 rounded-lg hover:bg-primary-50 transition-colors"
               >
@@ -168,13 +126,11 @@ export default function ServiceAreasPage() {
               <a href="mailto:support@tidyhood.nyc" className="text-primary-600 hover:text-primary-700 underline font-medium">
                 support@tidyhood.nyc
               </a>
-              {' '}and we'll help you out.
+              {' '}and we&apos;ll help you out.
             </p>
           </div>
         </div>
       </main>
-
-      <SiteFooter />
     </div>
   )
 }

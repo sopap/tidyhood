@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isZipAllowed } from '@/lib/service-area'
 
 // Phone number validation (US format)
 const phoneRegex = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/
@@ -13,8 +14,8 @@ export const laundryBookingSchema = z.object({
       .length(5, 'ZIP code must be 5 digits')
       .regex(/^\d{5}$/, 'ZIP code must contain only numbers')
       .refine(
-        (zip) => ['10026', '10027', '10030'].includes(zip),
-        'We only serve ZIP codes: 10026, 10027, 10030'
+        (zip) => isZipAllowed(zip),
+        'We don\'t serve this ZIP code yet — we cover all of Manhattan'
       ),
   }),
   phone: z.string()
@@ -49,8 +50,8 @@ export const cleaningBookingSchema = z.object({
       .length(5, 'ZIP code must be 5 digits')
       .regex(/^\d{5}$/, 'ZIP code must contain only numbers')
       .refine(
-        (zip) => ['10026', '10027', '10030'].includes(zip),
-        'We only serve ZIP codes: 10026, 10027, 10030'
+        (zip) => isZipAllowed(zip),
+        'We don\'t serve this ZIP code yet — we cover all of Manhattan'
       ),
   }),
   phone: z.string()

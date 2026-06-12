@@ -2,17 +2,9 @@
 
 import Link from 'next/link'
 import { Phone, Mail, MapPin, Facebook, Twitter, Instagram } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
 export default function SiteFooter() {
-  const [zipsDisplay, setZipsDisplay] = useState('10026, 10027, 10030')
   const currentYear = new Date().getFullYear()
-
-  useEffect(() => {
-    // Load zip codes on client side to avoid hydration mismatch
-    const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
-    setZipsDisplay(allowedZips.join(', '))
-  }, [])
 
   return (
     <footer className="bg-gray-900 text-white" role="contentinfo">
@@ -29,7 +21,7 @@ export default function SiteFooter() {
               />
             </Link>
             <p className="text-base text-gray-300 mb-4">
-              Professional laundry pickup and home cleaning services for Harlem residents.
+              Born in Harlem, serving all of Manhattan. Professional laundry pickup and home cleaning.
             </p>
             {/* Social Media Links */}
             <div className="flex gap-4 mt-4">
@@ -70,8 +62,10 @@ export default function SiteFooter() {
               <li className="flex items-start gap-2">
                 <MapPin className="h-5 w-5 text-primary-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="text-base text-gray-300">
-                  <strong className="text-white">Service Area:</strong> Harlem, NYC<br />
-                  <span className="text-sm text-gray-400" suppressHydrationWarning>ZIPs: {zipsDisplay}</span>
+                  <strong className="text-white">Service Area:</strong> All of Manhattan<br />
+                  <Link href="/service-areas" className="text-sm text-gray-400 underline hover:text-white">
+                    See neighborhoods & ZIPs
+                  </Link>
                 </div>
               </li>
               <li className="flex items-start gap-2">

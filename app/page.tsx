@@ -30,7 +30,7 @@ const faqStructuredData = {
       "name": "Do you offer same-day laundry pickup in Harlem?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Schedule before 11 AM for same-day pickup in most Harlem ZIP codes (10026, 10027, 10030). Next-day pickup is guaranteed for all bookings."
+        "text": "Yes. Schedule before 11 AM for same-day pickup in most Manhattan ZIP codes. Next-day pickup is guaranteed for all bookings."
       }
     },
     {
@@ -43,10 +43,10 @@ const faqStructuredData = {
     },
     {
       "@type": "Question",
-      "name": "What areas in Harlem do you serve?",
+      "name": "What areas do you serve?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "We serve all of Harlem including Central Harlem, South Harlem, and Morningside Heights — ZIP codes 10026, 10027, 10030."
+        "text": "All of Manhattan. We started in Harlem and now cover every neighborhood from Inwood to the Financial District."
       }
     },
     {
@@ -87,8 +87,6 @@ export default function Home() {
   })
 
   // Get ZIP codes from environment variable
-  const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
-  const zipsDisplay = allowedZips.join(', ')
 
   // Fetch user's last order and pricing
   useEffect(() => {
@@ -151,7 +149,7 @@ export default function Home() {
               Same-day pickup, spotless results — powered by local pros you can trust.
             </p>
             <p className="text-sm md:text-base text-text-tertiary mb-4">
-              Serving Harlem ZIPs: {zipsDisplay}
+              Born in Harlem — now serving all of Manhattan
             </p>
             
             {/* Primary CTAs - Hidden on mobile (shown in sticky bar) */}
@@ -396,21 +394,16 @@ export default function Home() {
 
           {/* Service Areas Section */}
           <div className="max-w-4xl mx-auto mb-16 md:mb-20">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-6">Laundry & Cleaning Service Areas in Harlem</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-6">Serving All of Manhattan</h2>
             <div className="card bg-gray-50 text-center">
               <p className="text-text-secondary mb-4">
-                We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup and delivery service covers ZIP codes:
+                TidyHood started in Harlem and now picks up and delivers across all of Manhattan —
+                from Inwood and Washington Heights down to the Financial District and Battery Park City.
               </p>
-              <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-4">
-                {allowedZips.map((zip) => (
-                  <div key={zip} className="flex items-center">
-                    <span className="text-primary-600 text-2xl mr-2">📍</span>
-                    <span className="font-bold">{zip}</span>
-                  </div>
-                ))}
-              </div>
               <p className="text-sm text-text-tertiary">
-                Near the border? Contact us — we may be able to accommodate your location.
+                <Link href="/service-areas" className="text-primary-600 underline hover:text-primary-700">
+                  See every neighborhood and ZIP code we cover →
+                </Link>
               </p>
             </div>
           </div>
@@ -473,7 +466,7 @@ export default function Home() {
                   </svg>
                 </summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  Yes. Schedule before 11 AM for same-day pickup in most Harlem ZIP codes ({zipsDisplay}). Next-day pickup is guaranteed for all bookings.
+                  Yes. Schedule before 11 AM for same-day pickup in most Manhattan ZIP codes. Next-day pickup is guaranteed for all bookings.
                 </p>
               </details>
               
@@ -491,13 +484,13 @@ export default function Home() {
               
               <details className="group card-compact cursor-pointer hover:border-primary-200 transition-colors">
                 <summary className="font-semibold flex items-center justify-between">
-                  <span>What areas in Harlem do you serve?</span>
+                  <span>What areas do you serve?</span>
                   <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  We serve all of Harlem including Central Harlem, South Harlem, and Morningside Heights — ZIP codes {zipsDisplay}.
+                  All of Manhattan. We started in Harlem and now cover every neighborhood from Inwood to the Financial District.
                 </p>
               </details>
               

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { loadGoogleMaps } from '@/lib/googleMaps'
+import { getAllowedZips } from '@/lib/service-area'
 
-// Get allowed ZIP codes from environment variable
-const ALLOWED_ZIPS = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+// Allowed ZIP codes (single source: lib/service-area.ts)
+const ALLOWED_ZIPS = getAllowedZips()
 
 interface Address {
   line1: string

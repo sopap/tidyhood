@@ -5,26 +5,28 @@ import Tooltip from '@/components/ui/Tooltip'
 import DryPriceTooltip from '@/components/dryclean/DryPriceTooltip'
 import { getLaundryDisplayPricing } from '@/lib/display-pricing'
 
-// Get allowed ZIP codes from environment variable
-const allowedZips = process.env.NEXT_PUBLIC_ALLOWED_ZIPS?.split(',').map(z => z.trim()) || ['10026', '10027', '10030']
+import { getAllowedZips } from '@/lib/service-area'
+
+// Allowed ZIP codes (single source: lib/service-area.ts)
+const allowedZips = getAllowedZips()
 
 export async function generateMetadata(): Promise<Metadata> {
   const pricing = await getLaundryDisplayPricing()
   
   return {
-    title: `Wash & Fold Laundry Delivery in Harlem | ${pricing.perLbPriceFormatted}/lb | Tidyhood`,
-    description: 'Professional wash & fold with free pickup & delivery in Harlem. Same-day options and QR-tracked bags. Book your laundry pickup now.',
+    title: `Wash & Fold Laundry Delivery in Manhattan | ${pricing.perLbPriceFormatted}/lb | Tidyhood`,
+    description: 'Professional wash & fold with free pickup & delivery across Manhattan. Same-day options and QR-tracked bags. Book your laundry pickup now.',
     alternates: {
       canonical: 'https://tidyhood.nyc/laundry',
     },
     openGraph: {
-      title: `Wash & Fold Laundry Delivery in Harlem | ${pricing.perLbPriceFormatted}/lb | Tidyhood`,
-      description: 'Professional wash & fold with free pickup & delivery in Harlem. Same-day options and QR-tracked bags.',
+      title: `Wash & Fold Laundry Delivery in Manhattan | ${pricing.perLbPriceFormatted}/lb | Tidyhood`,
+      description: 'Professional wash & fold with free pickup & delivery across Manhattan. Same-day options and QR-tracked bags.',
       url: 'https://tidyhood.nyc/laundry',
       siteName: 'Tidyhood',
       locale: 'en_US',
       type: 'website',
-      images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'Tidyhood - Laundry & Cleaning in Harlem' }],
+      images: [{ url: '/og-card.png', width: 1200, height: 630, alt: 'Tidyhood - Laundry & Cleaning in Manhattan' }],
     },
   }
 }
@@ -44,10 +46,10 @@ export default async function LaundryPage() {
     },
     "areaServed": allowedZips.map(zip => ({
       "@type": "City",
-      "name": "Harlem",
+      "name": "Manhattan",
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": "Harlem",
+        "addressLocality": "New York",
         "addressRegion": "NY",
         "postalCode": zip
       }
@@ -84,7 +86,7 @@ export default async function LaundryPage() {
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Wash & Fold Laundry Delivery in Harlem
+              Wash & Fold Laundry Delivery in Manhattan
             </h1>
             <p className="text-xl text-text-secondary mb-6">
               Professional laundry service with free pickup & delivery. Same-day options available.
@@ -252,7 +254,7 @@ export default async function LaundryPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-blue-700 mb-1">Picked Up</h3>
-                  <p className="text-sm text-gray-600">Our Harlem partner arrives with QR-coded bags and collects your laundry safely.</p>
+                  <p className="text-sm text-gray-600">Our local partner arrives with QR-coded bags and collects your laundry safely.</p>
                 </div>
               </div>
               
@@ -290,21 +292,16 @@ export default async function LaundryPage() {
 
           {/* Service Areas */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-6">Laundry Pickup Service Areas in Harlem</h2>
+            <h2 className="text-3xl font-bold mb-6">Laundry Pickup Across All of Manhattan</h2>
             <div className="card bg-gray-50">
               <p className="text-text-secondary mb-4">
-                We proudly serve all of Harlem, including Central Harlem, South Harlem, and Morningside Heights. Our pickup service covers:
+                Born in Harlem, we now pick up and deliver across the entire borough — from
+                Inwood and Washington Heights down to the Financial District.
               </p>
-              <div className="grid md:grid-cols-3 gap-4 mb-4">
-                {allowedZips.map(zip => (
-                  <div key={zip} className="flex items-center">
-                    <span className="text-primary-600 mr-2">📍</span>
-                    <span className="font-semibold">ZIP {zip}</span>
-                  </div>
-                ))}
-              </div>
               <p className="text-sm text-text-tertiary">
-                Near the border? Contact us and we'll see if we can accommodate your location.
+                <Link href="/service-areas" className="text-primary-600 underline hover:text-primary-700">
+                  See every neighborhood and ZIP code we cover →
+                </Link>
               </p>
             </div>
           </section>
@@ -385,12 +382,12 @@ export default async function LaundryPage() {
 
           {/* FAQ Section */}
           <section className="mb-16">
-            <h2 className="text-3xl font-bold mb-6">FAQ — Laundry Service in Harlem</h2>
+            <h2 className="text-3xl font-bold mb-6">FAQ — Laundry Service in Manhattan</h2>
             <div className="space-y-4">
               <details className="card-compact cursor-pointer">
-                <summary className="font-semibold">Do you offer same-day laundry pickup in Harlem?</summary>
+                <summary className="font-semibold">Do you offer same-day laundry pickup?</summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  Yes! Book before 11 AM and we can usually pick up the same day in most Harlem ZIP codes. Next-day pickup is guaranteed for all bookings.
+                  Yes! Book before 11 AM and we can usually pick up the same day in most Manhattan ZIP codes. Next-day pickup is guaranteed for all bookings.
                 </p>
               </details>
               
@@ -421,7 +418,7 @@ export default async function LaundryPage() {
           <div className="text-center py-12 bg-primary-50 rounded-xl">
             <h2 className="text-2xl font-bold mb-4">Ready for Fresh, Clean Laundry?</h2>
             <p className="text-text-secondary mb-6">
-              Join hundreds of Harlem residents who trust Tidyhood with their laundry every week.
+              Join hundreds of your neighbors across Manhattan who trust Tidyhood with their laundry every week.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/book/laundry" className="btn-primary btn-lg">
@@ -437,7 +434,7 @@ export default async function LaundryPage() {
           <div className="mt-12 text-center text-sm text-text-tertiary">
             <Link href="/" className="underline hover:text-primary-600">Home</Link>
             {' · '}
-            <Link href="/cleaning" className="underline hover:text-primary-600">House Cleaning Service in Harlem</Link>
+            <Link href="/cleaning" className="underline hover:text-primary-600">House Cleaning Service in Manhattan</Link>
             {' · '}
             <Link href="/services" className="underline hover:text-primary-600">All Services</Link>
           </div>
