@@ -57,7 +57,7 @@ VALUES
 -- Laundry addons
 INSERT INTO pricing_rules (service_type, geozone, unit_type, unit_key, unit_price_cents, priority, active)
 VALUES 
-  ('LAUNDRY', '10026,10027,10030', 'ADDON', 'LND_RUSH_24HR', 1000, 200, true),
+  ('LAUNDRY', '10026,10027,10030', 'ADDON', 'LND_RUSH_24HR', 1000, 200, false),
   ('LAUNDRY', '10026,10027,10030', 'ADDON', 'LND_BULKY_ITEM', 800, 200, true),
   ('LAUNDRY', '10026,10027,10030', 'ADDON', 'LND_DELICATE', 500, 200, true),
   ('LAUNDRY', '10026,10027,10030', 'ADDON', 'LND_EXTRA_SOFTENER', 300, 200, true);

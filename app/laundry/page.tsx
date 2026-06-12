@@ -133,7 +133,7 @@ export default async function LaundryPage() {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
-                    <span>{pricing.perLbPriceFormatted}/lb + $10 rush fee</span>
+                    <span>{pricing.perLbPriceFormatted}/lb + 25% rush surcharge</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-green-500 mr-2">✓</span>
@@ -396,7 +396,7 @@ export default async function LaundryPage() {
               <details className="card-compact cursor-pointer">
                 <summary className="font-semibold">What's included in the {pricing.perLbPriceFormatted}/lb price?</summary>
                 <p className="mt-3 text-sm text-text-secondary">
-                  Everything! Wash, dry, fold, eco-friendly detergent, free pickup & delivery, and QR tracking. The only extra cost is if you need rush 24-hour service ($10 fee).
+                  Everything! Wash, dry, fold, eco-friendly detergent, free pickup & delivery, and QR tracking. The only extra cost is if you need rush 24-hour service (+25% surcharge).
                 </p>
               </details>
               

@@ -162,7 +162,7 @@ export default function Home() {
   const [lastOrder, setLastOrder] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [pricing, setPricing] = useState({
-    laundryPerLb: '$2.15',
+    laundryPerLb: '$1.75',
     laundryMinLbs: '15',
     cleaningStudio: '$89',
   })
@@ -175,20 +175,14 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch pricing from database
-        const pricingRes = await fetch('/api/admin/settings/pricing')
+        // Fetch live display pricing (public endpoint, same rules checkout charges from)
+        const pricingRes = await fetch('/api/pricing/display')
         if (pricingRes.ok) {
-          const pricingData = await pricingRes.json()
-          const rules = pricingData.rules || []
-          
-          const perLbRule = rules.find((r: any) => r.unit_key === 'LND_WF_PERLB')
-          const minRule = rules.find((r: any) => r.unit_key === 'LND_WF_MIN_LBS')
-          const studioRule = rules.find((r: any) => r.unit_key === 'CLN_STD_STUDIO')
-          
+          const { laundry, cleaning } = await pricingRes.json()
           setPricing({
-            laundryPerLb: perLbRule ? `$${(perLbRule.unit_price_cents / 100).toFixed(2)}` : '$2.15',
-            laundryMinLbs: minRule ? `${(minRule.unit_price_cents / 100)}` : '15',
-            cleaningStudio: studioRule ? `$${Math.floor(studioRule.unit_price_cents / 100)}` : '$89',
+            laundryPerLb: laundry?.perLbPriceFormatted || '$1.75',
+            laundryMinLbs: laundry?.minWeightLbs ? `${laundry.minWeightLbs}` : '15',
+            cleaningStudio: cleaning?.studioPriceFormatted || '$89',
           })
         }
 

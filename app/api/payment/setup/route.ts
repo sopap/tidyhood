@@ -6,6 +6,69 @@ import { logger } from '@/lib/logger';
 import { canUsePaymentAuthorization } from '@/lib/feature-flags';
 import { executePaymentAuthorizationSaga } from '@/lib/payment-saga';
 import { logPaymentError, createErrorResponse } from '@/lib/payment-errors';
+import { quoteLaundry, quoteCleaning } from '@/lib/pricing';
+
+/**
+ * Max stored estimate for dry-clean-only orders (quoted after inspection,
+ * so there is no server-computable price at booking time).
+ */
+const MAX_DRY_CLEAN_AUTH_CENTS = parseInt(
+  process.env.MAX_DRY_CLEAN_AUTH_CENTS || '30000',
+  10
+);
+
+const TIER_TO_LBS: Record<string, number> = { small: 15, medium: 25, large: 35 };
+
+/**
+ * SECURITY: Never trust the client-supplied estimated_amount_cents.
+ * The stored estimate drives the ±variance auto-charge gate after weighing,
+ * so recompute it server-side from the order details wherever possible.
+ */
+async function computeServerEstimateCents(params: z.infer<typeof setupSchema>): Promise<number> {
+  const d = (params.details ?? {}) as Record<string, any>;
+
+  if (params.service_type === 'LAUNDRY') {
+    if (params.service_category === 'washFold' || params.service_category === 'mixed') {
+      const lbs: number | undefined =
+        (typeof d.estimatedPounds === 'number' && d.estimatedPounds > 0
+          ? d.estimatedPounds
+          : undefined) ?? (d.weightTier ? TIER_TO_LBS[d.weightTier] : undefined);
+      if (!lbs || lbs <= 0) {
+        throw new ValidationError('Weight tier or estimated pounds required for wash & fold orders');
+      }
+      const quote = await quoteLaundry({
+        zip: params.address.zip,
+        lbs,
+        addons: Array.isArray(d.addons) ? d.addons : [],
+        rushService: !!d.rushService,
+      });
+      return quote.total_cents;
+    }
+    // dryClean: priced after inspection — cap the client estimate at a sanity bound
+    if (params.estimated_amount_cents > MAX_DRY_CLEAN_AUTH_CENTS) {
+      throw new ValidationError(
+        'Estimated amount exceeds the maximum allowed for dry cleaning orders',
+        'AMOUNT_EXCEEDS_CAP'
+      );
+    }
+    return params.estimated_amount_cents;
+  }
+
+  // CLEANING
+  if (typeof d.bedrooms !== 'number' || !d.bathrooms) {
+    throw new ValidationError('Bedrooms and bathrooms required for cleaning orders');
+  }
+  const quote = await quoteCleaning({
+    zip: params.address.zip,
+    bedrooms: d.bedrooms,
+    bathrooms: d.bathrooms,
+    deep: d.cleaningType === 'deep' || !!d.deep,
+    addons: Array.isArray(d.addons) ? d.addons : [],
+    frequency: d.frequency,
+    firstVisitDeep: !!d.firstVisitDeep,
+  });
+  return quote.total_cents;
+}
 
 const setupSchema = z.object({
   service_type: z.enum(['LAUNDRY', 'CLEANING']),
@@ -91,12 +154,23 @@ export async function POST(request: NextRequest) {
       estimated_amount: params.estimated_amount_cents
     });
     
+    // Recompute the estimate server-side (never trust the client amount)
+    const serverEstimateCents = await computeServerEstimateCents(params);
+    if (Math.abs(serverEstimateCents - params.estimated_amount_cents) > 100) {
+      logger.warn({
+        event: 'payment_setup_estimate_mismatch',
+        user_id: user?.id || 'guest',
+        client_estimate_cents: params.estimated_amount_cents,
+        server_estimate_cents: serverEstimateCents,
+      });
+    }
+
     // Execute payment setup saga
     const order = await executePaymentAuthorizationSaga({
       user_id: user?.id,
       service_type: params.service_type,
       service_category: params.service_category,
-      estimated_amount_cents: params.estimated_amount_cents,
+      estimated_amount_cents: serverEstimateCents,
       payment_method_id: params.payment_method_id,
       slot: params.slot,
       delivery_slot: params.delivery_slot,

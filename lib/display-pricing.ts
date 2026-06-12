@@ -26,7 +26,7 @@ export async function getLaundryDisplayPricing() {
       .eq('active', true)
       .single()
     
-    const perLbCents = perLbRule?.unit_price_cents || 215 // Default to $2.15
+    const perLbCents = perLbRule?.unit_price_cents || 175 // Default to $1.75 (matches seed LND_WF_PERLB)
     const minWeightLbs = (minWeightRule?.unit_price_cents || 1500) / 100 // Weight stored as cents for consistency (15 lbs = 1500)
     const minOrderCents = Math.ceil(minWeightLbs * perLbCents) // Calculate minimum order price from weight
     
@@ -41,11 +41,11 @@ export async function getLaundryDisplayPricing() {
     console.error('Error fetching laundry pricing:', error)
     // Return defaults if database fails
     return {
-      perLbPrice: 2.15,
-      perLbPriceFormatted: '$2.15',
+      perLbPrice: 1.75,
+      perLbPriceFormatted: '$1.75',
       minWeightLbs: 15,
-      minOrderPrice: 32.25,
-      minOrderPriceFormatted: '$32.25',
+      minOrderPrice: 26.25,
+      minOrderPriceFormatted: '$26.25',
     }
   }
 }
