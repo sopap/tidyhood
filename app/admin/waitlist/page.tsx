@@ -1,6 +1,4 @@
-import { redirect } from 'next/navigation'
 import { getServiceClient } from '@/lib/db'
-import AdminNav from '@/components/admin/AdminNav'
 
 interface WaitlistEntry {
   id: string
@@ -14,24 +12,11 @@ interface WaitlistEntry {
 }
 
 async function getWaitlistData() {
+  // NOTE: auth/admin enforcement happens in app/admin/layout.tsx.
+  // The previous check here called auth.getSession() on the service-role
+  // client, which never has a session — so this page redirected every
+  // visitor (including admins) to /login and was unreachable.
   const supabase = getServiceClient()
-  
-  // Check authentication
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    redirect('/login')
-  }
-
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, email')
-    .eq('id', session.user.id)
-    .single()
-
-  if (!profile || profile.role !== 'admin') {
-    redirect('/orders')
-  }
 
   // Fetch waitlist entries
   const { data: entries, error } = await supabase
@@ -41,10 +26,10 @@ async function getWaitlistData() {
 
   if (error) {
     console.error('Error fetching waitlist:', error)
-    return { entries: [], userEmail: profile.email }
+    return { entries: [] }
   }
 
-  return { entries: entries as WaitlistEntry[], userEmail: profile.email }
+  return { entries: entries as WaitlistEntry[] }
 }
 
 function getServiceInterestBadge(interest: string) {
@@ -68,7 +53,7 @@ function formatDate(dateString: string) {
 }
 
 export default async function AdminWaitlistPage() {
-  const { entries, userEmail } = await getWaitlistData()
+  const { entries } = await getWaitlistData()
 
   // Group entries by ZIP code for analysis
   const zipCodeStats = entries.reduce((acc, entry) => {
@@ -86,8 +71,6 @@ export default async function AdminWaitlistPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNav userEmail={userEmail} />
-      
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

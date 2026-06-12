@@ -23,7 +23,7 @@ export async function GET(
       .from('admin_notes')
       .select(`
         *,
-        profiles:admin_id(email)
+        profiles:author_id(email)
       `)
       .eq('order_id', orderId)
       .order('created_at', { ascending: false })
@@ -89,12 +89,12 @@ export async function POST(
       .from('admin_notes')
       .insert({
         order_id: orderId,
-        admin_id: user.id,
+        author_id: user.id,
         note: note.trim()
       })
       .select(`
         *,
-        profiles:admin_id(email)
+        profiles:author_id(email)
       `)
       .single()
 

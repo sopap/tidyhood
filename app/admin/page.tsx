@@ -84,7 +84,7 @@ async function getMetrics(): Promise<Metrics | null> {
       .select('id, role, created_at')
 
     const totalUsers = allUsers?.length || 0
-    const customers = allUsers?.filter(u => u.role === 'customer' || !u.role).length || 0
+    const customers = allUsers?.filter(u => u.role === 'user' || !u.role).length || 0
     const partners = allUsers?.filter(u => u.role === 'partner').length || 0
     
     // Calculate new users this month
