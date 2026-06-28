@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { env } from '@/lib/env';
+import { requireAdmin } from '@/lib/auth';
+import { getServiceClient } from '@/lib/db';
 
 interface UserData {
   user: {
@@ -19,7 +20,6 @@ interface UserData {
   };
   recent_orders: Array<{
     id: string;
-    order_id: string;
     service_type: string;
     status: string;
     total_cents: number;
@@ -36,23 +36,101 @@ interface UserData {
   }>;
 }
 
+// Query the database directly from the server component. Do NOT round-trip
+// through the /api/admin/users/[id] route: a server-side fetch() does not
+// forward the admin's session cookies, so requireAdmin() there would 401 and
+// every user would render as "User not found".
 async function getUserDetail(userId: string): Promise<UserData | null> {
-  try {
-    const baseUrl = env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/admin/users/${userId}`, {
-      cache: 'no-store',
-    });
-    
-    if (!response.ok) {
-      console.error('[UserDetail] Failed to fetch user:', response.status);
-      return null;
+  await requireAdmin();
+  const db = getServiceClient();
+
+  // Fetch user profile
+  const { data: profile, error: profileError } = await db
+    .from('profiles')
+    .select('id, full_name, phone, role, created_at')
+    .eq('id', userId)
+    .single();
+
+  if (profileError || !profile) {
+    if (profileError) {
+      console.error('[UserDetail] Profile fetch error:', profileError);
     }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('[UserDetail] Error fetching user:', error);
     return null;
   }
+
+  // Fetch email from auth using admin API
+  const { data: { user: authUser }, error: authError } =
+    await db.auth.admin.getUserById(userId);
+
+  if (authError) {
+    console.error('[UserDetail] Auth user fetch error:', authError);
+  }
+
+  // Fetch all orders for statistics
+  const { data: orders, error: ordersError } = await db
+    .from('orders')
+    .select('id, service_type, status, total_cents, quote_cents, created_at, slot_start')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (ordersError) {
+    console.error('[UserDetail] Orders fetch error:', ordersError);
+  }
+
+  // Calculate statistics - count completed/delivered orders for revenue.
+  // Use quote_cents (final quoted amount) if available, otherwise total_cents.
+  const totalOrders = orders?.length || 0;
+  const completedOrders = orders?.filter(
+    (o) => o.status === 'delivered' || o.status === 'completed'
+  ) || [];
+  const lifetimeValue =
+    completedOrders.reduce((sum, o) => sum + (o.quote_cents || o.total_cents || 0), 0) / 100;
+  const avgOrderValue = completedOrders.length > 0 ? lifetimeValue / completedOrders.length : 0;
+
+  const lastOrder = orders && orders.length > 0 ? orders[0].created_at : null;
+
+  const serviceCounts = orders?.reduce((acc, o) => {
+    acc[o.service_type] = (acc[o.service_type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+  const favoriteService = Object.keys(serviceCounts).length > 0
+    ? Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0][0]
+    : 'None';
+
+  const recentOrders = orders?.slice(0, 5).map((order) => ({
+    id: order.id,
+    service_type: order.service_type,
+    status: order.status,
+    total_cents: order.quote_cents || order.total_cents,
+    created_at: order.created_at,
+  })) || [];
+
+  // Fetch saved addresses
+  const { data: addresses } = await db
+    .from('user_addresses')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false });
+
+  return {
+    user: {
+      id: profile.id,
+      name: profile.full_name || authUser?.user_metadata?.full_name || 'Unknown',
+      email: authUser?.email || 'N/A',
+      phone: profile.phone || authUser?.user_metadata?.phone || 'N/A',
+      role: profile.role,
+      created_at: profile.created_at,
+    },
+    stats: {
+      total_orders: totalOrders,
+      lifetime_value: lifetimeValue,
+      avg_order_value: avgOrderValue,
+      last_order: lastOrder,
+      favorite_service: favoriteService,
+    },
+    recent_orders: recentOrders,
+    addresses: addresses || [],
+  };
 }
 
 export default async function UserDetailPage({ 
@@ -207,7 +285,7 @@ export default async function UserDetailPage({
                 <div key={order.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="font-medium text-gray-900">#{order.order_id}</p>
+                      <p className="font-medium text-gray-900">#{order.id.slice(0, 8)}</p>
                       <p className="text-sm text-gray-600">{order.service_type}</p>
                     </div>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
